@@ -1,0 +1,99 @@
+Code lives in:  FLYBYME/mesh-core — this worktree. All commits go here.
+
+================================================================================
+THE TASK
+================================================================================
+
+**The shell owns sign-in.** Add it to `src/chrome/index.ts`.
+
+The console is deployed at `console.localhost` and every call it makes comes back
+`401`, because the contracts it uses are gated `user` and **nothing on the page
+signs anybody in.** The `auth` Extension is composed into the release and holds
+the credentials seam — it has no UI of its own, by design.
+
+Sign-in belongs in the shell rather than in either console, and that is the
+decision worth getting right: **it is a page-level concern, not an application's.**
+Two Applications on one page must not each render their own login form, must not
+disagree about who is signed in, and must not both try to hold a ticket. The
+shell is the one part present on every page.
+
+================================================================================
+WHAT ALREADY EXISTS — READ BEFORE BUILDING
+================================================================================
+
+    src/chrome/index.ts              the shell. Short. Read all of it first.
+    node_modules/@flybyme/mesh-web/src/auth/extension.ts
+                                     the auth Extension: what it provides and how
+    node_modules/@flybyme/mesh-web/src/kernel/broker.ts
+                                     `credentials`, the seam every call goes through
+    ~/code/mesh-demos/src/whoami/index.ts
+                                     an app that already renders a sign-in form and
+                                     handles signed-out, signed-in and refused
+
+**An Application never handles a credential.** `start()` installs
+`withHeaders(fetchTransport(api), () => credentials.headers())` and never looks
+through it. The auth Extension fills that in, and a part's call carries a ticket
+it has never seen. The shell is not an exception to that — it drives auth's API,
+it does not hold a token itself.
+
+Look at how `whoami` obtains the auth API and reuse it rather than inventing a
+second path. If the shell cannot reach it because the token is not in `consumes`,
+that is the finding — say so and solve it the declared way.
+
+================================================================================
+WHAT TO BUILD
+================================================================================
+
+- **Signed out:** an email and password field and a sign-in button, in the bar or
+  in a small panel the bar opens. `TextArea` is not wanted here; `Input` with
+  `type: 'password'` is. Kernel `^0.11` fixed `Input` so a controlled value
+  actually clears (A7.0) — you do not need the revision-counter workaround the
+  demo apps carry.
+- **Signed in:** who, and a way out. `identity.whoami` is granted on this site at
+  `auth: 'user'`; `identity.sign_out` is granted too.
+- **Refused:** a wrong password is an *answer*, not an exception — `makeHttp`
+  returns status rather than throwing, deliberately. Show it.
+- **On load:** if a session is already held, do not show a form.
+
+Keep it small. A bar, a state, and the three cases.
+
+================================================================================
+WHAT NOT TO DO
+================================================================================
+
+**Do not put sign-in in `catalog` or `releases`.** That is the mistake this task
+exists to avoid, and two forms on one page is how a session becomes ambiguous.
+
+**Do not store a password anywhere**, not in a signal that outlives the submit,
+not in storage. It goes to `ticket_issue` and is forgotten.
+
+**Do not build a user-management screen.** Registering accounts is `identity`'s
+console and it is not written yet.
+
+================================================================================
+WHAT GOOD LOOKS LIKE
+================================================================================
+
+- Browser tests via `mountPart` with the auth API stubbed: signed out renders a
+  form, a wrong password shows the refusal, a good one moves to signed in, and
+  signing out returns to the form.
+- The existing 13 tests still pass.
+- `npm run typecheck` clean, **zero `as any`, zero `as never`, zero casts.**
+- Styling inline via `style` props — a part still cannot ship CSS in mesh-core,
+  and camelCase keys work as of kernel 0.11.2. Use `var(--token, fallback)` so a
+  site's theme reaches it.
+- Bump `chrome` to `0.2.0` in `mesh.json` and `package.json`: new behaviour, and
+  a site composing `^0.1` should not silently gain a login form.
+
+================================================================================
+YOUR REPORT
+================================================================================
+
+`agent-runs/reports/2-shell-sign-in.md`
+
+- how the shell reaches the auth API, and whether that path was already there
+- what happens on a page where the `auth` Extension is **not** composed — the
+  shell must still work, because most sites will not have it
+- what you would need to show *which organization* a caller is acting in; the
+  `x-organization` header exists and the session carries memberships
+- anything that made the demo apps' sign-in form easier or harder than this one
