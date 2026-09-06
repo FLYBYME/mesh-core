@@ -1,0 +1,32 @@
+{
+    // Typechecking only. Nothing here emits, and nothing here is what the builder runs.
+    //
+    // A build is `esbuild`, which strips types and never checks them, so **typechecking is the
+    // author's job** — in this repository, before pushing. `@flybyme/mesh-web` is a devDependency for
+    // exactly that reason and for no other: the build resolves it through the page's import map, not
+    // through `node_modules`, and a part artifact must never contain a copy of the kernel.
+    //
+    // `types: []` on purpose: this is browser code, so a node builtin in here should be a compile
+    // error rather than something that fails once it reaches a page.
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "types": [],
+
+        "strict": true,
+        "exactOptionalPropertyTypes": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+
+        "noEmit": true,
+        "skipLibCheck": true,
+        "verbatimModuleSyntax": true,
+        "isolatedModules": true
+    },
+    "include": ["src/**/*.ts", "test/**/*.ts"]
+}

@@ -1,0 +1,22 @@
+{
+    "name": "@flybyme/mesh-core",
+    "version": "0.1.0",
+    "description": "The parts the platform is operated with: the shell, and the consoles for the services behind it.",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "generate": "mesh-serve client",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test:browser": "vitest run --config vitest.browser.config.ts",
+        "test": "npm run typecheck && npm run test:browser",
+        "dev": "mesh-serve dev"
+    },
+    "devDependencies": {
+        "@flybyme/mesh-serve": "file:../mesh-serve",
+        "@flybyme/mesh-web": "github:FLYBYME/mesh-web#v0.11.1",
+        "@vitest/browser": "^2.1.9",
+        "playwright": "^1.62.1",
+        "typescript": "^5.9.3",
+        "vitest": "^2.1.9"
+    }
+}

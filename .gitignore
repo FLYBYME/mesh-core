@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+
+# `mesh-serve dev` output. Disposable, rebuilt on every run, never an artifact.
+.dev/
+
+# `mesh-serve dev` output. Disposable, rebuilt on every run.
+.dev/
+agent-runs/results/*.result.md
+agent-runs/results/*-verify.log
