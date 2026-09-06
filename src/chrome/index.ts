@@ -141,7 +141,7 @@ export default class ChromeExtension implements Extension<typeof NEEDS, readonly
                  */
                 props: {
                     class: 'chrome-shell',
-                    style: { display: 'flex', flexDirection: 'column', height: '100%' },
+                    style: { display: 'flex', flexDirection: 'column', width: '100%', height: '100%' },
                 },
                 children: [
                     element('Row', {
