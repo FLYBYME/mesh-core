@@ -80,6 +80,32 @@
             ],
             "license": "UNLICENSED",
             "homepage": "https://github.com/FLYBYME/mesh-core"
+        },
+        {
+            "kind": "extension",
+            "id": "auth",
+            "version": "0.3.0",
+            "entry": "src/auth/index.ts",
+            "kernel": "^0.11",
+            "mesh": [
+                {
+                    "package": "@flybyme/mesh-serve",
+                    "version": "^0.1",
+                    "contracts": [
+                        "identity.ticket_issue",
+                        "identity.whoami"
+                    ]
+                }
+            ],
+            "description": "The auth Extension: holds the session, attaches the ticket, and hands no credential to anyone.",
+            "keywords": [
+                "auth",
+                "identity",
+                "session",
+                "core"
+            ],
+            "license": "UNLICENSED",
+            "homepage": "https://github.com/FLYBYME/mesh-core"
         }
     ]
 }
