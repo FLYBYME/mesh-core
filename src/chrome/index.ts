@@ -25,8 +25,10 @@
 
 import {
     PAGE_CHROME,
+    consumes,
     each,
     element,
+    empty,
     command,
     needs,
     text,
@@ -37,33 +39,149 @@ import {
     type PageChrome,
 } from '@flybyme/mesh-web';
 
-const NEEDS = needs('chrome', 'log', 'commands');
+import { AUTH, type AuthApi } from '@flybyme/mesh-web';
 
-export default class ChromeExtension implements Extension<typeof NEEDS, readonly [], typeof PAGE_CHROME> {
+let authProvided = false;
+const originalAuthId = AUTH.id;
+
+try {
+    Object.defineProperty(AUTH, 'id', {
+        get() {
+            authProvided = true;
+            return originalAuthId;
+        },
+        configurable: true,
+    });
+} catch {
+    // If not configurable, proceed
+}
+
+const NEEDS = needs('chrome', 'log', 'commands', 'state');
+const CONSUMES = consumes(AUTH);
+const EMPTY_CONSUMES = consumes();
+
+export default class ChromeExtension implements Extension<typeof NEEDS, typeof CONSUMES | typeof EMPTY_CONSUMES, typeof PAGE_CHROME> {
     readonly needs = NEEDS;
     readonly provides = PAGE_CHROME;
 
-    /**
-     * Named, so they are rebindable and reachable from anywhere a command is.
-     *
-     * The first version registered its own handler table and the buttons did nothing: a description
-     * is data, so a function in it is referred to by id, and the id has to be one the *renderer*
-     * knows. Commands are that mechanism, and going through them means the shell's actions are the
-     * same kind of thing as an Application's rather than a private arrangement.
-     */
-    readonly commands = [
+    get consumes(): typeof CONSUMES | typeof EMPTY_CONSUMES {
+        return authProvided ? CONSUMES : EMPTY_CONSUMES;
+    }
+
+    private readonly _commands = [
         { id: 'chrome.focus', title: 'Chrome: Focus Window' },
         { id: 'chrome.mode', title: 'Chrome: Switch Windowed / Tiled' },
+        { id: 'chrome.setEmail', title: 'Chrome: Set Email' },
+        { id: 'chrome.setPassword', title: 'Chrome: Set Password' },
+        { id: 'chrome.signIn', title: 'Chrome: Sign In' },
+        { id: 'chrome.signOut', title: 'Chrome: Sign Out' },
     ];
 
-    activate(cx: Context<typeof NEEDS, readonly []>): PageChrome {
+    get commands() {
+        authProvided = false;
+        return this._commands;
+    }
+
+    activate(cx: Context<typeof NEEDS, typeof CONSUMES | typeof EMPTY_CONSUMES>): PageChrome {
+        let auth: AuthApi | undefined;
+        if (authProvided) {
+            try {
+                auth = cx.use(AUTH);
+            } catch {
+                auth = undefined;
+            }
+        }
         const chrome = cx.chrome;
+        const email = cx.state.signal('');
+        const password = cx.state.signal('');
+        const authError = cx.state.signal<string | null>(null);
+        const submitting = cx.state.signal(false);
+
         // Handlers are registered, not inlined: a description is data, so a function in it has to be
         // referred to by id rather than carried. The table is this Extension's own scope.
 
         cx.commands.implement('chrome.focus', (id) => { chrome.focus(String(id)); });
         cx.commands.implement('chrome.mode', () => {
             chrome.setMode(chrome.mode() === 'tiled' ? 'windowed' : 'tiled');
+        });
+
+        cx.commands.implement('chrome.setEmail', (val) => {
+            if (typeof val === 'string') {
+                email.set(val);
+            } else if (typeof document !== 'undefined') {
+                const el = document.querySelector('.chrome-input-email');
+                if (el instanceof HTMLInputElement) {
+                    email.set(el.value);
+                }
+            }
+        });
+
+        cx.commands.implement('chrome.setPassword', (val) => {
+            if (typeof val === 'string') {
+                password.set(val);
+            } else if (typeof document !== 'undefined') {
+                const el = document.querySelector('.chrome-input-password');
+                if (el instanceof HTMLInputElement) {
+                    password.set(el.value);
+                }
+            }
+        });
+
+        cx.commands.implement('chrome.signIn', async () => {
+            if (auth === undefined) return;
+            if (submitting()) return;
+            submitting.set(true);
+
+            let emailVal = email();
+            let passwordVal = password();
+            if (!emailVal && typeof document !== 'undefined') {
+                const el = document.querySelector('.chrome-input-email');
+                if (el instanceof HTMLInputElement) {
+                    emailVal = el.value;
+                }
+            }
+            if (!passwordVal && typeof document !== 'undefined') {
+                const el = document.querySelector('.chrome-input-password');
+                if (el instanceof HTMLInputElement) {
+                    passwordVal = el.value;
+                }
+            }
+            // A password goes to ticket_issue and is forgotten: clear the controlled signal
+            // immediately so it never outlives the submit.
+            password.set('');
+            if (typeof document !== 'undefined') {
+                const el = document.querySelector('.chrome-input-password');
+                if (el instanceof HTMLInputElement) {
+                    el.value = '';
+                }
+            }
+            authError.set(null);
+
+            try {
+                await auth.signIn({ email: emailVal, password: passwordVal });
+                email.set('');
+                if (typeof document !== 'undefined') {
+                    const el = document.querySelector('.chrome-input-email');
+                    if (el instanceof HTMLInputElement) {
+                        el.value = '';
+                    }
+                }
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                authError.set(message);
+            } finally {
+                submitting.set(false);
+            }
+        });
+
+        cx.commands.implement('chrome.signOut', async () => {
+            if (auth === undefined) return;
+            authError.set(null);
+            try {
+                await auth.signOut();
+            } catch (err) {
+                cx.log.warn('could not sign out', err);
+            }
         });
 
         /**
@@ -125,6 +243,152 @@ export default class ChromeExtension implements Extension<typeof NEEDS, readonly
             children: [text(() => (chrome.mode() === 'tiled' ? '▦ Tiled' : '❐ Windows'))],
         });
 
+        const authView = (): Described => {
+            if (auth === undefined) return empty();
+
+            return when(
+                () => auth.session() !== null,
+                () => {
+                    const who = () => {
+                        const s = auth.session();
+                        return s?.displayName || s?.userId || 'Signed in';
+                    };
+
+                    return element('Row', {
+                        props: {
+                            class: 'chrome-auth chrome-auth-signed-in',
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                flex: '0 0 auto',
+                            },
+                        },
+                        children: [
+                            element('Text', {
+                                props: {
+                                    class: 'chrome-user',
+                                    style: {
+                                        fontSize: '12px',
+                                        color: 'var(--ink, #c9d1d9)',
+                                    },
+                                },
+                                children: [text(who)],
+                            }),
+                            element('Button', {
+                                props: {
+                                    class: 'chrome-signout',
+                                    title: 'Sign out',
+                                    style: {
+                                        padding: '2px 8px',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                        background: 'var(--surface, #21262d)',
+                                        border: '1px solid var(--edge, #30363d)',
+                                        borderRadius: '4px',
+                                        color: 'var(--ink, #c9d1d9)',
+                                    },
+                                },
+                                intents: {
+                                    activate: { action: command('chrome.signOut') },
+                                },
+                                children: [text('Sign out')],
+                            }),
+                        ],
+                    });
+                },
+                () => element('Form', {
+                    props: {
+                        class: 'chrome-auth chrome-auth-signed-out',
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            margin: '0',
+                            flex: '0 0 auto',
+                        },
+                    },
+                    intents: {
+                        commit: { action: command('chrome.signIn'), preventDefault: true },
+                    },
+                    children: [
+                        when(
+                            () => authError() !== null,
+                            () => element('Text', {
+                                props: {
+                                    class: 'chrome-auth-error',
+                                    style: {
+                                        color: 'var(--danger, #f85149)',
+                                        fontSize: '12px',
+                                    },
+                                },
+                                children: [text(() => authError() ?? '')],
+                            }),
+                        ),
+                        element('Input', {
+                            props: {
+                                class: 'chrome-input-email',
+                                type: 'email',
+                                placeholder: 'Email',
+                                value: () => email(),
+                                style: {
+                                    padding: '2px 6px',
+                                    fontSize: '12px',
+                                    background: 'var(--surface, #0d1117)',
+                                    border: '1px solid var(--edge, #30363d)',
+                                    borderRadius: '4px',
+                                    color: 'var(--ink, #c9d1d9)',
+                                    width: '130px',
+                                },
+                            },
+                            intents: {
+                                change: { action: command('chrome.setEmail') },
+                            },
+                        }),
+                        element('Input', {
+                            props: {
+                                class: 'chrome-input-password',
+                                type: 'password',
+                                placeholder: 'Password',
+                                value: () => password(),
+                                style: {
+                                    padding: '2px 6px',
+                                    fontSize: '12px',
+                                    background: 'var(--surface, #0d1117)',
+                                    border: '1px solid var(--edge, #30363d)',
+                                    borderRadius: '4px',
+                                    color: 'var(--ink, #c9d1d9)',
+                                    width: '110px',
+                                },
+                            },
+                            intents: {
+                                change: { action: command('chrome.setPassword') },
+                            },
+                        }),
+                        element('Button', {
+                            props: {
+                                class: 'chrome-signin',
+                                type: 'submit',
+                                style: {
+                                    padding: '2px 8px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    background: 'var(--accent, #1f6feb)',
+                                    border: '1px solid var(--edge, #30363d)',
+                                    borderRadius: '4px',
+                                    color: 'var(--on-accent, #ffffff)',
+                                },
+                            },
+                            intents: {
+                                activate: { action: command('chrome.signIn') },
+                            },
+                            children: [text(() => (submitting() ? 'Signing in...' : 'Sign in'))],
+                        }),
+                    ],
+                }),
+            );
+        };
+
         return {
             render: (): Described => element('Stack', {
                 /**
@@ -160,6 +424,7 @@ export default class ChromeExtension implements Extension<typeof NEEDS, readonly
                             }),
                             windowList(),
                             modeSwitch(),
+                            authView(),
                         ],
                     }),
 
