@@ -4,10 +4,14 @@
         {
             "kind": "extension",
             "id": "chrome",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "entry": "src/chrome/index.ts",
             "description": "The shell every site gets: a window list, a mode switch, and the area the windows live in.",
-            "keywords": ["chrome", "shell", "core"],
+            "keywords": [
+                "chrome",
+                "shell",
+                "core"
+            ],
             "license": "UNLICENSED",
             "homepage": "https://github.com/FLYBYME/mesh-core"
         }

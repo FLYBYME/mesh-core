@@ -1,6 +1,6 @@
 {
     "name": "@flybyme/mesh-core",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "The parts the platform is operated with: the shell, and the consoles for the services behind it.",
     "type": "module",
     "private": true,

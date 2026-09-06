@@ -74,7 +74,10 @@ export default class ChromeExtension implements Extension<typeof NEEDS, readonly
          * button is one that loses focus mid-keyboard-navigation.
          */
         const windowList = (): Described => element('Row', {
-            props: { class: 'chrome-windows', gap: 4 },
+            props: {
+                class: 'chrome-windows',
+                style: { display: 'flex', gap: '4px', flex: '1 1 auto', overflowX: 'auto' },
+            },
             children: [
                 each(
                     () => chrome.windows(),
@@ -124,10 +127,32 @@ export default class ChromeExtension implements Extension<typeof NEEDS, readonly
 
         return {
             render: (): Described => element('Stack', {
-                props: { class: 'chrome-shell' },
+                /**
+                 * Styled inline, and that is a finding rather than a preference.
+                 *
+                 * **A part cannot ship CSS.** The builder bundles an entry with esbuild; the
+                 * kernel's own stylesheet is copied by mesh-web's build script and served as a
+                 * second file in the kernel artifact. A part has no equivalent, so a shell that
+                 * needs `height: 100%` on its outermost box has nowhere to say so except here.
+                 *
+                 * It matters more than it looks: this is the box the window host lives in, and a
+                 * host with no height is a desktop with no windows — which is exactly what the
+                 * first deploy of this Extension rendered.
+                 */
+                props: {
+                    class: 'chrome-shell',
+                    style: { display: 'flex', flexDirection: 'column', height: '100%' },
+                },
                 children: [
                     element('Row', {
-                        props: { class: 'chrome-bar' },
+                        props: {
+                            class: 'chrome-bar',
+                            style: {
+                                flex: '0 0 auto', alignItems: 'center', gap: '8px',
+                                padding: '6px 10px', background: 'var(--chrome, #161b22)',
+                                borderBottom: '1px solid var(--edge, #30363d)',
+                            },
+                        },
                         children: [
                             element('Text', {
                                 props: { class: 'chrome-brand' },
