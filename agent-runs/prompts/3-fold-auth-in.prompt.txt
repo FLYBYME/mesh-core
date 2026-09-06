@@ -1,0 +1,126 @@
+Code lives in:  FLYBYME/mesh-core — this worktree. All commits go here.
+
+================================================================================
+THE TASK
+================================================================================
+
+**Fold the `auth` Extension into this repository, and bring it up to kernel 0.11.**
+
+`mesh-auth` is a whole repository containing one Extension of about 400 lines.
+The decision (project owner, 2026-09-06) is that core parts live in mesh-core:
+the shell and the consoles are already here, and `auth` is the same kind of
+thing — infrastructure every site composes, not a demo.
+
+This is now safe to do because `partVersion.repository` is recorded per version,
+so a part changing repositories does not orphan the versions published from the
+old one.
+
+**The `auth` part is live on four of six sites** — `demo.localhost`, `localhost`,
+`127.0.0.1` and `console.localhost`. You are not deploying anything; publishing
+and recomposing happen outside this dispatch. But it is why the bar is high.
+
+================================================================================
+WHAT MOVES, AND WHERE
+================================================================================
+
+From `~/code/mesh-auth` (read it, do not edit it — it is a different repository):
+
+    src/index.ts          ->  src/auth/index.ts
+    src/extension.ts      ->  src/auth/extension.ts
+    test/auth.browser.test.ts -> test/auth.browser.test.ts
+
+This repository's layout is `src/<part>/index.ts` — see `src/chrome/`,
+`src/catalog/`, `src/releases/`. Follow it exactly.
+
+`src/generated/api.ts` is **generated**, not copied. mesh-auth's copy declares
+`identity.ticket_issue` and `identity.whoami`; this repository's declares the
+catalog and releases contracts. Add auth's `mesh` block to its part entry in
+`mesh.json` and regenerate with `npm run generate` — do not hand-merge two
+generated files.
+
+Add the fourth entry to `mesh.json`, matching the shape of the three already
+there — including `description`, `keywords`, `license` and `homepage`, which
+mesh-auth's entry lacks and which the catalog now reads (they are what stops the
+part store being a grid of bare ids).
+
+================================================================================
+THE UPGRADE, WHICH IS THE REAL WORK
+================================================================================
+
+mesh-auth is built against **kernel ^0.6** (`@flybyme/mesh-web` 0.6.1). This
+repository is on **^0.11** (`github:FLYBYME/mesh-web#v0.11.1`). Between those:
+
+- **A7.0** — `Input` with a controlled value now clears properly. If the auth
+  form carries a revision-counter workaround for that, delete it; it is no longer
+  needed and it is the kind of thing that quietly stays forever.
+- **0.11.2** — camelCase style props now work. Previously they were emitted
+  verbatim and silently dropped, so any inline style written in kebab-case as a
+  workaround can go back to the normal form.
+- **0.11.4** — `[hidden]` actually hides.
+- **0.11.5** — a manifest conflict is reported rather than swallowed.
+
+Read this repository's `src/chrome/index.ts` before you start. **chrome 0.2.0
+already does page-level sign-in**, consuming `AUTH` from `@flybyme/mesh-web` and
+calling auth's API. So the two halves are about to live in one repository, and
+you are the first person to see both at once:
+
+- `AUTH` and `AuthApi` are declared in **mesh-web**, not in mesh-auth. mesh-auth
+  *provides* the token; chrome *consumes* it. Moving the provider does not change
+  that and must not.
+- chrome guards on `authProvided` and falls back to `EMPTY_CONSUMES` when auth is
+  absent, because most sites will not compose it. **That must still work after
+  the move** — a site with chrome and no auth is the common case.
+
+If you find the two halves disagree about anything — the API surface, when the
+provider is registered, what happens on a page with no auth — that is the finding
+and it belongs in the report. Do not paper over it.
+
+================================================================================
+WHAT NOT TO DO
+================================================================================
+
+**Do not edit `~/code/mesh-auth`.** Read-only. It is archived after this lands.
+
+**Do not publish, compose or deploy.** No `mesh-serve publish`, no `cdn.compose`.
+Those happen outside this dispatch, against the live node, by hand.
+
+**Do not change chrome's behaviour.** If chrome needs a change to work with the
+moved auth, describe it in the report rather than making it — chrome 0.2.0 is
+live on all six sites.
+
+**Do not merge the two `src/generated/api.ts` files by hand.** Regenerate.
+
+**Zero `as any`, zero `as never`, zero casts.**
+
+================================================================================
+WHAT GOOD LOOKS LIKE
+================================================================================
+
+- `src/auth/` exists, `mesh.json` has four parts, `npm run generate` produces one
+  api.ts covering all four.
+- mesh-auth's browser test moved and **passing against kernel 0.11**, plus
+  chrome's existing 20 tests still passing — that pairing is the point, since it
+  is the first time a provider and its consumer are tested in one repository.
+- A test that **a page with chrome and no auth still works**. This is the
+  regression that would take down five sites and it is not currently covered
+  anywhere in this repository.
+- `npm run typecheck` clean. `npm test` green.
+- `auth` version bumped to **0.3.0** in `mesh.json`: new repository, new kernel
+  floor. Not 0.2.1 — a site composing `^0.2` must not silently move kernels.
+- The `kernel` field for the auth part reads `^0.11`.
+
+================================================================================
+YOUR REPORT
+================================================================================
+
+`agent-runs/reports/3-fold-auth-in.md`
+
+- what the 0.6 → 0.11 upgrade actually required, and which workarounds you deleted
+- **anything the provider and consumer disagreed about**, now that they are in one
+  repository — this is the most valuable thing you can produce here
+- what a site composing the old `auth@0.2.0` keeps getting, and what has to happen
+  for the four live sites to move to 0.3.0
+- whether `mesh-auth` can be archived immediately or whether something still reads
+  it — the catalog records it as `partVersion.repository` for every version
+  published from it, and C6 rebuilds by cloning that
+- anything for the reader audit
