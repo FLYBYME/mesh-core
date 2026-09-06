@@ -7,11 +7,13 @@ import {
     text,
     when,
     type Application,
+    type CollectionStatus,
     type CommandDecl,
     type Context,
     type Json,
     type Node as Described,
     type ProviderToken,
+    type ReadonlySignal,
     type Signal,
     type ViewContext,
     type ViewDecl,
@@ -27,16 +29,16 @@ import {
 } from '../generated/api.js';
 
 export interface ReleasesApi {
-    readonly sites: Signal<readonly SiteFindOutputItem[]>;
+    readonly sites: ReadonlySignal<readonly SiteFindOutputItem[]>;
     readonly selectedHost: Signal<string | null>;
     readonly selectedSite: () => SiteFindOutputItem | null;
-    readonly releases: Signal<readonly ReleaseFindOutputItem[]>;
+    readonly releases: ReadonlySignal<readonly ReleaseFindOutputItem[]>;
     readonly selectedReleaseHash: Signal<string | null>;
     readonly selectedRelease: () => ReleaseFindOutputItem | null;
-    readonly sitesStatus: Signal<'idle' | 'loading' | 'ready' | 'error'>;
-    readonly sitesError: Signal<string | null>;
-    readonly releasesStatus: Signal<'idle' | 'loading' | 'ready' | 'error'>;
-    readonly releasesError: Signal<string | null>;
+    readonly sitesStatus: ReadonlySignal<CollectionStatus>;
+    readonly sitesError: () => string | null;
+    readonly releasesStatus: ReadonlySignal<CollectionStatus>;
+    readonly releasesError: () => string | null;
 
     readonly composeKernel: Signal<string>;
     readonly composeName: Signal<string>;
@@ -61,7 +63,7 @@ export interface ReleasesApi {
 
 export const RELEASES: ProviderToken<ReleasesApi> = provider<ReleasesApi>('releases');
 
-const NEEDS = needs('mesh', 'state', 'commands', 'windows', 'log');
+const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log');
 
 function parsePartsInput(raw: string): readonly CdnComposeInputPart[] {
     const lines = raw.split('\n');
@@ -249,7 +251,7 @@ function renderReleasesView(vx: ViewContext<Record<string, never>, ReleasesApi>)
                 }),
             ),
             when(
-                () => app.sitesStatus() === 'ready' && app.sites().length === 0,
+                () => (app.sitesStatus() === 'ready' || app.sitesStatus() === 'empty') && app.sites().length === 0,
                 () => element('Text', {
                     props: { style: { fontSize: '12px', color: 'var(--ink-dim, #8b949e)', padding: '8px' } },
                     children: [text('No sites provisioned for this tenant.')],
@@ -378,7 +380,7 @@ function renderReleasesView(vx: ViewContext<Record<string, never>, ReleasesApi>)
                 },
             ),
             when(
-                () => app.releasesStatus() === 'ready' && app.releases().length === 0,
+                () => (app.releasesStatus() === 'ready' || app.releasesStatus() === 'empty') && app.releases().length === 0,
                 () => element('Text', {
                     props: { style: { fontSize: '12px', color: 'var(--ink-dim, #8b949e)', padding: '8px' } },
                     children: [text('No releases composed yet. Use the composer on the right.')],
@@ -968,7 +970,7 @@ function renderReleasesView(vx: ViewContext<Record<string, never>, ReleasesApi>)
     });
 }
 
-export default class ReleasesApp implements Application<typeof NEEDS, readonly [], typeof RELEASES> {
+export default class ReleasesApp implements Application<typeof NEEDS, readonly [], typeof RELEASES, typeof chromeApi> {
     readonly needs = NEEDS;
     readonly provides = RELEASES;
     readonly api = chromeApi;
@@ -994,15 +996,28 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
     ];
 
     async start(cx: Context<typeof NEEDS, readonly [], typeof chromeApi>): Promise<ReleasesApi> {
-        const sites = cx.state.signal<readonly SiteFindOutputItem[]>([]);
+        const sites = cx.models('site');
         const selectedHost = cx.state.signal<string | null>(null);
-        const releases = cx.state.signal<readonly ReleaseFindOutputItem[]>([]);
+        const releases = cx.models('release');
         const selectedReleaseHash = cx.state.signal<string | null>(null);
 
-        const sitesStatus = cx.state.signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
-        const sitesError = cx.state.signal<string | null>(null);
-        const releasesStatus = cx.state.signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
-        const releasesError = cx.state.signal<string | null>(null);
+        const sitesError = cx.state.computed<string | null>(() => {
+            const err = sites.error();
+            if (err === null) return null;
+            const detail = 'detail' in err && typeof err.detail === 'string'
+                ? err.detail
+                : err.kind;
+            return `Failed to load sites (${err.kind}): ${detail}`;
+        });
+
+        const releasesError = cx.state.computed<string | null>(() => {
+            const err = releases.error();
+            if (err === null) return null;
+            const detail = 'detail' in err && typeof err.detail === 'string'
+                ? err.detail
+                : err.kind;
+            return `Failed to load releases (${err.kind}): ${detail}`;
+        });
 
         const composeKernel = cx.state.signal<string>('^0.11');
         const composeName = cx.state.signal<string>('Console Release');
@@ -1018,7 +1033,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
         const selectedSite = cx.state.computed<SiteFindOutputItem | null>(() => {
             const h = selectedHost();
             if (h === null) return null;
-            for (const s of sites()) {
+            for (const s of sites.rows()) {
                 if (s.host === h) return s;
             }
             return null;
@@ -1027,58 +1042,34 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
         const selectedRelease = cx.state.computed<ReleaseFindOutputItem | null>(() => {
             const hash = selectedReleaseHash();
             if (hash === null) return null;
-            for (const r of releases()) {
+            for (const r of releases.rows()) {
                 if (r.hash === hash) return r;
             }
             return null;
         });
 
-        const loadSites = async (): Promise<void> => {
-            sitesStatus.set('loading');
-            sitesError.set(null);
-            const res = await cx.mesh.call('site.find', { query: {} });
-            if (res.ok) {
-                sites.set(res.value);
-                sitesStatus.set('ready');
-                if (selectedHost() === null && res.value.length > 0) {
-                    const first = res.value[0];
-                    if (first !== undefined) {
-                        selectedHost.set(first.host);
-                    }
+        cx.state.effect(() => {
+            const sRows = sites.rows();
+            if (selectedHost() === null && sRows.length > 0) {
+                const first = sRows[0];
+                if (first !== undefined) {
+                    selectedHost.set(first.host);
                 }
-            } else {
-                sitesStatus.set('error');
-                const detail = 'detail' in res.error && typeof res.error.detail === 'string'
-                    ? res.error.detail
-                    : res.error.kind;
-                sitesError.set(`Failed to load sites (${res.error.kind}): ${detail}`);
             }
-        };
+        });
 
-        const loadReleases = async (): Promise<void> => {
-            releasesStatus.set('loading');
-            releasesError.set(null);
-            const res = await cx.mesh.call('release.find', { query: {} });
-            if (res.ok) {
-                releases.set(res.value);
-                releasesStatus.set('ready');
-                if (selectedReleaseHash() === null && res.value.length > 0) {
-                    const first = res.value[0];
-                    if (first !== undefined) {
-                        selectedReleaseHash.set(first.hash);
-                    }
+        cx.state.effect(() => {
+            const rRows = releases.rows();
+            if (selectedReleaseHash() === null && rRows.length > 0) {
+                const first = rRows[0];
+                if (first !== undefined) {
+                    selectedReleaseHash.set(first.hash);
                 }
-            } else {
-                releasesStatus.set('error');
-                const detail = 'detail' in res.error && typeof res.error.detail === 'string'
-                    ? res.error.detail
-                    : res.error.kind;
-                releasesError.set(`Failed to load releases (${res.error.kind}): ${detail}`);
             }
-        };
+        });
 
         const loadData = async (): Promise<void> => {
-            await Promise.all([loadSites(), loadReleases()]);
+            await Promise.all([sites.refetch(), releases.refetch()]);
         };
 
         const selectSite = (host: string): void => {
@@ -1129,7 +1120,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
                 composeResult.set(res.value);
                 composeStatus.set('success');
                 if (!dryRun) {
-                    await loadReleases();
+                    await releases.refetch();
                     selectedReleaseHash.set(res.value.hash);
                 }
             } else {
@@ -1150,7 +1141,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             if (res.ok) {
                 deployResult.set(res.value);
                 deployStatus.set('success');
-                await loadSites();
+                await sites.refetch();
             } else {
                 deployStatus.set('error');
                 const detail = 'detail' in res.error && typeof res.error.detail === 'string'
@@ -1209,15 +1200,15 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
         });
 
         return {
-            sites,
+            sites: sites.rows,
             selectedHost,
             selectedSite,
-            releases,
+            releases: releases.rows,
             selectedReleaseHash,
             selectedRelease,
-            sitesStatus,
+            sitesStatus: sites.status,
             sitesError,
-            releasesStatus,
+            releasesStatus: releases.status,
             releasesError,
             composeKernel,
             composeName,
