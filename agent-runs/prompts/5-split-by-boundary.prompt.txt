@@ -1,0 +1,130 @@
+Code lives in:  FLYBYME/mesh-core — this worktree. All commits go here.
+
+================================================================================
+THE TASK
+================================================================================
+
+**Split the four parts into the file structure the project decided on.**
+Structure and reasoning: `~/code/surfdns/architecture/boundaries.md` — read it
+first, it is short and it is the specification for this dispatch.
+
+    catalog   1179 lines, 1 file
+    releases  1232 lines, 1 file
+    chrome     444 lines, 1 file
+    auth       427 lines, 2 files
+
+These four matter more than the demo applications, because **all six live sites
+run on them.** `chrome` is on every one; `auth` on four; `catalog` and `releases`
+are `console.localhost`.
+
+================================================================================
+THE SHAPE
+================================================================================
+
+    src/<part>/
+        contract.ts       the token, the API interface, NEEDS, CONSUMES
+        <pure>.ts         logic with no kernel import
+        views/
+            <view>.ts     one view per file
+        index.ts          the Application or Extension class, and the default export
+
+Four rules, each checkable:
+
+1. **`contract.ts` imports nothing from its siblings.** Being a leaf of the module
+   graph is what makes it safe for another part to import.
+2. **`index.ts` is the file no other part may import.**
+3. **The pure files import no kernel.**
+4. **One view per file** — a view is already the unit of screen.
+
+================================================================================
+THE ONE THAT IS DIFFERENT: auth
+================================================================================
+
+**`auth` is the reason this pattern exists, and it is already half-way there** —
+the only part in either repository with more than one file (`index.ts` +
+`extension.ts`). `boundaries.md` uses it as evidence.
+
+Note carefully: **`AUTH` and `AuthApi` are declared in `@flybyme/mesh-web`, not
+here.** `auth` *provides* the token; `chrome` *consumes* it. That is the same
+pattern one level up, and splitting `auth` must not change it — do not move the
+token, do not re-declare it, do not create a local copy.
+
+`chrome` guards on a module-level `authProvided` flag and falls back to
+`EMPTY_CONSUMES` when auth is absent, because most sites will not compose it.
+**That must still work after the split.** There is a test for it — *"a page with
+chrome and no auth still works after a page with auth ran"* — which exists
+because that flag is module-level state and ordering matters. If the split moves
+that flag between modules, think hard about what module-level state means when
+two modules now hold it.
+
+================================================================================
+WHAT MUST NOT CHANGE
+================================================================================
+
+**Behaviour. Any of it.** These four parts are what six live sites are serving
+right now at kernel 0.13.0. A reader must be able to confirm this dispatch changed
+no behaviour by reading the diff, which is only possible if the diff is moves and
+imports.
+
+- **No renamed exports, no changed signatures, no fixes in passing.** Found a bug?
+  Report it, leave it.
+- **`catalog` and `releases` were rewritten onto the `models` capability
+  yesterday** (dispatch 4). Do not undo, adjust or "improve" that adoption — this
+  is a file split on top of it.
+- **Every existing test passes untouched.** 27 tests across four files. The only
+  acceptable test edits are import paths. If a test needs a real change, something
+  moved that should not have — stop and say so.
+
+================================================================================
+VERSIONS
+================================================================================
+
+Bump each part's **patch** version in `mesh.json`: `chrome` 0.2.0 → 0.2.1,
+`catalog` 0.2.0 → 0.2.1, `releases` 0.2.0 → 0.2.1, `auth` 0.3.0 → 0.3.1. Not a
+minor — no interface changes.
+
+The bump is required even though behaviour does not change: a version is immutable
+and bound to a commit, so republishing the same version from a new commit is
+refused by the catalog, correctly. The artifact digest will change because the
+bytes change; that is expected, because a release names digests.
+
+Kernel stays `^0.13`. Do not touch it.
+
+================================================================================
+HOW TO WORK
+================================================================================
+
+**One part per commit**, four commits, each reviewable alone. Start with
+**`auth`** — it is smallest, already split, and it is the pattern's own example.
+Then `chrome`, then `catalog`, then `releases`.
+
+**Run every command in the foreground**, and run the tests after each part rather
+than only at the end.
+
+**Zero `as any`, zero `as never`, zero casts.**
+
+================================================================================
+WHAT GOOD LOOKS LIKE
+================================================================================
+
+- Four parts in the shape above.
+- `npm test` green — **27 tests**, none edited beyond import paths.
+- `npm run typecheck` clean.
+- A grep for `from '../[a-z]*/index.js'` finds nothing.
+- Patch bumps in `mesh.json`.
+
+================================================================================
+YOUR REPORT
+================================================================================
+
+`agent-runs/reports/5-split-by-boundary.md`
+
+- **whether a console has a pure half at all.** `catalog` and `releases` are
+  mostly views over remote data; if rule 3 yields nothing for them, that is worth
+  knowing, because it means the rule is about applications with logic rather than
+  about every part.
+- what happened to `chrome`'s module-level `authProvided` flag, and whether the
+  split made that state harder or easier to reason about
+- whether `auth`'s existing two-file split matched the shape or had to be redone
+- bugs found and deliberately left, with file and line
+- anything for the reader audit
