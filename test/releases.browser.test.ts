@@ -344,4 +344,39 @@ describe('ReleasesApp', () => {
         const errorCard = document.querySelector('.sites-error-card');
         expect(errorCard).not.toBeNull();
     });
+
+    it('updates bound collections after mutations without caller re-fetching', async () => {
+        const s = await mountPart({
+            parts: [{ id: 'releases', contribution: ReleasesApp }],
+        });
+        site = s;
+
+        const releasesApi = s.kernel.provided(RELEASES);
+        if (!releasesApi) throw new Error('ReleasesApi not found');
+
+        // Baseline: 2 releases, 2 sites
+        expect(releasesApi.releases().length).toBe(2);
+        expect(releasesApi.sites().find((st) => st.host === '127.0.0.1')?.releaseHash)
+            .toBe('sha256:11111111111111111111111111111111');
+
+        // Mutation 1: compose a new release (POST /api/releases)
+        await releasesApi.runCompose(false);
+
+        // Assert: bound releases collection reflects the new release without manual caller re-fetch
+        expect(releasesApi.composeStatus()).toBe('success');
+        expect(releasesApi.releases().length).toBe(3);
+        expect(releasesApi.releases().some((r) => r.hash === 'sha256:33333333333333333333333333333333')).toBe(true);
+
+        // Mutation 2: deploy the new release to site 127.0.0.1 (POST /sites/:host/deploy)
+        await releasesApi.runDeploy('127.0.0.1', 'sha256:33333333333333333333333333333333');
+
+        // Assert: bound sites collection reflects the updated releaseHash without manual caller re-fetch
+        expect(releasesApi.deployStatus()).toBe('success');
+        expect(releasesApi.sites().find((st) => st.host === '127.0.0.1')?.releaseHash)
+            .toBe('sha256:33333333333333333333333333333333');
+
+        // Assert DOM reactivity reflects the bound collections
+        const releaseButtons = document.querySelectorAll('.release-item');
+        expect(releaseButtons.length).toBe(3);
+    });
 });
