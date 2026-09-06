@@ -1,11 +1,12 @@
 {
-    "kernel": "^0.11",
+    "kernel": "^0.13",
     "parts": [
         {
             "kind": "extension",
             "id": "chrome",
             "version": "0.2.0",
             "entry": "src/chrome/index.ts",
+            "kernel": "^0.13",
             "description": "The shell every site gets: a window list, a mode switch, and the area the windows live in.",
             "keywords": [
                 "chrome",
@@ -18,8 +19,9 @@
         {
             "kind": "application",
             "id": "catalog",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "entry": "src/catalog/index.ts",
+            "kernel": "^0.13",
             "mesh": [
                 {
                     "package": "@flybyme/mesh-serve",
@@ -50,8 +52,9 @@
         {
             "kind": "application",
             "id": "releases",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "entry": "src/releases/index.ts",
+            "kernel": "^0.13",
             "mesh": [
                 {
                     "package": "@flybyme/mesh-serve",
@@ -86,7 +89,7 @@
             "id": "auth",
             "version": "0.3.0",
             "entry": "src/auth/index.ts",
-            "kernel": "^0.11",
+            "kernel": "^0.13",
             "mesh": [
                 {
                     "package": "@flybyme/mesh-serve",
