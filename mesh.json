@@ -14,6 +14,72 @@
             ],
             "license": "UNLICENSED",
             "homepage": "https://github.com/FLYBYME/mesh-core"
+        },
+        {
+            "kind": "application",
+            "id": "catalog",
+            "version": "0.1.0",
+            "entry": "src/catalog/index.ts",
+            "mesh": [
+                {
+                    "package": "@flybyme/mesh-serve",
+                    "version": "^0.1",
+                    "contracts": [
+                        "part.find",
+                        "part.get",
+                        "part.count",
+                        "partVersion.find",
+                        "partVersion.get",
+                        "partVersion.count",
+                        "catalog.resolve"
+                    ]
+                }
+            ],
+            "description": "Browse the platform catalog: inspect parts, versions, provenance, authors, repositories, and resolve version requirements.",
+            "keywords": [
+                "catalog",
+                "parts",
+                "versions",
+                "packages",
+                "core",
+                "console"
+            ],
+            "license": "UNLICENSED",
+            "homepage": "https://github.com/FLYBYME/mesh-core"
+        },
+        {
+            "kind": "application",
+            "id": "releases",
+            "version": "0.1.0",
+            "entry": "src/releases/index.ts",
+            "mesh": [
+                {
+                    "package": "@flybyme/mesh-serve",
+                    "version": "^0.1",
+                    "contracts": [
+                        "release.find",
+                        "release.get",
+                        "release.count",
+                        "site.find",
+                        "site.get",
+                        "site.count",
+                        "cdn.compose",
+                        "cdn.deploy"
+                    ]
+                }
+            ],
+            "description": "Compose immutable releases from version ranges, dry-run dependency resolutions, deploy to hostnames, and roll back.",
+            "keywords": [
+                "releases",
+                "deploy",
+                "rollback",
+                "cdn",
+                "sites",
+                "core",
+                "console"
+            ],
+            "license": "UNLICENSED",
+            "homepage": "https://github.com/FLYBYME/mesh-core"
         }
     ]
 }
