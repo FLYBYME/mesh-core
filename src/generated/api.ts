@@ -1,7 +1,7 @@
 // GENERATED FILE — do not edit.
 //
 // Emitted from chrome's mesh.json by `mesh-serve client`.
-// Exposure: sha256:c550f392a1a98e871b3af482f61b46e4
+// Exposure: sha256:5c9617cccad0f34fc0bcaebfeb2ba4eb
 //
 // Regenerate rather than editing. The exposure hash above is checked at run time against
 // the one the API reports, so a hand-edited client is a client that lies about a surface
@@ -93,6 +93,32 @@ export interface CdnDeployOutput {
     readonly release: string;
     readonly changed: boolean;
     readonly unusedGrants: readonly string[];
+}
+
+export interface IdentityTicketIssueInput {
+    readonly email: string;
+    readonly password: string;
+    readonly via?: string;
+}
+
+export interface IdentityTicketIssueOutput {
+    readonly token: string;
+    readonly userId: string;
+    readonly expiresAt: number;
+}
+
+export interface IdentityWhoamiOutputOrganization {
+    readonly organizationId: string;
+    readonly name: string;
+    readonly roleKey: string;
+}
+
+export interface IdentityWhoamiOutput {
+    readonly userId: string;
+    readonly email: string;
+    readonly displayName: string;
+    readonly roles: readonly string[];
+    readonly organizations: readonly IdentityWhoamiOutputOrganization[];
 }
 
 export interface PartCountInput {
@@ -455,7 +481,7 @@ export interface SiteGetOutput {
 
 export const chromeApi = defineApi({
     id: "chrome",
-    exposure: "sha256:c550f392a1a98e871b3af482f61b46e4",
+    exposure: "sha256:5c9617cccad0f34fc0bcaebfeb2ba4eb",
     base: "/api",
     calls: {
         /**
@@ -476,6 +502,18 @@ export const chromeApi = defineApi({
          * POST /sites/:host/deploy — auth: public, destructive
          */
         "cdn.deploy": call<CdnDeployInput, CdnDeployOutput, never>("POST", "/sites/:host/deploy"),
+        /**
+         * Exchange credentials for an opaque ticket.
+         *
+         * POST /identity/ticket — auth: public, destructive
+         */
+        "identity.ticket_issue": call<IdentityTicketIssueInput, IdentityTicketIssueOutput, never>("POST", "/identity/ticket"),
+        /**
+         * Who the caller is, and which organizations they belong to.
+         *
+         * GET /identity/whoami — auth: public
+         */
+        "identity.whoami": call<void, IdentityWhoamiOutput, never>("GET", "/identity/whoami"),
         /**
          * Get the number of parts by query.
          *
