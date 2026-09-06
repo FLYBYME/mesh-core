@@ -7,11 +7,13 @@ import {
     text,
     when,
     type Application,
+    type CollectionStatus,
     type CommandDecl,
     type Context,
     type Json,
     type Node as Described,
     type ProviderToken,
+    type ReadonlySignal,
     type Signal,
     type ViewContext,
     type ViewDecl,
@@ -25,16 +27,16 @@ import {
 } from '../generated/api.js';
 
 export interface CatalogApi {
-    readonly parts: Signal<readonly PartFindOutputItem[]>;
+    readonly parts: ReadonlySignal<readonly PartFindOutputItem[]>;
     readonly selectedPartName: Signal<string | null>;
     readonly selectedPart: () => PartFindOutputItem | null;
-    readonly versions: Signal<readonly PartVersionFindOutputItem[]>;
+    readonly versions: ReadonlySignal<readonly PartVersionFindOutputItem[]>;
     readonly selectedVersionNumber: Signal<string | null>;
     readonly selectedVersion: () => PartVersionFindOutputItem | null;
-    readonly status: Signal<'loading' | 'ready' | 'error'>;
-    readonly errorMessage: Signal<string | null>;
-    readonly versionStatus: Signal<'idle' | 'loading' | 'ready' | 'error'>;
-    readonly versionErrorMessage: Signal<string | null>;
+    readonly status: ReadonlySignal<CollectionStatus>;
+    readonly errorMessage: () => string | null;
+    readonly versionStatus: ReadonlySignal<CollectionStatus>;
+    readonly versionErrorMessage: () => string | null;
     readonly searchQuery: Signal<string>;
     readonly kindFilter: Signal<'all' | 'kernel' | 'application' | 'extension'>;
     readonly filteredParts: () => readonly PartFindOutputItem[];
@@ -55,7 +57,7 @@ export interface CatalogApi {
 
 export const CATALOG: ProviderToken<CatalogApi> = provider<CatalogApi>('catalog');
 
-const NEEDS = needs('mesh', 'state', 'commands', 'windows', 'log');
+const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log');
 
 function renderKindBadge(kind: () => string): Described {
     return element('Badge', {
@@ -347,7 +349,7 @@ function renderCatalogView(vx: ViewContext<Record<string, never>, CatalogApi>): 
                 }),
             ),
             when(
-                () => app.status() === 'ready' && app.filteredParts().length === 0,
+                () => (app.status() === 'ready' || app.status() === 'empty') && app.filteredParts().length === 0,
                 () => element('Text', {
                     props: { style: { padding: '24px 16px', color: 'var(--ink-dim, #8b949e)', display: 'block' } },
                     children: [text('No parts match the search criteria.')],
@@ -471,7 +473,7 @@ function renderCatalogView(vx: ViewContext<Record<string, never>, CatalogApi>): 
                         }),
                     ),
                     when(
-                        () => app.versionStatus() === 'ready' && app.versions().length === 0,
+                        () => (app.versionStatus() === 'ready' || app.versionStatus() === 'empty') && app.versions().length === 0,
                         () => element('Text', {
                             props: { style: { padding: '16px', color: 'var(--ink-dim, #8b949e)', display: 'block' } },
                             children: [text('No published versions found for this part.')],
@@ -919,7 +921,7 @@ function renderCatalogView(vx: ViewContext<Record<string, never>, CatalogApi>): 
     });
 }
 
-export default class CatalogApp implements Application<typeof NEEDS, readonly [], typeof CATALOG> {
+export default class CatalogApp implements Application<typeof NEEDS, readonly [], typeof CATALOG, typeof chromeApi> {
     readonly needs = NEEDS;
     readonly provides = CATALOG;
     readonly api = chromeApi;
@@ -945,14 +947,33 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
     ];
 
     async start(cx: Context<typeof NEEDS, readonly [], typeof chromeApi>): Promise<CatalogApi> {
-        const parts = cx.state.signal<readonly PartFindOutputItem[]>([]);
+        const parts = cx.models('part');
         const selectedPartName = cx.state.signal<string | null>(null);
-        const versions = cx.state.signal<readonly PartVersionFindOutputItem[]>([]);
+
+        const versions = cx.models('partVersion', () => {
+            const partName = selectedPartName();
+            return partName !== null ? { query: { partName } } : { query: { partName: '' } };
+        });
         const selectedVersionNumber = cx.state.signal<string | null>(null);
-        const status = cx.state.signal<'loading' | 'ready' | 'error'>('loading');
-        const errorMessage = cx.state.signal<string | null>(null);
-        const versionStatus = cx.state.signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
-        const versionErrorMessage = cx.state.signal<string | null>(null);
+
+        const errorMessage = cx.state.computed<string | null>(() => {
+            const err = parts.error();
+            if (err === null) return null;
+            const detail = 'detail' in err && typeof err.detail === 'string'
+                ? err.detail
+                : err.kind;
+            return `Failed to load catalog parts (${err.kind}): ${detail}`;
+        });
+
+        const versionErrorMessage = cx.state.computed<string | null>(() => {
+            const err = versions.error();
+            if (err === null) return null;
+            const detail = 'detail' in err && typeof err.detail === 'string'
+                ? err.detail
+                : err.kind;
+            return `Failed to load versions (${err.kind}): ${detail}`;
+        });
+
         const searchQuery = cx.state.signal<string>('');
         const kindFilter = cx.state.signal<'all' | 'kernel' | 'application' | 'extension'>('all');
 
@@ -966,7 +987,7 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
         const selectedPart = cx.state.computed<PartFindOutputItem | null>(() => {
             const name = selectedPartName();
             if (name === null) return null;
-            for (const p of parts()) {
+            for (const p of parts.rows()) {
                 if (p.name === name) return p;
             }
             return null;
@@ -975,7 +996,7 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
         const selectedVersion = cx.state.computed<PartVersionFindOutputItem | null>(() => {
             const ver = selectedVersionNumber();
             if (ver === null) return null;
-            for (const v of versions()) {
+            for (const v of versions.rows()) {
                 if (v.version === ver) return v;
             }
             return null;
@@ -984,7 +1005,7 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
         const filteredParts = cx.state.computed<readonly PartFindOutputItem[]>(() => {
             const q = searchQuery().toLowerCase().trim();
             const k = kindFilter();
-            return parts().filter((p) => {
+            return parts.rows().filter((p) => {
                 if (k !== 'all' && p.kind !== k) return false;
                 if (q === '') return true;
                 if (p.name.toLowerCase().includes(q)) return true;
@@ -995,57 +1016,37 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
             });
         });
 
-        const loadVersions = async (partName: string): Promise<void> => {
-            versionStatus.set('loading');
-            versionErrorMessage.set(null);
-            const res = await cx.mesh.call('partVersion.find', { query: { partName } });
-            if (res.ok) {
-                versions.set(res.value);
-                versionStatus.set('ready');
-                if (res.value.length > 0) {
-                    const first = res.value[0];
-                    if (first !== undefined) {
-                        selectedVersionNumber.set(first.version);
-                    }
-                } else {
-                    selectedVersionNumber.set(null);
+        cx.state.effect(() => {
+            const pRows = parts.rows();
+            if (selectedPartName() === null && pRows.length > 0) {
+                const first = pRows[0];
+                if (first !== undefined) {
+                    selectedPartName.set(first.name);
+                    resolvePartName.set(first.name);
+                }
+            }
+        });
+
+        cx.state.effect(() => {
+            const vRows = versions.rows();
+            if (vRows.length > 0) {
+                const first = vRows[0];
+                if (first !== undefined) {
+                    selectedVersionNumber.set(first.version);
                 }
             } else {
-                versionStatus.set('error');
-                const detail = 'detail' in res.error && typeof res.error.detail === 'string'
-                    ? res.error.detail
-                    : res.error.kind;
-                versionErrorMessage.set(`Failed to load versions (${res.error.kind}): ${detail}`);
+                selectedVersionNumber.set(null);
             }
-        };
+        });
 
         const selectPart = async (name: string): Promise<void> => {
             selectedPartName.set(name);
             resolvePartName.set(name);
-            await loadVersions(name);
+            await versions.refetch();
         };
 
         const loadParts = async (): Promise<void> => {
-            status.set('loading');
-            errorMessage.set(null);
-            const res = await cx.mesh.call('part.find', { query: {} });
-            if (res.ok) {
-                parts.set(res.value);
-                status.set('ready');
-                const current = selectedPartName();
-                if (current === null && res.value.length > 0) {
-                    const first = res.value[0];
-                    if (first !== undefined) {
-                        await selectPart(first.name);
-                    }
-                }
-            } else {
-                status.set('error');
-                const detail = 'detail' in res.error && typeof res.error.detail === 'string'
-                    ? res.error.detail
-                    : res.error.kind;
-                errorMessage.set(`Failed to load catalog parts (${res.error.kind}): ${detail}`);
-            }
+            await parts.refetch();
         };
 
         const selectVersion = (version: string): void => {
@@ -1136,7 +1137,10 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
             await runResolve();
         });
 
-        await loadParts();
+        await parts.refetch();
+        if (selectedPartName() !== null) {
+            await versions.refetch();
+        }
 
         queueMicrotask(() => {
             if (cx.windows.own().length === 0) {
@@ -1145,15 +1149,15 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
         });
 
         return {
-            parts,
+            parts: parts.rows,
             selectedPartName,
             selectedPart,
-            versions,
+            versions: versions.rows,
             selectedVersionNumber,
             selectedVersion,
-            status,
+            status: parts.status,
             errorMessage,
-            versionStatus,
+            versionStatus: versions.status,
             versionErrorMessage,
             searchQuery,
             kindFilter,
