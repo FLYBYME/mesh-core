@@ -1,0 +1,101 @@
+Code lives in:  FLYBYME/mesh-core — this worktree. All commits go here.
+
+================================================================================
+THE TASK
+================================================================================
+
+**Move the `catalog` and `releases` consoles onto the `models` capability, and
+upgrade this repository to kernel `^0.13`.**
+
+`models` landed in mesh-web today (A3.7): typed reactive collections over a
+site's declared CRUD contracts, with loading, error, empty and ready as
+first-class signals, mutations typed from the declared API, and disposal bound to
+the reactive scope.
+
+**It has zero production readers.** That is the exact shape this project treats as
+a defect — see `mesh-serve/spec/unread.md`, whose rule is *"name the reader, or do
+not add the field"*. This dispatch is the reader, and it is the only way to find
+out whether the capability was worth building.
+
+Between the two consoles there are **7 hand-rolled `cx.mesh.call` sites and 104
+lines of signal, loading and error plumbing** — a signal to hold rows, a loading
+flag, an error branch, and a manual re-fetch after every mutation, written twice.
+That is the code `models` exists to delete.
+
+================================================================================
+WHAT TO DO
+================================================================================
+
+**1. Upgrade the kernel.** `package.json` currently pins
+`github:FLYBYME/mesh-web#v0.11.1`; `mesh.json` says `"kernel": "^0.11"`. Move both
+to **0.13** — `models` does not exist before it. Between 0.11 and 0.13 also landed
+`single` window mode, the `dialog` description node with a focus trap, and a real
+`TApi` type parameter on `Application`/`Extension`. **That last one is additive
+with a default**, so nothing here should need changing to keep compiling — if
+something does, that is a finding and it belongs in the report, because it means
+the change was not as additive as claimed.
+
+**2. Adopt `models` in `src/catalog/` and `src/releases/`.** Replace the
+hand-rolled fetch-and-hold pattern with a bound collection. Read
+`node_modules/@flybyme/mesh-web/src/models/` first — `types.ts` for the shape,
+then `models.ts`.
+
+**3. Delete what it replaces.** The point is subtraction. A console that gains a
+`models` call and keeps its loading signal has not adopted anything.
+
+================================================================================
+WHAT TO WATCH FOR
+================================================================================
+
+**Do not change what the consoles show or do.** Same views, same columns, same
+actions. This is a rewrite of how data arrives, and a diff mixing that with a
+feature change cannot be reviewed. `console.localhost` is live on these parts.
+
+**`cx.models` is typed per contribution, like `cx.mesh`.** It is deliberately not
+a member of `CapabilityMap` — an unknown collection name must be a compile error.
+If you find yourself reaching for a cast to make a call type-check, stop: that is
+either a missing declaration in `mesh.json` or a real gap in the capability, and
+both are report material. **Zero `as any`, zero `as never`, zero casts.**
+
+**The mutation path is the interesting half.** `releases` composes and deploys —
+those are writes, and after one the list must be right. Whether `models` refreshes
+correctly without a hand-written re-fetch is the sharpest test of whether it
+works. If it does not, say so precisely; that is worth more than the adoption.
+
+**`chrome` and `auth` are in this repository too and are not part of this task.**
+`chrome` 0.2.0 is live on all six sites.
+
+================================================================================
+WHAT GOOD LOOKS LIKE
+================================================================================
+
+- Both consoles on `models`, with the loading/error/refetch plumbing **removed**,
+  not merely bypassed.
+- **A stated line count**: how many lines each console lost. That number is the
+  answer to whether the capability earns its place, and if it is small, the honest
+  report says so.
+- All existing tests passing — **27 today** across chrome, auth, catalog and
+  releases. `npm run typecheck` clean.
+- A test that a mutation updates the bound collection **without a hand-written
+  re-fetch**.
+- Version bumps in `mesh.json`: `catalog` and `releases` to **0.2.0** — new kernel
+  floor, so a site composing `^0.1` must not silently move kernels. `chrome` and
+  `auth` bump only if their code actually changed.
+- The `kernel` field on every part in `mesh.json` reads `^0.13`.
+
+**Run every command in the foreground. Commit as you go.**
+
+================================================================================
+YOUR REPORT
+================================================================================
+
+`agent-runs/reports/4-consoles-on-models.md`
+
+- **lines deleted per console**, and whether `models` earned its place
+- whether mutations refreshed correctly without help, and exactly what happened if
+  not
+- anything the 0.11 → 0.13 upgrade required, especially anything that contradicts
+  the claim that the `TApi` parameter is additive
+- what `models` is missing that a real console wanted — you are its first
+  production consumer and that list is the most valuable thing in this report
+- anything for the reader audit
