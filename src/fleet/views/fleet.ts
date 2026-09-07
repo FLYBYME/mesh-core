@@ -31,18 +31,21 @@ const chip = (
     tone: 'on' | 'off' | 'warn' | 'quiet',
     onActivate?: string,
     arg?: string,
+    busy?: () => boolean,
 ): Described => element('Button', {
     props: {
         class: `fleet-chip fleet-chip-${tone}`,
-        style: {
+        disabled: busy !== undefined ? busy : undefined,
+        style: () => ({
             padding: '2px 9px',
             borderRadius: '999px',
             fontSize: '12px',
-            cursor: onActivate === undefined ? 'default' : 'pointer',
+            cursor: onActivate === undefined || (busy !== undefined && busy()) ? 'default' : 'pointer',
+            opacity: (busy !== undefined && busy()) ? 0.7 : 1,
             border: '1px solid var(--edge)',
             background: tone === 'on' ? 'var(--accent)' : tone === 'warn' ? 'var(--warn)' : 'var(--surface)',
             color: tone === 'on' || tone === 'warn' ? 'var(--on-accent)' : 'var(--ink-dim)',
-        },
+        }),
     },
     ...(onActivate === undefined
         ? {}
@@ -145,6 +148,7 @@ function renderDetail(app: FleetApi): Described {
                                                 return n.services.includes(service()) ? 'on' : 'off';
                                             })(),
                                             'fleet.toggleService', service(),
+                                            () => app.busy(),
                                         ),
                                     ),
                                 ]),
@@ -170,6 +174,7 @@ function renderDetail(app: FleetApi): Described {
                                             `${group().name} (${String((group().services ?? []).length)})`,
                                             node()?.groups.includes(group().name) === true ? 'on' : 'off',
                                             'fleet.toggleGroup', group().name,
+                                            () => app.busy(),
                                         ),
                                     ),
                                 ]),
@@ -220,7 +225,13 @@ function renderDetail(app: FleetApi): Described {
                                 element('Button', {
                                     props: {
                                         class: 'fleet-reconcile-one',
-                                        style: { padding: '4px 12px', fontSize: '12px', alignSelf: 'flex-start' },
+                                        style: () => ({
+                                            padding: '4px 12px',
+                                            fontSize: '12px',
+                                            alignSelf: 'flex-start',
+                                            cursor: app.busy() ? 'not-allowed' : 'pointer',
+                                            opacity: app.busy() ? 0.7 : 1,
+                                        }),
                                         disabled: () => app.busy(),
                                     },
                                     intents: {
@@ -228,7 +239,7 @@ function renderDetail(app: FleetApi): Described {
                                             action: command('fleet.reconcile', node()?.hostname ?? ''),
                                         },
                                     },
-                                    children: [text('Reconcile this machine')],
+                                    children: [text(() => (app.busy() ? 'Reconciling...' : 'Reconcile this machine'))],
                                 }),
                             ],
                         }),
@@ -278,11 +289,17 @@ export function renderFleetView(vx: ViewContext<Record<string, never>, FleetApi>
                     }),
                     element('Button', {
                         props: {
-                            style: { padding: '4px 12px', fontSize: '12px' },
+                            class: 'fleet-reconcile-all',
+                            style: () => ({
+                                padding: '4px 12px',
+                                fontSize: '12px',
+                                cursor: app.busy() ? 'not-allowed' : 'pointer',
+                                opacity: app.busy() ? 0.7 : 1,
+                            }),
                             disabled: () => app.busy(),
                         },
                         intents: { activate: { action: command('fleet.reconcileAll') } },
-                        children: [text('Reconcile all')],
+                        children: [text(() => (app.busy() ? 'Reconciling...' : 'Reconcile all'))],
                     }),
                 ],
             }),

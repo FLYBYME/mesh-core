@@ -293,4 +293,51 @@ describe('SitesApp', () => {
         // Verified site releaseHash updated
         expect(sitesApi.selectedSite()?.releaseHash).toBe('sha256:99999999999999999999999999999999');
     });
+
+    it('raises notification and indicates busy state on deployment failure', async () => {
+        globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+            const url = String(input);
+            const method = init?.method ?? 'GET';
+            if (url.includes('/api/sites') && method === 'GET') {
+                return new Response(JSON.stringify(mutableSites), {
+                    status: 200,
+                    headers: { 'content-type': 'application/json' },
+                });
+            }
+            if (url.includes('/deploy') && method === 'POST') {
+                return new Response(JSON.stringify({
+                    error: { kind: 'bad_request', detail: 'Invalid release hash' },
+                }), {
+                    status: 400,
+                    headers: { 'content-type': 'application/json' },
+                });
+            }
+            return new Response('Not Found', { status: 404 });
+        };
+
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'sites', contribution: SitesApp },
+            ],
+        });
+        site = s;
+
+        const sitesApi = s.kernel.provided(SITES);
+        if (!sitesApi) throw new Error('SitesApi not found');
+
+        await sitesApi.select('127.0.0.1');
+
+        const deployPromise = sitesApi.deploy('127.0.0.1', 'sha256:invalid');
+        await new Promise((r) => setTimeout(r, 50));
+        const confirmBtn = document.querySelector('.mesh-confirm-ok');
+        if (confirmBtn instanceof HTMLButtonElement) {
+            confirmBtn.click();
+        }
+        await deployPromise;
+
+        expect(sitesApi.lastError()).toContain('Deployment failed');
+        const notices = s.kernel.services.notifications();
+        expect(notices.some((n) => n.level === 'error' && n.message.includes('Deployment failed'))).toBe(true);
+    });
 });

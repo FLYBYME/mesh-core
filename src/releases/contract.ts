@@ -107,5 +107,5 @@ export interface ReleasesApi {
 
 export const RELEASES: ProviderToken<ReleasesApi> = provider<ReleasesApi>('releases');
 
-export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation');
+export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation', 'notifications');
 export const CONSUMES = consumes();

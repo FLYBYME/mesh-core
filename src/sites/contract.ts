@@ -98,5 +98,5 @@ export interface SitesApi {
 
 export const SITES: ProviderToken<SitesApi> = provider<SitesApi>('sites');
 
-export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation');
+export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation', 'notifications');
 export const CONSUMES = consumes();

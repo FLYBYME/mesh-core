@@ -165,6 +165,7 @@ export default class ChromeExtension implements Extension<typeof NEEDS, typeof C
             } catch (err) {
                 const message = err instanceof Error ? err.message : String(err);
                 authError.set(message);
+                cx.notifications.error(message);
             } finally {
                 submitting.set(false);
             }
@@ -176,7 +177,9 @@ export default class ChromeExtension implements Extension<typeof NEEDS, typeof C
             try {
                 await auth.signOut();
             } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
                 cx.log.warn('could not sign out', err);
+                cx.notifications.error(`Sign out failed: ${message}`);
             }
         });
 

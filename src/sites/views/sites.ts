@@ -154,7 +154,7 @@ function renderSiteDetail(app: SitesApi): Described {
                                     }),
                                     onFieldChange: 'sites.setField',
                                     onSubmit: 'sites.save',
-                                    submitLabel: 'Save Site Changes',
+                                    submitLabel: () => (app.busy() ? 'Saving...' : 'Save Site Changes'),
                                     disabled: () => !app.writeSupported() || app.busy(),
                                     overrides: {
                                         fields: {
@@ -286,16 +286,17 @@ function renderSiteDetail(app: SitesApi): Described {
                                         element('Button', {
                                             props: {
                                                 class: 'btn-deploy-release',
-                                                style: {
+                                                style: () => ({
                                                     padding: '6px 14px',
                                                     fontSize: '12px',
                                                     fontWeight: '600',
-                                                    cursor: 'pointer',
-                                                },
+                                                    cursor: app.busy() ? 'not-allowed' : 'pointer',
+                                                    opacity: app.busy() ? 0.7 : 1,
+                                                }),
                                                 disabled: () => app.busy(),
                                             },
                                             intents: { activate: { action: command('sites.deploySelected') } },
-                                            children: [text('Deploy Release')],
+                                            children: [text(() => (app.busy() ? 'Deploying...' : 'Deploy Release'))],
                                         }),
                                     ],
                                 }),

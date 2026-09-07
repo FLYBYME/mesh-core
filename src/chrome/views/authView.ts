@@ -150,15 +150,17 @@ export function renderAuthView(props: AuthViewProps): Described {
                     props: {
                         class: 'chrome-signin',
                         type: 'submit',
-                        style: {
+                        disabled: () => submitting(),
+                        style: () => ({
                             padding: '2px 8px',
                             fontSize: '12px',
-                            cursor: 'pointer',
+                            cursor: submitting() ? 'not-allowed' : 'pointer',
+                            opacity: submitting() ? 0.7 : 1,
                             background: 'var(--accent, #1f6feb)',
                             border: '1px solid var(--edge, #30363d)',
                             borderRadius: '4px',
                             color: 'var(--on-accent, #ffffff)',
-                        },
+                        }),
                     },
                     intents: {
                         activate: { action: command('chrome.signIn') },

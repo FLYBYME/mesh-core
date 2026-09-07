@@ -167,5 +167,5 @@ export const FLEET: ProviderToken<FleetApi> = provider<FleetApi>('fleet');
  */
 export const CORE_SERVICES: readonly string[] = ['api', 'identity', 'fleet', 'supervisor'];
 
-export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation');
+export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation', 'notifications');
 export const CONSUMES = consumes();

@@ -208,7 +208,9 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             if (site === null) return;
 
             if (!writeSupported()) {
-                lastError.set('Saving site metadata is not available on this server.');
+                const msg = 'Saving site metadata is not available on this server.';
+                lastError.set(msg);
+                cx.notifications.error(msg);
                 return;
             }
 
@@ -226,8 +228,10 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
                 theme = JSON.parse(formTheme() || '{}') as Record<string, string>;
                 policy = JSON.parse(formPolicy() || '{}') as Record<string, string>;
             } catch (error) {
-                lastError.set(`Theme and policy must be JSON objects: ${
-                    error instanceof Error ? error.message : String(error)}`);
+                const msg = `Theme and policy must be JSON objects: ${
+                    error instanceof Error ? error.message : String(error)}`;
+                lastError.set(msg);
+                cx.notifications.error(msg);
                 return;
             }
 
@@ -262,7 +266,9 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
                     const detail = 'detail' in result.error && typeof result.error.detail === 'string'
                         ? result.error.detail
                         : result.error.kind;
-                    lastError.set(`Could not save ${site.host} (${result.error.kind}): ${detail}`);
+                    const msg = `Could not save ${site.host} (${result.error.kind}): ${detail}`;
+                    lastError.set(msg);
+                    cx.notifications.error(msg);
                 }
             } finally {
                 busy.set(false);
@@ -272,7 +278,9 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
 
         const deploy = async (host: string, releaseHash: string): Promise<void> => {
             if (!host || !releaseHash) {
-                lastError.set('Both host and release hash are required for deployment.');
+                const msg = 'Both host and release hash are required for deployment.';
+                lastError.set(msg);
+                cx.notifications.error(msg);
                 return;
             }
 
@@ -295,7 +303,9 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
                     const detail = 'detail' in result.error && typeof result.error.detail === 'string'
                         ? result.error.detail
                         : result.error.kind;
-                    lastError.set(`Deployment failed (${result.error.kind}): ${detail}`);
+                    const msg = `Deployment failed (${result.error.kind}): ${detail}`;
+                    lastError.set(msg);
+                    cx.notifications.error(msg);
                 }
             } finally {
                 busy.set(false);

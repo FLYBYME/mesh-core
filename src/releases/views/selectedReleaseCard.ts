@@ -52,6 +52,7 @@ function renderDeployActionBox(app: ReleasesApi, isLive: () => boolean): Describ
                         () => element('Button', {
                             props: {
                                 class: 'btn-deploy-release',
+                                disabled: () => app.deployStatus() === 'deploying',
                                 style: () => ({
                                     padding: '8px 16px',
                                     borderRadius: '6px',
@@ -60,7 +61,8 @@ function renderDeployActionBox(app: ReleasesApi, isLive: () => boolean): Describ
                                     color: '#ffffff',
                                     fontWeight: '600',
                                     fontSize: '13px',
-                                    cursor: 'pointer',
+                                    cursor: app.deployStatus() === 'deploying' ? 'not-allowed' : 'pointer',
+                                    opacity: app.deployStatus() === 'deploying' ? 0.7 : 1,
                                 }),
                             },
                             intents: {
