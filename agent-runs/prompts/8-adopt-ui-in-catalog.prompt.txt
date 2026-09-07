@@ -1,0 +1,96 @@
+Code lives in:  FLYBYME/mesh-core — this worktree. All commits go here.
+
+Read `AGENTS.md` first.
+
+**Scope: one console. Not both.** Dispatch 7 built the `ui` extension and died
+part-way through this adoption; its work is on master and its half-finished
+adoption was discarded. Small scope is deliberate — dispatch length is what costs
+quota, measured.
+
+================================================================================
+THE TASK
+================================================================================
+
+**Adopt `ui.*` in the `catalog` console, and delete the styling it replaces.**
+
+`ui@0.1.0` exists in this repository (`src/ui/`), declared as an extension, with
+36 passing browser tests. It provides four components:
+
+    ui.EntityList      a scrolling pane with a header, a count, and the
+                       loading / error / empty presentation
+    ui.DetailSurface   the titled card with a badge, and its empty-selection state
+    ui.PropertyGrid    label/value rows, monospace where the value is a hash
+    ui.Table           header row plus rows, which neither console had so both
+                       hand-stitched one out of Grid and Stack
+
+`catalog` already declares `requiredParts: [{ id: 'ui', version: '^0.1' }]`.
+
+**Nobody has seen these render inside a real console.** That is the point of this
+dispatch: a capability with no consumer is not done
+(`~/code/surfdns/decisions/0001-vertical-before-horizontal.md`), and `models`
+shipped with no consumer and its first adoption found a real gap within a day.
+
+================================================================================
+WHERE THE DUPLICATION IS
+================================================================================
+
+`agent-runs/reports/6-sections-are-functions.md` §4 measured it. In `catalog`:
+
+- `views/partsList.ts` — the sidebar, its uppercase header with a count, and the
+  same three branches `releases` has: loading → muted text, error → a card at
+  `rgba(248,81,73,0.1)` with `1px solid #f85149`, empty → a muted message
+- `views/versionProvenanceCard.ts` — the detail surface and its property grid
+- `views/versionTable.ts` — the hand-stitched table
+
+Those three are the targets. `views/browser.ts` composes them.
+
+================================================================================
+WHAT GOOD LOOKS LIKE
+================================================================================
+
+- **A stated count: inline `style: {}` objects and hex literals removed from
+  `catalog`.** That number is whether `ui` earned its place. If it is small, say
+  so plainly — that is the honest test, and it is better learned now than after a
+  second console is built on it.
+- The console renders and behaves **identically**. `console.localhost` is live on
+  this part.
+- All existing tests passing, `catalog`'s own included. `npm run typecheck` clean,
+  **zero casts**.
+- `catalog` bumped to `0.2.4` in `mesh.json`. `ui` unchanged unless you had to
+  change it — if you did, that is the most interesting thing in your report.
+
+================================================================================
+WHAT TO WATCH
+================================================================================
+
+**A prop cannot be a callback.** `Props` is `Reactive<Json> | undefined`, so a
+component takes values and getters, and **per-item rendering belongs to the
+caller** — `ui.EntityList` owns the frame and the status presentation, and
+`catalog` supplies the rows as children via `each()`. If a component seems to
+need a callback, it needs a different shape, not a widened `Props`.
+
+**Do not extract shared style constants and do not add a `styles.ts`.** Styling
+that is still needed after adoption stays inline for now; a helper shared between
+parts couples two independently versioned artifacts.
+
+**Do not touch `releases`.** It is the second console and it is the next dispatch
+— keeping it untouched is what makes this one reviewable.
+
+**Do not adopt the internal context** (kernel 0.14's separation of a view's state
+from the published API). Separate task.
+
+Foreground commands, commit as you go.
+
+================================================================================
+YOUR REPORT
+================================================================================
+
+`agent-runs/reports/8-adopt-ui-in-catalog.md`
+
+- **style objects and hex literals removed**, counted
+- **what `ui` was missing**, precisely — you are its first consumer and that list
+  is worth more than the adoption
+- whether the loading/error/empty-as-CSS-state approach actually worked in a real
+  console, or needed changing
+- what `releases` will need that `catalog` did not
+- anything for the reader audit
