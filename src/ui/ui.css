@@ -264,6 +264,7 @@
     }
 
     .ui-property-grid code,
+    .ui-property-grid [data-code],
     .ui-property-grid [data-code="true"],
     .ui-property-grid [code="true"],
     .ui-property-grid .code {
