@@ -61,6 +61,7 @@ export interface SitesApi {
     readonly sites: ReadonlySignal<readonly SiteFindOutputItem[]>;
     readonly sitesStatus: ReadonlySignal<CollectionStatus>;
     readonly sitesError: () => string | null;
+    readonly live: ReadonlySignal<boolean>;
 
     readonly selectedHost: Signal<string | null>;
     readonly selectedSite: () => SiteFindOutputItem | null;
