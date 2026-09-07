@@ -52,7 +52,7 @@
         {
             "kind": "application",
             "id": "releases",
-            "version": "0.2.2",
+            "version": "0.2.3",
             "entry": "src/releases/index.ts",
             "kernel": "^0.13",
             "mesh": [
