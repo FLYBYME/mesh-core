@@ -254,7 +254,7 @@ export function renderForm(options: RenderFormOptions): Described {
         props: {
             class: options.class ?? 'ui-schema-form',
         },
-        ...(options.onSubmit ? { intents: { commit: { action: command(options.onSubmit) } } } : {}),
+        ...(options.onSubmit ? { intents: { commit: { action: command(options.onSubmit), preventDefault: true } } } : {}),
         children: [
             ...fieldNodes,
             ...(actionsNode ? [actionsNode] : []),
