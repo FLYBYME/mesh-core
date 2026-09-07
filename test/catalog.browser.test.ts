@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, mountPart } from '@flybyme/mesh-web/testing';
+import { defineApi } from '@flybyme/mesh-web';
 import CatalogApp, { CATALOG } from '../src/catalog/index.js';
+import AuthExtension, { AUTH } from '../src/auth/index.js';
 import UiExtension from '../src/ui/index.js';
-import type {
-    CatalogResolveOutput,
-    PartFindOutputItem,
-    PartVersionFindOutputItem,
+import {
+    chromeApi,
+    type CatalogResolveOutput,
+    type PartFindOutputItem,
+    type PartVersionFindOutputItem,
 } from '../src/generated/api.js';
 
 const MOCK_PARTS: readonly PartFindOutputItem[] = [
@@ -289,5 +292,99 @@ describe('CatalogApp', () => {
 
         const errorCard = document.querySelector('.catalog-error-card');
         expect(errorCard).not.toBeNull();
+    });
+
+    it('surfaces live indicator and removes refresh button', async () => {
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'catalog', contribution: CatalogApp },
+            ],
+        });
+        site = s;
+
+        const catalogApi = s.kernel.provided(CATALOG);
+        if (!catalogApi) throw new Error('CatalogApi not found');
+
+        // Verify live indicator exists and reflects query.live
+        const liveIndicator = document.querySelector('.catalog-live-indicator');
+        expect(liveIndicator).not.toBeNull();
+        expect(liveIndicator?.textContent).toBe('○ not following');
+        expect(catalogApi.live()).toBe(false);
+
+        // Verify refresh button is completely deleted
+        const refreshBtn = document.querySelector('.btn-refresh-parts');
+        expect(refreshBtn).toBeNull();
+
+        // Verify catalog.refresh command is not declared
+        const app = new CatalogApp();
+        expect(app.commands.some((c) => c.id === 'catalog.refresh')).toBe(false);
+    });
+
+    it('renders not-signed-in state as idle without 401 error, and loads automatically when session arrives', async () => {
+        const gatedApi = defineApi({
+            ...chromeApi,
+            calls: {
+                ...chromeApi.calls,
+                // The generated call with its gate changed, rather than a fresh `call(...)`: a
+                // hand-written one infers `ApiCall<unknown, unknown>` and stops being assignable to
+                // the api the app declares, which is a type error about the test rather than about
+                // the thing under test. What this exercises is the gate, so the gate is all it moves.
+                'part.find': { ...chromeApi.calls['part.find'], gate: { kind: 'auth', level: 'user' } },
+            },
+        });
+
+        class GatedCatalogApp extends CatalogApp {
+            override readonly api = gatedApi;
+        }
+
+        const s = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'ui', contribution: UiExtension },
+                { id: 'catalog', contribution: GatedCatalogApp },
+            ],
+        });
+        site = s;
+
+        const catalogApi = s.kernel.provided(CATALOG);
+        if (!catalogApi) throw new Error('CatalogApi not found');
+        const authApi = s.kernel.provided(AUTH);
+        if (!authApi) throw new Error('AuthApi not found');
+
+        // Initially signed out -> status is idle, not error
+        expect(catalogApi.status()).toBe('idle');
+        expect(catalogApi.errorMessage()).toBeNull();
+        const list = document.querySelector('.ui-entity-list');
+        expect(list?.getAttribute('data-status')).toBe('idle');
+        const idleText = document.querySelector('.ui-entity-list-idle');
+        expect(idleText).not.toBeNull();
+        expect(idleText?.textContent).toContain('Sign in to view catalog parts.');
+
+        // Session arrives -> collection automatically fetches without manual refresh
+        // Exactly what a `Session` is — no email, no memberships, no organization. The kernel's
+        // session is who is signed in and when it expires; anything else about the account is a
+        // call away, and putting it here would make the auth Extension a second place that holds it.
+        authApi.session.set({
+            userId: 'user_1',
+            displayName: 'Tony',
+            roles: [],
+            expiresAt: Date.now() + 3_600_000,
+        });
+
+        // Wait a microtask for reactive effect to run and fetch
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        expect(catalogApi.status()).toBe('ready');
+        expect(catalogApi.parts().length).toBe(2);
+        expect(document.querySelectorAll('.part-item').length).toBe(2);
+
+        // Sign out -> transitions back to idle and clears rows
+        authApi.session.set(null);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        expect(catalogApi.status()).toBe('idle');
+        expect(catalogApi.parts().length).toBe(0);
+        expect(document.querySelector('.ui-entity-list-idle')).not.toBeNull();
     });
 });
