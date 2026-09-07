@@ -19,7 +19,7 @@
         {
             "kind": "application",
             "id": "catalog",
-            "version": "0.2.1",
+            "version": "0.2.2",
             "entry": "src/catalog/index.ts",
             "kernel": "^0.13",
             "mesh": [
