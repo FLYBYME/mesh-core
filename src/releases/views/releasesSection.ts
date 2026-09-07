@@ -103,6 +103,13 @@ export function renderReleasesSection(app: ReleasesApi): Described {
                 ],
             }),
             when(
+                () => app.releasesStatus() === 'idle',
+                () => element('Text', {
+                    props: { class: 'releases-idle-message', style: { fontSize: '12px', color: 'var(--ink-dim, #8b949e)', padding: '8px' } },
+                    children: [text('Sign in to view scoped releases.')],
+                }),
+            ),
+            when(
                 () => app.releasesStatus() === 'loading',
                 () => element('Text', {
                     props: { style: { fontSize: '12px', color: 'var(--ink-dim, #8b949e)', padding: '8px' } },

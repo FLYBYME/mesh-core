@@ -1,4 +1,5 @@
 import {
+    computed,
     type Application,
     type CommandDecl,
     type Context,
@@ -67,7 +68,6 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
     readonly api = chromeApi;
 
     readonly commands: readonly CommandDecl[] = [
-        { id: 'releases.refresh', title: 'Releases: Refresh Data' },
         { id: 'releases.selectSite', title: 'Releases: Select Site' },
         { id: 'releases.selectRelease', title: 'Releases: Select Release' },
         { id: 'releases.setComposeKernel', title: 'Releases: Set Kernel Range' },
@@ -213,7 +213,16 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
         });
 
         const loadData = async (): Promise<void> => {
-            await Promise.all([sites.refetch(), releases.refetch()]);
+            const promises: Promise<unknown>[] = [];
+            if (sites.status() !== 'idle') {
+                promises.push(sites.refetch());
+            }
+            if (releases.status() !== 'idle') {
+                promises.push(releases.refetch());
+            }
+            try {
+                await Promise.all(promises);
+            } catch {}
         };
 
         const selectSite = (host: string): void => {
@@ -424,9 +433,6 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             }
         };
 
-        cx.commands.implement('releases.refresh', async () => {
-            await loadData();
-        });
 
         cx.commands.implement('releases.selectSite', (val?: Json) => {
             if (typeof val === 'string') selectSite(val);
@@ -509,9 +515,12 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             selectedReleaseHash,
             selectedRelease,
             sitesStatus: sites.status,
+            sitesLive: sites.live,
             sitesError,
             releasesStatus: releases.status,
+            releasesLive: releases.live,
             releasesError,
+            live: computed(() => sites.live() && releases.live()),
             composeKernel,
             composeName,
             composeParts,
