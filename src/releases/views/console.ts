@@ -645,7 +645,9 @@ export function renderReleasesView(vx: ViewContext<Record<string, never>, Releas
                         props: {
                             class: 'input-compose-kernel',
                             value: () => app.composeKernel(),
-                            placeholder: '^0.11',
+                            // A shape, not a version. A placeholder naming a real kernel is a
+                            // hardcoded version wearing a disguise, and goes stale the same way.
+                            placeholder: '^major.minor',
                             style: {
                                 padding: '6px 10px',
                                 borderRadius: '4px',
@@ -671,7 +673,7 @@ export function renderReleasesView(vx: ViewContext<Record<string, never>, Releas
                         props: {
                             class: 'textarea-compose-parts',
                             value: () => app.composePartsText(),
-                            placeholder: 'chrome: ^0.1.2\ncatalog: ^0.1.0\nreleases: ^0.1.0',
+                            placeholder: 'part-id: ^major.minor.patch\nanother-part: ^major.minor.patch',
                             rows: 4,
                             style: {
                                 width: '100%',

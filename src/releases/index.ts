@@ -74,9 +74,22 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             return `Failed to load releases (${err.kind}): ${detail}`;
         });
 
-        const composeKernel = cx.state.signal<string>('^0.11');
-        const composeName = cx.state.signal<string>('Console Release');
-        const composePartsText = cx.state.signal<string>('chrome: ^0.1.2\ncatalog: ^0.1.0\nreleases: ^0.1.0');
+        /**
+         * The compose form starts empty and is **seeded from a real release**, never from constants.
+         *
+         * It used to default to `^0.11` and `chrome: ^0.1.2 / catalog: ^0.1.0 / releases: ^0.1.0`.
+         * Those were correct on the day they were typed and wrong within a week — by the time the
+         * platform reached kernel 0.13 and chrome 0.2.1, the console's own suggestion would have
+         * composed a release that F5 is being written to refuse.
+         *
+         * A hardcoded version in a console is the same class of thing as a hardcoded path in an
+         * artifact: it is a fact about one moment, recorded where nothing will ever update it.
+         */
+        const composeKernel = cx.state.signal<string>('');
+        const composeName = cx.state.signal<string>('');
+        const composePartsText = cx.state.signal<string>('');
+        /** Cleared when the user edits, so seeding never overwrites something typed. */
+        const composeSeededFrom = cx.state.signal<string | null>(null);
         const composeStatus = cx.state.signal<'idle' | 'composing' | 'success' | 'error'>('idle');
         const composeResult = cx.state.signal<CdnComposeOutput | null>(null);
         const composeError = cx.state.signal<string | null>(null);
@@ -111,6 +124,36 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
                     selectedHost.set(first.host);
                 }
             }
+        });
+
+        /**
+         * Seed the compose form from whichever release is selected.
+         *
+         * A range rather than the exact version — `^0.13.0` from kernel `0.13.0` — because composing
+         * is usually *the same shape, moved forward*, and an exact pin is the thing the caller would
+         * have to delete first. `checkComposition` resolves the range against the catalog, so the
+         * suggestion is only ever a starting point.
+         *
+         * Reseeds when the selection changes and stops the moment the text is edited, tracked by
+         * which release the current text came from. An effect that overwrites what somebody just
+         * typed is worse than no defaults at all.
+         */
+        cx.state.effect(() => {
+            const release = selectedRelease();
+            if (release === null) return;
+            if (composeSeededFrom() === release.hash) return;
+
+            const edited = composeKernel() !== '' || composePartsText() !== '';
+            if (edited && composeSeededFrom() === null) return;
+
+            composeKernel.set(`^${release.kernel.version}`);
+            composeName.set(release.name ?? '');
+            composePartsText.set(
+                Object.entries(release.parts)
+                    .map(([id, part]) => `${id}: ^${part.version}`)
+                    .join('\n'),
+            );
+            composeSeededFrom.set(release.hash);
         });
 
         cx.state.effect(() => {
@@ -159,13 +202,23 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             const parts = parsePartsInput(composePartsText());
             if (parts.length === 0) {
                 composeStatus.set('error');
-                composeError.set('No valid parts entered. Format: "id: range" (e.g. "chrome: ^0.1.2").');
+                composeError.set('No valid parts entered. Format: "id: range" — one per line.');
+                return;
+            }
+
+            const kernel = composeKernel().trim();
+            if (kernel === '') {
+                // Refused rather than defaulted. The old code substituted `^0.11` for an empty
+                // field, so a release could be composed against a kernel nobody chose and nothing
+                // in the result said which one it was.
+                composeStatus.set('error');
+                composeError.set('A kernel range is required. Select a release to seed one, or type it.');
                 return;
             }
 
             const trimmedName = composeName().trim();
             const res = await cx.mesh.call('cdn.compose', {
-                kernel: composeKernel().trim() === '' ? '^0.11' : composeKernel().trim(),
+                kernel,
                 parts,
                 dryRun,
                 ...(trimmedName !== '' ? { name: trimmedName } : {}),
