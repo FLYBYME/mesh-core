@@ -53,10 +53,16 @@ export const entityListComponent: ComponentDefinition = {
         empty.setAttribute('role', 'status');
         empty.textContent = 'No items found.';
 
+        const idle = document.createElement('div');
+        idle.className = 'ui-entity-list-idle';
+        idle.setAttribute('role', 'status');
+        idle.textContent = 'Not signed in.';
+
         el.appendChild(loading);
         el.appendChild(error);
         el.appendChild(items);
         el.appendChild(empty);
+        el.appendChild(idle);
 
         return el;
     },
@@ -132,6 +138,12 @@ export const entityListComponent: ComponentDefinition = {
         if (name === 'emptyMessage') {
             const empty = el.querySelector('.ui-entity-list-empty');
             if (isHTMLElement(empty)) empty.textContent = String(value);
+            return true;
+        }
+
+        if (name === 'idleMessage') {
+            const idle = el.querySelector('.ui-entity-list-idle');
+            if (isHTMLElement(idle)) idle.textContent = String(value);
             return true;
         }
 

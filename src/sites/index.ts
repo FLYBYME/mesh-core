@@ -36,7 +36,6 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
     readonly api = chromeApi;
 
     readonly commands: readonly CommandDecl[] = [
-        { id: 'sites.refresh', title: 'Sites: Refresh' },
         { id: 'sites.select', title: 'Sites: Select Site' },
         { id: 'sites.setField', title: 'Sites: Set Form Field' },
         { id: 'sites.save', title: 'Sites: Save Site' },
@@ -153,7 +152,11 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
         };
 
         const refresh = async (): Promise<void> => {
-            await sites.refetch();
+            if (sites.status() !== 'idle') {
+                try {
+                    await sites.refetch();
+                } catch {}
+            }
             const current = selectedSite();
             if (current !== null && !isDirty()) {
                 populateForm(current);
@@ -299,7 +302,6 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             }
         };
 
-        cx.commands.implement('sites.refresh', refresh);
         cx.commands.implement('sites.select', async (hostVal?: Json) => {
             if (typeof hostVal === 'string') await select(hostVal);
         });
@@ -326,10 +328,12 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             }
         });
 
-        try {
-            await sites.refetch();
-        } catch {
-            // Error captured in sites.error()
+        if (sites.status() !== 'idle') {
+            try {
+                await sites.refetch();
+            } catch {
+                // Error captured in sites.error()
+            }
         }
 
         // Autostart window: An Application opens its own window
@@ -343,6 +347,7 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             sites: sites.rows,
             sitesStatus: sites.status,
             sitesError,
+            live: sites.live,
             selectedHost,
             selectedSite,
             formTitle,

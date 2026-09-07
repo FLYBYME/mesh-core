@@ -1,5 +1,4 @@
 import {
-    command,
     element,
     text,
     when,
@@ -13,7 +12,7 @@ import { renderReleasesSection } from './releasesSection.js';
 import { renderSelectedReleaseCard } from './selectedReleaseCard.js';
 import { renderComposerCard } from './composerCard.js';
 
-function renderReleasesHeader(): Described {
+function renderReleasesHeader(app: ReleasesApi): Described {
     return element('Row', {
         props: {
             class: 'releases-header',
@@ -48,23 +47,21 @@ function renderReleasesHeader(): Described {
                         },
                         children: [text('Tenant Scoped')],
                     }),
+                    element('Span', {
+                        props: {
+                            class: 'releases-live-indicator live-indicator',
+                            style: () => ({
+                                padding: '2px 8px',
+                                borderRadius: '10px',
+                                fontSize: '11px',
+                                background: app.live() ? 'rgba(56, 139, 253, 0.15)' : 'var(--surface, #21262d)',
+                                color: app.live() ? 'var(--accent, #58a6ff)' : 'var(--ink-dim, #8b949e)',
+                                border: '1px solid var(--edge, #30363d)',
+                            }),
+                        },
+                        children: [text(() => (app.live() ? '● live' : '○ not following'))],
+                    }),
                 ],
-            }),
-            element('Button', {
-                props: {
-                    class: 'btn-refresh-data',
-                    style: {
-                        padding: '5px 12px',
-                        borderRadius: '6px',
-                        background: 'var(--surface, #21262d)',
-                        border: '1px solid var(--edge, #30363d)',
-                        color: 'var(--ink, #e6edf3)',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                    },
-                },
-                intents: { activate: { action: command('releases.refresh') } },
-                children: [text('↻ Refresh')],
             }),
         ],
     });
@@ -164,7 +161,7 @@ export function renderReleasesView(vx: ViewContext<Record<string, never>, Releas
             },
         },
         children: [
-            renderReleasesHeader(),
+            renderReleasesHeader(app),
             element('Row', {
                 props: {
                     style: {

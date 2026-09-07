@@ -28,7 +28,6 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
     readonly api = chromeApi;
 
     readonly commands: readonly CommandDecl[] = [
-        { id: 'catalog.refresh', title: 'Catalog: Refresh Parts' },
         { id: 'catalog.selectPart', title: 'Catalog: Select Part' },
         { id: 'catalog.selectVersion', title: 'Catalog: Select Version' },
         { id: 'catalog.setSearch', title: 'Catalog: Search Parts' },
@@ -143,7 +142,6 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
         const selectPart = async (name: string): Promise<void> => {
             selectedPartName.set(name);
             resolvePartName.set(name);
-            await versions.refetch();
         };
 
         const loadParts = async (): Promise<void> => {
@@ -194,10 +192,6 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
             }
         };
 
-        cx.commands.implement('catalog.refresh', async () => {
-            await loadParts();
-        });
-
         cx.commands.implement('catalog.selectPart', async (val?: Json) => {
             if (typeof val === 'string') {
                 await selectPart(val);
@@ -238,9 +232,15 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
             await runResolve();
         });
 
-        await parts.refetch();
-        if (selectedPartName() !== null) {
-            await versions.refetch();
+        if (parts.status() !== 'idle') {
+            try {
+                await parts.refetch();
+            } catch {}
+            if (selectedPartName() !== null && versions.status() !== 'idle') {
+                try {
+                    await versions.refetch();
+                } catch {}
+            }
         }
 
         queueMicrotask(() => {
@@ -257,6 +257,7 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
             selectedVersionNumber,
             selectedVersion,
             status: parts.status,
+            live: parts.live,
             errorMessage,
             versionStatus: versions.status,
             versionErrorMessage,

@@ -331,13 +331,19 @@ export function renderSitesView(vx: ViewContext<Record<string, never>, SitesApi>
                         props: { level: 2, style: { fontSize: '14px', margin: '0', flex: '1 1 auto' } },
                         children: [text(() => `Sites — ${String(app.sites().length)} site(s)`)],
                     }),
-                    element('Button', {
+                    element('Span', {
                         props: {
-                            style: { padding: '4px 12px', fontSize: '12px' },
-                            disabled: () => app.busy(),
+                            class: 'sites-live-indicator live-indicator',
+                            style: () => ({
+                                padding: '2px 8px',
+                                borderRadius: '10px',
+                                fontSize: '11px',
+                                background: app.live() ? 'rgba(56, 139, 253, 0.15)' : 'var(--surface)',
+                                color: app.live() ? 'var(--accent)' : 'var(--ink-dim)',
+                                border: '1px solid var(--edge)',
+                            }),
                         },
-                        intents: { activate: { action: command('sites.refresh') } },
-                        children: [text('Refresh')],
+                        children: [text(() => (app.live() ? '● live' : '○ not following'))],
                     }),
                 ],
             }),
@@ -369,6 +375,7 @@ export function renderSitesView(vx: ViewContext<Record<string, never>, SitesApi>
                             loadingMessage: 'Reading sites...',
                             errorMessage: () => app.sitesError() ?? 'Unknown error',
                             emptyMessage: 'No sites registered.',
+                            idleMessage: 'Sign in to view registered sites.',
                             count: () => app.sites().length,
                         },
                         children: [

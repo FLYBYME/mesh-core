@@ -64,9 +64,12 @@ export interface ReleasesApi {
     readonly selectedReleaseHash: Signal<string | null>;
     readonly selectedRelease: () => ReleaseFindOutputItem | null;
     readonly sitesStatus: ReadonlySignal<CollectionStatus>;
+    readonly sitesLive: ReadonlySignal<boolean>;
     readonly sitesError: () => string | null;
     readonly releasesStatus: ReadonlySignal<CollectionStatus>;
+    readonly releasesLive: ReadonlySignal<boolean>;
     readonly releasesError: () => string | null;
+    readonly live: ReadonlySignal<boolean>;
 
     readonly composeKernel: Signal<string>;
     readonly composeName: Signal<string>;

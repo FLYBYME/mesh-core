@@ -92,6 +92,13 @@ export function renderSitesSection(app: ReleasesApi): Described {
                 ],
             }),
             when(
+                () => app.sitesStatus() === 'idle',
+                () => element('Text', {
+                    props: { class: 'sites-idle-message', style: { fontSize: '12px', color: 'var(--ink-dim, #8b949e)', padding: '8px' } },
+                    children: [text('Sign in to view scoped sites.')],
+                }),
+            ),
+            when(
                 () => app.sitesStatus() === 'loading',
                 () => element('Text', {
                     props: { style: { fontSize: '12px', color: 'var(--ink-dim, #8b949e)', padding: '8px' } },

@@ -34,11 +34,17 @@ export const tableComponent: ComponentDefinition = {
         empty.setAttribute('role', 'status');
         empty.textContent = 'No records found.';
 
+        const idle = document.createElement('div');
+        idle.className = 'ui-table-idle';
+        idle.setAttribute('role', 'status');
+        idle.textContent = 'Not signed in.';
+
         el.appendChild(header);
         el.appendChild(loading);
         el.appendChild(error);
         el.appendChild(rows);
         el.appendChild(empty);
+        el.appendChild(idle);
 
         return el;
     },
@@ -127,6 +133,12 @@ export const tableComponent: ComponentDefinition = {
         if (name === 'emptyMessage') {
             const empty = el.querySelector('.ui-table-empty');
             if (isHTMLElement(empty)) empty.textContent = String(value);
+            return true;
+        }
+
+        if (name === 'idleMessage') {
+            const idle = el.querySelector('.ui-table-idle');
+            if (isHTMLElement(idle)) idle.textContent = String(value);
             return true;
         }
 

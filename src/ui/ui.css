@@ -82,6 +82,14 @@
         text-align: center;
     }
 
+    .ui-entity-list-idle {
+        display: none;
+        padding: 24px 16px;
+        color: var(--ink-dim);
+        font-size: 13px;
+        text-align: center;
+    }
+
     .ui-entity-list[data-status="loading"] .ui-entity-list-loading {
         display: block;
     }
@@ -93,6 +101,13 @@
         display: block;
     }
     .ui-entity-list[data-status="error"] .ui-entity-list-items {
+        display: none;
+    }
+
+    .ui-entity-list[data-status="idle"] .ui-entity-list-idle {
+        display: block;
+    }
+    .ui-entity-list[data-status="idle"] .ui-entity-list-items {
         display: none;
     }
 
@@ -391,6 +406,14 @@
         text-align: center;
     }
 
+    .ui-table-idle {
+        display: none;
+        padding: 16px;
+        color: var(--ink-dim);
+        font-size: 13px;
+        text-align: center;
+    }
+
     .ui-table[data-status="loading"] .ui-table-loading {
         display: block;
     }
@@ -402,6 +425,13 @@
         display: block;
     }
     .ui-table[data-status="error"] .ui-table-rows {
+        display: none;
+    }
+
+    .ui-table[data-status="idle"] .ui-table-idle {
+        display: block;
+    }
+    .ui-table[data-status="idle"] .ui-table-rows {
         display: none;
     }
 

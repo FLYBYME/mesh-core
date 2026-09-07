@@ -1,4 +1,5 @@
 import {
+    computed,
     type Application,
     type CommandDecl,
     type Context,
@@ -50,7 +51,6 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
     readonly api = chromeApi;
 
     readonly commands: readonly CommandDecl[] = [
-        { id: "fleet.refresh", title: "Fleet: Refresh" },
         { id: "fleet.select", title: "Fleet: Select Machine" },
         { id: "fleet.toggleService", title: "Fleet: Toggle Service" },
         { id: "fleet.toggleGroup", title: "Fleet: Toggle Group" },
@@ -181,7 +181,17 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
         };
 
         const refresh = async (): Promise<void> => {
-            await Promise.all([nodes.refetch(), groups.refetch(), loadStatus()]);
+            const promises: Promise<unknown>[] = [];
+            if (nodes.status() !== "idle") {
+                promises.push(nodes.refetch());
+            }
+            if (groups.status() !== "idle") {
+                promises.push(groups.refetch());
+            }
+            promises.push(loadStatus());
+            try {
+                await Promise.all(promises);
+            } catch {}
         };
 
         const select = async (hostname: string): Promise<void> => {
@@ -426,7 +436,6 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             }
         };
 
-        cx.commands.implement("fleet.refresh", refresh);
         cx.commands.implement("fleet.select", async (hostname) => { await select(String(hostname)); });
         cx.commands.implement("fleet.toggleService", async (s) => { await toggleService(String(s)); });
         cx.commands.implement("fleet.toggleGroup", async (g) => { await toggleGroup(String(g)); });
@@ -452,6 +461,7 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             groups: groups.rows,
             nodesStatus: nodes.status,
             nodesError,
+            live: computed(() => nodes.live() && groups.live()),
             fleet,
             selectedHostname,
             selected,

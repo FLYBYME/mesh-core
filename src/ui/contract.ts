@@ -22,7 +22,7 @@ export const UI_DIALOG = 'ui.Dialog';
 
 // ---------------------------------------------------------------------------- prop types
 
-export type EntityListStatus = 'loading' | 'error' | 'ready' | 'empty';
+export type EntityListStatus = 'idle' | 'loading' | 'error' | 'ready' | 'empty';
 
 export interface EntityListProps {
     readonly status?: EntityListStatus | (() => EntityListStatus);
@@ -31,6 +31,7 @@ export interface EntityListProps {
     readonly loadingMessage?: string | (() => string);
     readonly errorMessage?: string | null | (() => string | null);
     readonly emptyMessage?: string | (() => string);
+    readonly idleMessage?: string | (() => string);
     readonly errorClass?: string | (() => string);
     readonly width?: string | (() => string);
     readonly empty?: boolean | (() => boolean);
@@ -62,6 +63,7 @@ export interface TableProps {
     readonly loadingMessage?: string | (() => string);
     readonly errorMessage?: string | null | (() => string | null);
     readonly emptyMessage?: string | (() => string);
+    readonly idleMessage?: string | (() => string);
     readonly count?: number | (() => number);
     readonly empty?: boolean | (() => boolean);
     readonly class?: string | (() => string);
