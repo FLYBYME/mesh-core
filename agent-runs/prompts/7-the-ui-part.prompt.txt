@@ -1,8 +1,31 @@
 Code lives in:  FLYBYME/mesh-core — this worktree. All commits go here.
 
-**BLOCKED until mesh-web dispatch 13 lands** — an Extension cannot provide a
-component before that. Check `node_modules/@flybyme/mesh-web` supports component
-contribution before starting; if it does not, stop and say so.
+================================================================================
+FIRST, UPGRADE THE KERNEL — this repository is a version behind
+================================================================================
+
+Component contribution shipped in **mesh-web 0.14.0** and this repository is on
+`^0.13`. Move `package.json` and every part's `kernel` field in `mesh.json` to
+**`^0.14`**, then:
+
+    rm -rf node_modules/@flybyme/mesh-web && npm install
+    node -e "console.log(require('./node_modules/@flybyme/mesh-web/package.json').version)"
+
+**Check that it prints 0.14.0.** npm reuses a cached git dependency when the
+lockfile still resolves to an older commit, and this has already bitten twice —
+a dispatch here once passed its whole suite against 0.11.1 while `package.json`
+said 0.13.0, a kernel that predated the capability it had just adopted.
+
+0.14 also brought the **internal context**, so a view no longer reaches its state
+through the published API. Adopting that here is a **separate dispatch** — do not
+do it as well. If a console's API looks bloated, that is why, and it is somebody
+else's task.
+
+What 0.14 gives you for this task: `Declarations.components`, merged into
+`manifest.components` with conflicts recorded at load, and the kernel registering
+them before anything renders. **The `${id}.` prefix is enforced** — a part may
+only declare components named for itself, so `ui` declares `ui.*` and nothing else
+can.
 
 ================================================================================
 THE TASK
