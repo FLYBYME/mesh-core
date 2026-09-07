@@ -8,6 +8,7 @@ import {
 
 import {
     chromeApi,
+    type CdnComposeInputPart,
     type CdnComposeOutput,
     type CdnDeployOutput,
     type ReleaseFindOutputItem,
@@ -25,6 +26,41 @@ import { renderReleasesView } from './views/console.js';
 export * from './contract.js';
 export * from './parse.js';
 
+function isRecord(val: unknown): val is Record<string, unknown> {
+    return typeof val === 'object' && val !== null;
+}
+
+function isKind(val: unknown): val is 'application' | 'extension' {
+    return val === 'application' || val === 'extension';
+}
+
+function toComposePart(item: unknown): CdnComposeInputPart | undefined {
+    if (!isRecord(item)) return undefined;
+    const id = typeof item.id === 'string' ? item.id : '';
+    const version = typeof item.version === 'string' ? item.version : '';
+    const kind = isKind(item.kind) ? item.kind : 'application';
+    return { id, version, kind };
+}
+
+function parsePartsArray(val: unknown): readonly CdnComposeInputPart[] {
+    if (!Array.isArray(val)) return [];
+    const parts: CdnComposeInputPart[] = [];
+    for (const item of val) {
+        const p = toComposePart(item);
+        if (p) parts.push(p);
+    }
+    return parts;
+}
+
+function extractPartPatch(patch: unknown): Partial<CdnComposeInputPart> {
+    if (!isRecord(patch)) return {};
+    const res: { id?: string; version?: string; kind?: 'application' | 'extension' } = {};
+    if (typeof patch.id === 'string') res.id = patch.id;
+    if (typeof patch.version === 'string') res.version = patch.version;
+    if (isKind(patch.kind)) res.kind = patch.kind;
+    return res;
+}
+
 export default class ReleasesApp implements Application<typeof NEEDS, readonly [], typeof RELEASES, typeof chromeApi> {
     readonly needs = NEEDS;
     readonly provides = RELEASES;
@@ -37,6 +73,13 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
         { id: 'releases.setComposeKernel', title: 'Releases: Set Kernel Range' },
         { id: 'releases.setComposeName', title: 'Releases: Set Release Name' },
         { id: 'releases.setComposeParts', title: 'Releases: Set Parts Text' },
+        { id: 'releases.addComposePart', title: 'Releases: Add Part' },
+        { id: 'releases.removeComposePart', title: 'Releases: Remove Part' },
+        { id: 'releases.updateComposePart', title: 'Releases: Update Part' },
+        { id: 'releases.updatePartId', title: 'Releases: Update Part ID' },
+        { id: 'releases.updatePartVersion', title: 'Releases: Update Part Version' },
+        { id: 'releases.updatePartKind', title: 'Releases: Update Part Kind' },
+        { id: 'releases.setField', title: 'Releases: Set Field' },
         { id: 'releases.dryRunCompose', title: 'Releases: Dry Run Compose' },
         { id: 'releases.commitCompose', title: 'Releases: Commit Compose' },
         { id: 'releases.deployRelease', title: 'Releases: Deploy Release' },
@@ -87,6 +130,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
          */
         const composeKernel = cx.state.signal<string>('');
         const composeName = cx.state.signal<string>('');
+        const composeParts = cx.state.signal<readonly CdnComposeInputPart[]>([]);
         const composePartsText = cx.state.signal<string>('');
         /** Cleared when the user edits, so seeding never overwrites something typed. */
         const composeSeededFrom = cx.state.signal<string | null>(null);
@@ -143,16 +187,18 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             if (release === null) return;
             if (composeSeededFrom() === release.hash) return;
 
-            const edited = composeKernel() !== '' || composePartsText() !== '';
+            const edited = composeKernel() !== '' || composeParts().length > 0;
             if (edited && composeSeededFrom() === null) return;
 
             composeKernel.set(`^${release.kernel.version}`);
             composeName.set(release.name ?? '');
-            composePartsText.set(
-                Object.entries(release.parts)
-                    .map(([id, part]) => `${id}: ^${part.version}`)
-                    .join('\n'),
-            );
+            const seededParts: readonly CdnComposeInputPart[] = Object.entries(release.parts).map(([id, part]) => ({
+                id,
+                version: `^${part.version}`,
+                kind: (id === 'chrome' || id === 'theme' || id === 'auth' || id === 'ui') ? 'extension' : 'application',
+            }));
+            composeParts.set(seededParts);
+            composePartsText.set(seededParts.map((p) => `${p.id}: ${p.version}`).join('\n'));
             composeSeededFrom.set(release.hash);
         });
 
@@ -184,14 +230,124 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
 
         const setComposeKernel = (kernel: string): void => {
             composeKernel.set(kernel);
+            composeSeededFrom.set(null);
         };
 
         const setComposeName = (name: string): void => {
             composeName.set(name);
+            composeSeededFrom.set(null);
+        };
+
+        const setComposeParts = (val: readonly CdnComposeInputPart[] | string): void => {
+            if (typeof val === 'string') {
+                const parsed = parsePartsInput(val);
+                composeParts.set(parsed);
+                composePartsText.set(val);
+            } else if (Array.isArray(val)) {
+                composeParts.set(val);
+                composePartsText.set(val.map((p) => `${p.id}: ${p.version}`).join('\n'));
+            }
+            composeSeededFrom.set(null);
         };
 
         const setComposePartsText = (textVal: string): void => {
-            composePartsText.set(textVal);
+            setComposeParts(textVal);
+        };
+
+        const setField = (fieldVal?: Json, val?: Json): void => {
+            const field = String(fieldVal ?? '');
+            if (field === 'name') {
+                composeName.set(typeof val === 'string' ? val : String(val ?? ''));
+                composeSeededFrom.set(null);
+            } else if (field === 'kernel') {
+                composeKernel.set(typeof val === 'string' ? val : String(val ?? ''));
+                composeSeededFrom.set(null);
+            } else if (field === 'parts') {
+                if (Array.isArray(val)) {
+                    const parsed = parsePartsArray(val);
+                    composeParts.set(parsed);
+                    composePartsText.set(parsed.map((p) => `${p.id}: ${p.version}`).join('\n'));
+                    composeSeededFrom.set(null);
+                }
+            }
+        };
+
+        const addComposePart = (part?: Partial<CdnComposeInputPart>): void => {
+            const curr = [...composeParts()];
+            curr.push({
+                id: part?.id ?? '',
+                version: part?.version ?? '^0.1.0',
+                kind: part?.kind ?? 'application',
+            });
+            composeParts.set(curr);
+            composePartsText.set(curr.map((p) => `${p.id}: ${p.version}`).join('\n'));
+            composeSeededFrom.set(null);
+        };
+
+        const removeComposePart = (indexVal?: Json): void => {
+            const idx = typeof indexVal === 'number' ? indexVal : parseInt(String(indexVal ?? '-1'), 10);
+            const curr = [...composeParts()];
+            if (idx >= 0 && idx < curr.length) {
+                curr.splice(idx, 1);
+                composeParts.set(curr);
+                composePartsText.set(curr.map((p) => `${p.id}: ${p.version}`).join('\n'));
+                composeSeededFrom.set(null);
+            }
+        };
+
+        const updateComposePart = (indexVal?: Json, patchVal?: Json): void => {
+            const idx = typeof indexVal === 'number' ? indexVal : parseInt(String(indexVal ?? '-1'), 10);
+            const curr = [...composeParts()];
+            const target = curr[idx];
+            if (idx >= 0 && idx < curr.length && target !== undefined && isRecord(patchVal)) {
+                const patch = extractPartPatch(patchVal);
+                curr[idx] = {
+                    id: patch.id ?? target.id,
+                    version: patch.version ?? target.version,
+                    kind: patch.kind ?? target.kind,
+                };
+                composeParts.set(curr);
+                composePartsText.set(curr.map((p) => `${p.id}: ${p.version}`).join('\n'));
+                composeSeededFrom.set(null);
+            }
+        };
+
+        const updatePartId = (indexVal?: Json, idVal?: Json): void => {
+            const idx = typeof indexVal === 'number' ? indexVal : parseInt(String(indexVal ?? '-1'), 10);
+            const id = typeof idVal === 'string' ? idVal : String(idVal ?? '');
+            const curr = [...composeParts()];
+            if (idx >= 0 && idx < curr.length && curr[idx] !== undefined) {
+                const existing = curr[idx];
+                const kind = (id === 'chrome' || id === 'theme' || id === 'auth' || id === 'ui') ? 'extension' : existing.kind;
+                curr[idx] = { ...existing, id, kind };
+                composeParts.set(curr);
+                composePartsText.set(curr.map((p) => `${p.id}: ${p.version}`).join('\n'));
+                composeSeededFrom.set(null);
+            }
+        };
+
+        const updatePartVersion = (indexVal?: Json, versionVal?: Json): void => {
+            const idx = typeof indexVal === 'number' ? indexVal : parseInt(String(indexVal ?? '-1'), 10);
+            const version = typeof versionVal === 'string' ? versionVal : String(versionVal ?? '');
+            const curr = [...composeParts()];
+            if (idx >= 0 && idx < curr.length && curr[idx] !== undefined) {
+                curr[idx] = { ...curr[idx], version };
+                composeParts.set(curr);
+                composePartsText.set(curr.map((p) => `${p.id}: ${p.version}`).join('\n'));
+                composeSeededFrom.set(null);
+            }
+        };
+
+        const updatePartKind = (indexVal?: Json, kindVal?: Json): void => {
+            const idx = typeof indexVal === 'number' ? indexVal : parseInt(String(indexVal ?? '-1'), 10);
+            const kind = kindVal === 'extension' ? 'extension' : 'application';
+            const curr = [...composeParts()];
+            if (idx >= 0 && idx < curr.length && curr[idx] !== undefined) {
+                curr[idx] = { ...curr[idx], kind };
+                composeParts.set(curr);
+                composePartsText.set(curr.map((p) => `${p.id}: ${p.version}`).join('\n'));
+                composeSeededFrom.set(null);
+            }
         };
 
         const runCompose = async (dryRun: boolean): Promise<void> => {
@@ -199,10 +355,10 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             composeError.set(null);
             composeResult.set(null);
 
-            const parts = parsePartsInput(composePartsText());
+            const parts = composeParts().filter((p) => p.id.trim() !== '' && p.version.trim() !== '');
             if (parts.length === 0) {
                 composeStatus.set('error');
-                composeError.set('No valid parts entered. Format: "id: range" — one per line.');
+                composeError.set('No valid parts entered. Add at least one part with an ID and version range.');
                 return;
             }
 
@@ -241,6 +397,15 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
         };
 
         const runDeploy = async (host: string, releaseHash: string): Promise<void> => {
+            if (!host || !releaseHash) return;
+
+            const ok = await cx.confirmation.ask({
+                message: `Deploy release "${releaseHash}" to "${host}"? This will switch live traffic.`,
+                confirmLabel: 'Deploy release',
+                destructive: true,
+            });
+            if (!ok) return;
+
             deployStatus.set('deploying');
             deployError.set(null);
             deployResult.set(null);
@@ -281,6 +446,35 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
 
         cx.commands.implement('releases.setComposeParts', (val?: Json) => {
             if (typeof val === 'string') setComposePartsText(val);
+            else if (Array.isArray(val)) setComposeParts(parsePartsArray(val));
+        });
+
+        cx.commands.implement('releases.addComposePart', () => {
+            addComposePart();
+        });
+
+        cx.commands.implement('releases.removeComposePart', (indexVal?: Json) => {
+            removeComposePart(indexVal);
+        });
+
+        cx.commands.implement('releases.updateComposePart', (indexVal?: Json, patchVal?: Json) => {
+            updateComposePart(indexVal, patchVal);
+        });
+
+        cx.commands.implement('releases.updatePartId', (indexVal?: Json, idVal?: Json) => {
+            updatePartId(indexVal, idVal);
+        });
+
+        cx.commands.implement('releases.updatePartVersion', (indexVal?: Json, versionVal?: Json) => {
+            updatePartVersion(indexVal, versionVal);
+        });
+
+        cx.commands.implement('releases.updatePartKind', (indexVal?: Json, kindVal?: Json) => {
+            updatePartKind(indexVal, kindVal);
+        });
+
+        cx.commands.implement('releases.setField', (fieldVal?: Json, val?: Json) => {
+            setField(fieldVal, val);
         });
 
         cx.commands.implement('releases.dryRunCompose', async () => {
@@ -320,6 +514,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             releasesError,
             composeKernel,
             composeName,
+            composeParts,
             composePartsText,
             composeStatus,
             composeResult,
@@ -332,7 +527,12 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             selectRelease,
             setComposeKernel,
             setComposeName,
+            setComposeParts,
             setComposePartsText,
+            addComposePart,
+            removeComposePart,
+            updateComposePart,
+            setField,
             runCompose,
             runDeploy,
         };

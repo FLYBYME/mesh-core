@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, mountPart } from '@flybyme/mesh-web/testing';
 import ReleasesApp, { RELEASES } from '../src/releases/index.js';
+import UiExtension from '../src/ui/index.js';
 import type {
     CdnComposeOutput,
     CdnDeployOutput,
@@ -117,11 +118,13 @@ describe('ReleasesApp', () => {
     let shouldFail = false;
     let mutableSites: SiteFindOutputItem[] = [];
     let mutableReleases: ReleaseFindOutputItem[] = [];
+    let composeResponseOverride: CdnComposeOutput | undefined;
 
     beforeEach(() => {
         shouldFail = false;
         mutableSites = [...MOCK_SITES];
         mutableReleases = [...MOCK_RELEASES];
+        composeResponseOverride = undefined;
 
         globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
             const url = String(input);
@@ -171,7 +174,7 @@ describe('ReleasesApp', () => {
                     mutableReleases.push(newRel);
                 }
 
-                return new Response(JSON.stringify(MOCK_DRYRUN_OUTPUT), {
+                return new Response(JSON.stringify(composeResponseOverride ?? MOCK_DRYRUN_OUTPUT), {
                     status: 200,
                     headers: { 'content-type': 'application/json' },
                 });
@@ -220,7 +223,10 @@ describe('ReleasesApp', () => {
 
     it('loads and lists scoped sites and releases with live status', async () => {
         const s = await mountPart({
-            parts: [{ id: 'releases', contribution: ReleasesApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
         });
         site = s;
         s.assertSingleFramework();
@@ -245,7 +251,10 @@ describe('ReleasesApp', () => {
 
     it('supports dry run compose to inspect resolution without writing', async () => {
         const s = await mountPart({
-            parts: [{ id: 'releases', contribution: ReleasesApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
         });
         site = s;
 
@@ -272,7 +281,10 @@ describe('ReleasesApp', () => {
 
     it('commits a new release and updates the release list', async () => {
         const s = await mountPart({
-            parts: [{ id: 'releases', contribution: ReleasesApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
         });
         site = s;
 
@@ -288,7 +300,10 @@ describe('ReleasesApp', () => {
 
     it('deploys release to a site and supports rollback', async () => {
         const s = await mountPart({
-            parts: [{ id: 'releases', contribution: ReleasesApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
         });
         site = s;
 
@@ -303,11 +318,14 @@ describe('ReleasesApp', () => {
 
         const deployBtn = document.querySelector('.btn-deploy-release');
         expect(deployBtn).not.toBeNull();
-        if (deployBtn instanceof HTMLElement) {
-            deployBtn.click();
-        }
 
-        await releasesApi.runDeploy('127.0.0.1', 'sha256:22222222222222222222222222222222');
+        const deployPromise = releasesApi.runDeploy('127.0.0.1', 'sha256:22222222222222222222222222222222');
+        await new Promise((r) => setTimeout(r, 50));
+        const confirmBtn = document.querySelector('.mesh-confirm-ok');
+        if (confirmBtn instanceof HTMLButtonElement) {
+            confirmBtn.click();
+        }
+        await deployPromise;
 
         expect(releasesApi.deployStatus()).toBe('success');
 
@@ -320,18 +338,58 @@ describe('ReleasesApp', () => {
         expect(releasesApi.selectedRelease()?.hash).toBe('sha256:11111111111111111111111111111111');
 
         // Roll back site 127.0.0.1 to rel_1
-        await releasesApi.runDeploy('127.0.0.1', 'sha256:11111111111111111111111111111111');
+        const rollbackPromise = releasesApi.runDeploy('127.0.0.1', 'sha256:11111111111111111111111111111111');
+        await new Promise((r) => setTimeout(r, 50));
+        const confirmRollbackBtn = document.querySelector('.mesh-confirm-ok');
+        if (confirmRollbackBtn instanceof HTMLButtonElement) {
+            confirmRollbackBtn.click();
+        }
+        await rollbackPromise;
         expect(releasesApi.deployStatus()).toBe('success');
 
         const rolledBackSite = releasesApi.sites().find((st) => st.host === '127.0.0.1');
         expect(rolledBackSite?.releaseHash).toBe('sha256:11111111111111111111111111111111');
     });
 
+    it('aborts deployment when confirmation dialog is rejected', async () => {
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
+        });
+        site = s;
+
+        const releasesApi = s.kernel.provided(RELEASES);
+        if (!releasesApi) throw new Error('ReleasesApi not found');
+
+        releasesApi.selectSite('127.0.0.1');
+        releasesApi.selectRelease('sha256:22222222222222222222222222222222');
+
+        const deployPromise = releasesApi.runDeploy('127.0.0.1', 'sha256:22222222222222222222222222222222');
+        await new Promise((r) => setTimeout(r, 50));
+        const cancelBtn = document.querySelector('.mesh-confirm-cancel');
+        if (cancelBtn instanceof HTMLButtonElement) {
+            cancelBtn.click();
+        }
+        const res = await deployPromise;
+
+        expect(res).toBeUndefined();
+        expect(releasesApi.deployStatus()).toBe('idle');
+
+        // Verify site 127.0.0.1 retains its original releaseHash
+        const siteItem = releasesApi.sites().find((st) => st.host === '127.0.0.1');
+        expect(siteItem?.releaseHash).toBe('sha256:11111111111111111111111111111111');
+    });
+
     it('handles call refusal visibly with error message and no throw', async () => {
         shouldFail = true;
 
         const s = await mountPart({
-            parts: [{ id: 'releases', contribution: ReleasesApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
         });
         site = s;
 
@@ -347,7 +405,10 @@ describe('ReleasesApp', () => {
 
     it('updates bound collections after mutations without caller re-fetching', async () => {
         const s = await mountPart({
-            parts: [{ id: 'releases', contribution: ReleasesApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
         });
         site = s;
 
@@ -368,7 +429,13 @@ describe('ReleasesApp', () => {
         expect(releasesApi.releases().some((r) => r.hash === 'sha256:33333333333333333333333333333333')).toBe(true);
 
         // Mutation 2: deploy the new release to site 127.0.0.1 (POST /sites/:host/deploy)
-        await releasesApi.runDeploy('127.0.0.1', 'sha256:33333333333333333333333333333333');
+        const deployPromise = releasesApi.runDeploy('127.0.0.1', 'sha256:33333333333333333333333333333333');
+        await new Promise((r) => setTimeout(r, 50));
+        const confirmBtn = document.querySelector('.mesh-confirm-ok');
+        if (confirmBtn instanceof HTMLButtonElement) {
+            confirmBtn.click();
+        }
+        await deployPromise;
 
         // Assert: bound sites collection reflects the updated releaseHash without manual caller re-fetch
         expect(releasesApi.deployStatus()).toBe('success');
@@ -378,5 +445,92 @@ describe('ReleasesApp', () => {
         // Assert DOM reactivity reflects the bound collections
         const releaseButtons = document.querySelectorAll('.release-item');
         expect(releaseButtons.length).toBe(3);
+    });
+
+    it('renders composer form with schema controls and repeating parts', async () => {
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
+        });
+        site = s;
+
+        const releasesApi = s.kernel.provided(RELEASES);
+        if (!releasesApi) throw new Error('ReleasesApi not found');
+
+        const form = document.querySelector('.release-composer-form');
+        expect(form).not.toBeNull();
+
+        const nameInput = document.querySelector('.input-name');
+        expect(nameInput).not.toBeNull();
+
+        const kernelInput = document.querySelector('.input-kernel');
+        expect(kernelInput).not.toBeNull();
+
+        const partsList = document.querySelector('.composer-parts-list');
+        expect(partsList).not.toBeNull();
+
+        // Check initial parts list
+        const initialRows = document.querySelectorAll('.composer-part-row');
+        expect(initialRows.length).toBe(releasesApi.composeParts().length);
+
+        // Add a part via button
+        const addBtn = document.querySelector('.btn-add-part');
+        expect(addBtn).not.toBeNull();
+        if (addBtn instanceof HTMLButtonElement) {
+            addBtn.click();
+        }
+
+        const countAfterAdd = releasesApi.composeParts().length;
+        expect(countAfterAdd).toBe(initialRows.length + 1);
+
+        // Remove a part via button
+        const removeButtons = document.querySelectorAll('.btn-remove-part');
+        const lastRemoveBtn = removeButtons[removeButtons.length - 1];
+        if (lastRemoveBtn instanceof HTMLButtonElement) {
+            lastRemoveBtn.click();
+        }
+
+        expect(releasesApi.composeParts().length).toBe(initialRows.length);
+    });
+
+    it('reports multiple compose problems simultaneously in the result box', async () => {
+        composeResponseOverride = {
+            hash: '',
+            kernel: { version: '', digest: '' },
+            parts: {},
+            existed: false,
+            problems: [
+                { kind: 'kernel_unresolved', message: 'Kernel version ^0.15 could not be satisfied' },
+                { kind: 'version_conflict', message: 'Part ui (^0.2.0) requires chrome (^0.3.0), but chrome is 0.2.4' },
+                { kind: 'missing_dependency', message: 'Unsatisfied peer dependency: auth' },
+            ],
+        };
+
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
+        });
+        site = s;
+
+        const releasesApi = s.kernel.provided(RELEASES);
+        if (!releasesApi) throw new Error('ReleasesApi not found');
+
+        await releasesApi.runCompose(true);
+
+        expect(releasesApi.composeStatus()).toBe('success');
+        expect(releasesApi.composeResult()?.problems.length).toBe(3);
+
+        const resultBox = document.querySelector('.compose-result-box');
+        expect(resultBox).not.toBeNull();
+
+        const problemItems = document.querySelectorAll('.compose-problem-item');
+        expect(problemItems.length).toBe(3);
+        expect(problemItems[0]?.textContent).toContain('Kernel version ^0.15 could not be satisfied');
+        expect(problemItems[1]?.textContent).toContain('Part ui (^0.2.0) requires chrome');
+        expect(problemItems[2]?.textContent).toContain('Unsatisfied peer dependency: auth');
     });
 });
