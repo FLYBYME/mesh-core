@@ -72,8 +72,19 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
         const lastAction = cx.state.signal<string | null>(null);
         const lastError = cx.state.signal<string | null>(null);
 
-        // writeSupported signal: false until FLYBYME/mesh-serve#5 lands
-        const writeSupported = cx.state.signal<boolean>(false);
+        /**
+         * The writes exist now: `site.create` and `cdn.site_edit`.
+         *
+         * They arrived as a **separate contract** rather than an exposed `site.update`, because
+         * `defineCrud` has no way to omit a field from a generated update and an exposed one would
+         * carry `releaseHash` — a deploy with none of `cdn.deploy`'s checks, reachable by anybody
+         * allowed to change a title. A contract that simply does not have the field cannot be
+         * argued into writing it.
+         *
+         * So the separation this console was built around is now enforced by the server rather than
+         * by this screen declining to offer a button.
+         */
+        const writeSupported = cx.state.signal<boolean>(true);
 
         const sitesError = cx.state.computed<string | null>(() => {
             const err = sites.error();
@@ -194,7 +205,26 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             if (site === null) return;
 
             if (!writeSupported()) {
-                lastError.set('Saving site metadata is disabled: site.update is internal on the server (FLYBYME/mesh-serve#5).');
+                lastError.set('Saving site metadata is not available on this server.');
+                return;
+            }
+
+            /**
+             * The two JSON fields are parsed **before** anything is asked or sent.
+             *
+             * `theme` and `policy` are free-form records typed into a textarea, so they are the one
+             * place a person can produce something the contract will reject. Failing here names the
+             * field; failing after the confirmation would ask somebody to approve a save that was
+             * never going to happen.
+             */
+            let theme: Record<string, string>;
+            let policy: Record<string, string>;
+            try {
+                theme = JSON.parse(formTheme() || '{}') as Record<string, string>;
+                policy = JSON.parse(formPolicy() || '{}') as Record<string, string>;
+            } catch (error) {
+                lastError.set(`Theme and policy must be JSON objects: ${
+                    error instanceof Error ? error.message : String(error)}`);
                 return;
             }
 
@@ -207,7 +237,30 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             busy.set(true);
             lastError.set(null);
             try {
-                lastAction.set(`Saved changes to ${site.host}.`);
+                /**
+                 * `cdn.site_edit`, not `site.update`.
+                 *
+                 * The edit contract has no `releaseHash` field at all, so this screen cannot deploy
+                 * by accident — which is why the server grew a second contract rather than exposing
+                 * the generated update. Deploying is the separate action below.
+                 */
+                const result = await cx.mesh.call('cdn.site_edit', {
+                    host: site.host,
+                    title: formTitle(),
+                    description: formDescription(),
+                    indexable: formIndexable(),
+                    theme,
+                    policy,
+                });
+
+                if (result.ok) {
+                    lastAction.set(`Saved changes to ${site.host}.`);
+                } else {
+                    const detail = 'detail' in result.error && typeof result.error.detail === 'string'
+                        ? result.error.detail
+                        : result.error.kind;
+                    lastError.set(`Could not save ${site.host} (${result.error.kind}): ${detail}`);
+                }
             } finally {
                 busy.set(false);
                 await sites.refetch();

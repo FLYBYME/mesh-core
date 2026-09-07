@@ -35,7 +35,7 @@
         {
             "kind": "application",
             "id": "catalog",
-            "version": "0.2.7",
+            "version": "0.2.8",
             "entry": "src/catalog/index.ts",
             "kernel": "^0.15",
             "requiredParts": [
@@ -74,7 +74,7 @@
         {
             "kind": "application",
             "id": "releases",
-            "version": "0.2.5",
+            "version": "0.2.6",
             "entry": "src/releases/index.ts",
             "kernel": "^0.15",
             "requiredParts": [
@@ -115,7 +115,7 @@
         {
             "kind": "extension",
             "id": "auth",
-            "version": "0.3.4",
+            "version": "0.3.5",
             "entry": "src/auth/index.ts",
             "kernel": "^0.15",
             "mesh": [
@@ -141,7 +141,7 @@
         {
             "kind": "application",
             "id": "fleet",
-            "version": "0.1.3",
+            "version": "0.1.4",
             "entry": "src/fleet/index.ts",
             "kernel": "^0.15",
             "requiredParts": [
@@ -183,7 +183,7 @@
         {
             "kind": "application",
             "id": "sites",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "entry": "src/sites/index.ts",
             "kernel": "^0.15",
             "requiredParts": [
@@ -200,7 +200,9 @@
                         "site.find",
                         "site.get",
                         "site.count",
-                        "cdn.deploy"
+                        "cdn.deploy",
+                        "site.create",
+                        "cdn.site_edit"
                     ]
                 }
             ],

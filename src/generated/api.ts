@@ -1,8 +1,8 @@
 // GENERATED FILE — do not edit.
 //
 // Emitted from chrome's mesh.json by `mesh-serve client`.
-// Exposure: sha256:c7b66ed16b476e095ec5c3746a8097ce
-// ShapeHash: sha256:2c9bc8258a550b75c89f6419d20fb80f
+// Exposure: sha256:eab1870b84285abe282b8b5d8ebbb5b8
+// ShapeHash: sha256:41f3176513230fb821899d2b65a2e0b2
 //
 // Regenerate rather than editing. The exposure and shape hashes above are checked at run time
 // against what the API reports, so a hand-edited client is a client that lies about a surface
@@ -94,6 +94,53 @@ export interface CdnDeployOutput {
     readonly release: string;
     readonly changed: boolean;
     readonly unusedGrants: readonly string[];
+}
+
+export interface CdnSiteEditInput {
+    readonly host: string;
+    readonly title?: string;
+    readonly description?: string;
+    readonly indexable?: boolean;
+    readonly theme?: Readonly<Record<string, string>>;
+    readonly policy?: Readonly<Record<string, string>>;
+}
+
+export interface CdnSiteEditOutputMeshItem {
+    readonly package: string;
+    readonly version: string;
+    readonly contracts: readonly ({
+    readonly key: string;
+    readonly auth: "public" | "user" | "admin" | "operator";
+} | {
+    readonly key: string;
+    readonly permission: string;
+})[];
+    readonly events?: readonly ({
+    readonly key: string;
+    readonly auth: "public" | "user" | "admin" | "operator";
+} | {
+    readonly key: string;
+    readonly permission: string;
+})[];
+}
+
+export interface CdnSiteEditOutput {
+    readonly host: string;
+    readonly application: string;
+    readonly tenantId: string;
+    readonly api: string;
+    readonly releaseHash?: string;
+    readonly mesh: readonly CdnSiteEditOutputMeshItem[];
+    readonly theme: Readonly<Record<string, string>>;
+    readonly policy: Readonly<Record<string, string>>;
+    readonly title?: string;
+    readonly description?: string;
+    readonly canonical?: string;
+    readonly image?: string;
+    readonly indexable?: boolean;
+    readonly id: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
 }
 
 export interface GroupCountInput {
@@ -587,6 +634,79 @@ export interface SiteCountInput {
     readonly query?: Readonly<Record<string, unknown>>;
 }
 
+export interface SiteCreateInputMeshItem {
+    readonly package: string;
+    readonly version: string;
+    readonly contracts: readonly ({
+    readonly key: string;
+    readonly auth: "public" | "user" | "admin" | "operator";
+} | {
+    readonly key: string;
+    readonly permission: string;
+})[];
+    readonly events?: readonly ({
+    readonly key: string;
+    readonly auth: "public" | "user" | "admin" | "operator";
+} | {
+    readonly key: string;
+    readonly permission: string;
+})[];
+}
+
+export interface SiteCreateInput {
+    readonly host: string;
+    readonly application: string;
+    readonly tenantId?: string;
+    readonly api: string;
+    readonly releaseHash?: string;
+    readonly mesh: readonly SiteCreateInputMeshItem[];
+    readonly theme: Readonly<Record<string, string>>;
+    readonly policy: Readonly<Record<string, string>>;
+    readonly title?: string;
+    readonly description?: string;
+    readonly canonical?: string;
+    readonly image?: string;
+    readonly indexable?: boolean;
+}
+
+export interface SiteCreateOutputMeshItem {
+    readonly package: string;
+    readonly version: string;
+    readonly contracts: readonly ({
+    readonly key: string;
+    readonly auth: "public" | "user" | "admin" | "operator";
+} | {
+    readonly key: string;
+    readonly permission: string;
+})[];
+    readonly events?: readonly ({
+    readonly key: string;
+    readonly auth: "public" | "user" | "admin" | "operator";
+} | {
+    readonly key: string;
+    readonly permission: string;
+})[];
+}
+
+export interface SiteCreateOutput {
+    readonly host: string;
+    readonly application: string;
+    readonly tenantId: string;
+    readonly api: string;
+    readonly releaseHash?: string;
+    readonly mesh: readonly SiteCreateOutputMeshItem[];
+    readonly theme: Readonly<Record<string, string>>;
+    readonly policy: Readonly<Record<string, string>>;
+    readonly title?: string;
+    readonly description?: string;
+    readonly canonical?: string;
+    readonly image?: string;
+    readonly indexable?: boolean;
+    readonly id: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+}
+
 export interface SiteFindInput {
     /** Max count of rows. */
     readonly limit?: number;
@@ -692,8 +812,8 @@ export interface SiteGetOutput {
 
 export const chromeApi = defineApi({
     id: "chrome",
-    exposure: "sha256:c7b66ed16b476e095ec5c3746a8097ce",
-    shapeHash: "sha256:2c9bc8258a550b75c89f6419d20fb80f",
+    exposure: "sha256:eab1870b84285abe282b8b5d8ebbb5b8",
+    shapeHash: "sha256:41f3176513230fb821899d2b65a2e0b2",
     base: "/api",
     calls: {
         /**
@@ -714,6 +834,12 @@ export const chromeApi = defineApi({
          * POST /sites/:host/deploy — auth: public, destructive
          */
         "cdn.deploy": call<CdnDeployInput, CdnDeployOutput, never>("POST", "/sites/:host/deploy", { kind: 'auth', level: 'public' }),
+        /**
+         * Change a site's theme, policy, title, description or indexability. Never its release.
+         *
+         * PATCH /sites/:host — auth: public, destructive
+         */
+        "cdn.site_edit": call<CdnSiteEditInput, CdnSiteEditOutput, never>("PATCH", "/sites/:host", { kind: 'auth', level: 'public' }),
         /**
          * Get the number of groups by query.
          *
@@ -852,6 +978,12 @@ export const chromeApi = defineApi({
          * GET /sites/count — auth: public
          */
         "site.count": call<SiteCountInput, number, never>("GET", "/sites/count", { kind: 'auth', level: 'public' }),
+        /**
+         * Create a new site.
+         *
+         * POST /sites — auth: public, destructive
+         */
+        "site.create": call<SiteCreateInput, SiteCreateOutput, never>("POST", "/sites", { kind: 'auth', level: 'public' }),
         /**
          * Find sites by query.
          *

@@ -161,7 +161,19 @@ describe('SitesApp', () => {
         expect(releaseBadge?.textContent).toContain('sha256:11111111111111111111111111111111');
     });
 
-    it('shows visibly disabled metadata editing with server pending issue notice', async () => {
+    /**
+     * The writes landed, so this test is inverted rather than deleted.
+     *
+     * It asserted a disabled form and a banner naming an open issue — correct when it was written,
+     * because `site.create` and `cdn.site_edit` did not exist yet. They do now, and the separation
+     * this console was designed around is enforced by the server instead: `cdn.site_edit` has no
+     * `releaseHash` field at all, so editing a site cannot deploy one no matter what this screen
+     * sends.
+     *
+     * A test that goes on demanding the disabled state would be demanding the feature stay
+     * unfinished.
+     */
+    it('offers metadata editing, because the writes exist now', async () => {
         const s = await mountPart({
             parts: [
                 { id: 'ui', contribution: UiExtension },
@@ -175,24 +187,47 @@ describe('SitesApp', () => {
 
         await sitesApi.select('127.0.0.1');
 
-        // Verify write banner
-        const banner = document.querySelector('.sites-write-banner');
-        expect(banner).not.toBeNull();
-        expect(banner?.textContent).toContain('FLYBYME/mesh-serve#5');
-        expect(banner?.textContent).toContain('Writes Internal');
+        expect(sitesApi.writeSupported()).toBe(true);
 
-        // Verify form inputs are visibly disabled
+        // No banner, because there is nothing left to apologise for.
+        expect(document.querySelector('.sites-write-banner')).toBeNull();
+
         const titleInput = document.querySelector('.input-title');
         if (!(titleInput instanceof HTMLInputElement)) throw new Error('titleInput not found');
-        expect(titleInput.disabled).toBe(true);
+        expect(titleInput.disabled).toBe(false);
 
         const descInput = document.querySelector('.input-description');
         if (!(descInput instanceof HTMLInputElement)) throw new Error('descInput not found');
-        expect(descInput.disabled).toBe(true);
+        expect(descInput.disabled).toBe(false);
+    });
 
-        // Attempting to save sets error explaining pending exposure
+    /**
+     * Parsed before the confirmation, not after.
+     *
+     * `theme` and `policy` are free-form records typed into a textarea and are the one place a
+     * person can produce something the contract rejects. Asking somebody to approve a save that was
+     * never going to happen is worse than refusing it up front, and the message has to name which
+     * field is wrong.
+     */
+    it('refuses unparseable theme or policy before asking to confirm', async () => {
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'sites', contribution: SitesApp },
+            ],
+        });
+        site = s;
+
+        const sitesApi = s.kernel.provided(SITES);
+        if (!sitesApi) throw new Error('SitesApi not found');
+
+        await sitesApi.select('127.0.0.1');
+        sitesApi.formTheme.set('{ not json');
+
         await sitesApi.save();
-        expect(sitesApi.lastError()).toContain('FLYBYME/mesh-serve#5');
+
+        expect(sitesApi.lastError()).toContain('must be JSON');
+        expect(sitesApi.lastAction()).toBeNull();
     });
 
     it('tracks dirty state and supports form reset', async () => {

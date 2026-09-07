@@ -1,8 +1,8 @@
 {
     "application": "chrome",
     "base": "/api",
-    "exposure": "sha256:c7b66ed16b476e095ec5c3746a8097ce",
-    "shapeHash": "sha256:2c9bc8258a550b75c89f6419d20fb80f",
+    "exposure": "sha256:eab1870b84285abe282b8b5d8ebbb5b8",
+    "shapeHash": "sha256:41f3176513230fb821899d2b65a2e0b2",
     "calls": [
         {
             "key": "catalog.resolve",
@@ -340,6 +340,256 @@
             "domain": "cdn",
             "action": "deploy",
             "description": "Point a hostname at a release.",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            }
+        },
+        {
+            "key": "cdn.site_edit",
+            "method": "PATCH",
+            "path": "/sites/:host",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "host": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "indexable": {
+                        "type": "boolean"
+                    },
+                    "theme": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "policy": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "host"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "host": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "application": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "tenantId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "api": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "releaseHash": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "mesh": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "package": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "version": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "contracts": {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "auth": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "public",
+                                                            "user",
+                                                            "admin",
+                                                            "operator"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "auth"
+                                                ],
+                                                "additionalProperties": false
+                                            },
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "permission": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "permission"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        ]
+                                    },
+                                    "minItems": 1
+                                },
+                                "events": {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "auth": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "public",
+                                                            "user",
+                                                            "admin",
+                                                            "operator"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "auth"
+                                                ],
+                                                "additionalProperties": false
+                                            },
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "permission": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "permission"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        ]
+                                    },
+                                    "default": []
+                                }
+                            },
+                            "required": [
+                                "package",
+                                "version",
+                                "contracts"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "theme": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "policy": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "title": {
+                        "type": "string",
+                        "default": ""
+                    },
+                    "description": {
+                        "type": "string",
+                        "default": ""
+                    },
+                    "canonical": {
+                        "type": "string"
+                    },
+                    "image": {
+                        "type": "string"
+                    },
+                    "indexable": {
+                        "type": "boolean",
+                        "default": true
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "host",
+                    "application",
+                    "tenantId",
+                    "api",
+                    "mesh",
+                    "theme",
+                    "policy",
+                    "id",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": [],
+            "domain": "cdn",
+            "action": "site_edit",
+            "description": "Change a site's theme, policy, title, description or indexability. Never its release.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
@@ -2782,6 +3032,406 @@
             "domain": "site",
             "action": "count",
             "description": "Get the number of sites by query.",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            }
+        },
+        {
+            "key": "site.create",
+            "method": "POST",
+            "path": "/sites",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "host": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "application": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "tenantId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "api": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "releaseHash": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "mesh": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "package": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "version": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "contracts": {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "auth": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "public",
+                                                            "user",
+                                                            "admin",
+                                                            "operator"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "auth"
+                                                ],
+                                                "additionalProperties": false
+                                            },
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "permission": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "permission"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        ]
+                                    },
+                                    "minItems": 1
+                                },
+                                "events": {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "auth": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "public",
+                                                            "user",
+                                                            "admin",
+                                                            "operator"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "auth"
+                                                ],
+                                                "additionalProperties": false
+                                            },
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "permission": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "permission"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        ]
+                                    },
+                                    "default": []
+                                }
+                            },
+                            "required": [
+                                "package",
+                                "version",
+                                "contracts"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "theme": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "policy": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "title": {
+                        "type": "string",
+                        "default": ""
+                    },
+                    "description": {
+                        "type": "string",
+                        "default": ""
+                    },
+                    "canonical": {
+                        "type": "string"
+                    },
+                    "image": {
+                        "type": "string"
+                    },
+                    "indexable": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "required": [
+                    "host",
+                    "application",
+                    "api",
+                    "mesh",
+                    "theme",
+                    "policy"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "host": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "application": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "tenantId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "api": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "releaseHash": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "mesh": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "package": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "version": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "contracts": {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "auth": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "public",
+                                                            "user",
+                                                            "admin",
+                                                            "operator"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "auth"
+                                                ],
+                                                "additionalProperties": false
+                                            },
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "permission": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "permission"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        ]
+                                    },
+                                    "minItems": 1
+                                },
+                                "events": {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "auth": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "public",
+                                                            "user",
+                                                            "admin",
+                                                            "operator"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "auth"
+                                                ],
+                                                "additionalProperties": false
+                                            },
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "permission": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "permission"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        ]
+                                    },
+                                    "default": []
+                                }
+                            },
+                            "required": [
+                                "package",
+                                "version",
+                                "contracts"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "theme": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "policy": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "title": {
+                        "type": "string",
+                        "default": ""
+                    },
+                    "description": {
+                        "type": "string",
+                        "default": ""
+                    },
+                    "canonical": {
+                        "type": "string"
+                    },
+                    "image": {
+                        "type": "string"
+                    },
+                    "indexable": {
+                        "type": "boolean",
+                        "default": true
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "host",
+                    "application",
+                    "tenantId",
+                    "api",
+                    "mesh",
+                    "theme",
+                    "policy",
+                    "id",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": [],
+            "domain": "site",
+            "action": "create",
+            "description": "Create a new site.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
