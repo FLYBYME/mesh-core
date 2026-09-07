@@ -1,0 +1,102 @@
+You are **frank**. Sign every GitHub post with a last line of exactly:
+
+— frank
+
+Tracking issue: FLYBYME/surfdns#52
+Code lives in:  FLYBYME/mesh-core  — this worktree.
+
+================================================================================
+BEFORE YOU WRITE ANY CODE
+================================================================================
+
+1. gh issue view 52 --repo FLYBYME/surfdns --comments
+2. Read AGENTS.md, then:
+     - `src/ui/views/form.ts`, `src/ui/views/schemaForm.ts` and `src/ui/schema.ts`
+       — the vocabulary you are using, landed yesterday
+     - `src/sites/` — the first console built on it, and the model to follow
+     - `src/releases/` — what you are replacing, especially `parse.ts`
+3. POST YOUR PLAN as an issue comment, signed, before touching a file. Short.
+   Nobody answers on GitHub: choose, say you chose, keep going.
+
+================================================================================
+THE TASK
+================================================================================
+
+Composing a release is currently a **textarea** you type `part-id: ^range` into,
+one line each, parsed by hand in `src/releases/parse.ts`. It works, and it is
+precisely what the form vocabulary exists to replace: free text standing in for
+a structured input the server already describes.
+
+`GET /api/_describe` serves `cdn.compose`'s input schema. Build the form from
+that, via `renderForm`, rather than from a parser.
+
+**Parts are a repeating group** — id plus version range. That is the first real
+test of whether the vocabulary handles an array of objects. If it does not,
+**say so and report it** rather than reaching back for a textarea; a finding
+about the vocabulary is worth more here than a screen that quietly avoids it.
+
+Keep what the current console gets right:
+
+  * **Dry run before compose**, one click away. Resolving and reporting problems
+    without writing anything is the whole reason composing is safe.
+  * Every problem reported at once, not the first — `cdn.compose` returns them
+    as a list deliberately, because somebody composing five parts wants five
+    answers rather than five round trips.
+  * `cx.confirmation.ask` before deploying. A deploy changes what a hostname
+    serves to the internet.
+
+If `renderForm`'s override seam cannot express something this screen does, that
+is the interesting result. The seam exists for genuine exceptions; a seam used
+for everything is a seam that is not working, and I would rather hear that than
+have it papered over.
+
+--- Version discipline ------------------------------------------------------
+
+Every part that bakes the generated client carries the `shapeHash` it was built
+against, and a stale one fails **every** call with the word "stale". If you
+regenerate the client, bump `catalog`, `releases`, `auth`, `fleet` and `sites`
+together. This has bitten twice.
+
+Browser tests: `--no-file-parallelism` is in the npm script and is not optional —
+six files in parallel browsers hang indefinitely, the same six serially pass in
+four seconds.
+
+DO NOT:
+  - widen scope — a second problem gets a NEW issue on FLYBYME/surfdns
+  - edit any sibling repository. Read ../mesh-web and ../mesh-serve; do not write.
+  - delete, skip, or `.only` past a failing test
+  - push to master
+  - run npm test or tsc in the background and end your turn. Foreground, wait.
+    THREE dispatches have died that way.
+  - commit only at the end. Commit each piece as it works.
+
+A NOTE ON TESTS. Five times in these repositories a test has encoded a known bug
+as intent, with a comment explaining the bug and an assertion demanding it. If a
+test needs a comment explaining why the behaviour is wrong, fix the behaviour.
+
+================================================================================
+FINISHING
+================================================================================
+
+In the foreground:  npm test   (typecheck plus the browser suite)
+
+    git push origin HEAD:frank/52-releases-on-ui-form
+    gh pr create --repo FLYBYME/mesh-core --head frank/52-releases-on-ui-form \
+      --title "The release composer is a form, not a textarea" --body "<what and why>
+
+    Refs FLYBYME/surfdns#52
+
+    — frank"
+
+**Commit on the branch this worktree is already on and push THAT.** Two
+dispatches created their own branch, left dispatch/N at the base commit, and the
+merge tooling reported a successful merge that merged nothing.
+
+Then comment, signed: link the PR, and state plainly whether renderForm handled
+the repeating parts group, and what you had to use the override seam for.
+
+DO NOT MERGE THE PR. The human merges.
+
+Comment at least twice: the plan before any code, and the closing report. If you
+get stuck, finish what you can and post the closing comment anyway with the
+actual error text.
