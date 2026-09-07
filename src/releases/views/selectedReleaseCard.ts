@@ -185,6 +185,114 @@ function renderIncludedParts(app: ReleasesApi): Described[] {
     ];
 }
 
+function renderSourceRanges(app: ReleasesApi): Described {
+    return when(
+        () => Boolean(app.selectedRelease()?.rolling),
+        () => element('Stack', {
+            props: {
+                class: 'source-ranges-card',
+                style: {
+                    marginBottom: '16px',
+                    padding: '12px 14px',
+                    background: 'rgba(88, 166, 255, 0.05)',
+                    border: '1px solid rgba(88, 166, 255, 0.2)',
+                    borderRadius: '6px',
+                },
+            },
+            children: [
+                element('Row', {
+                    props: { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' } },
+                    children: [
+                        element('Heading', {
+                            props: { level: 3, style: { margin: '0', fontSize: '13px', color: '#58a6ff' } },
+                            children: [text('Followed Source Ranges (Rolling):')],
+                        }),
+                        element('Span', {
+                            props: { style: { fontSize: '11px', color: 'var(--ink-dim, #8b949e)' } },
+                            children: [text('Re-composes when parts publish new versions in range')],
+                        }),
+                    ],
+                }),
+                element('Grid', {
+                    props: {
+                        columns: '140px 1fr',
+                        gap: 6,
+                        style: { fontSize: '12px', marginBottom: '8px' },
+                    },
+                    children: [
+                        element('Span', { props: { bold: true }, children: [text('Kernel Range:')] }),
+                        element('Span', {
+                            props: { code: true, style: { fontFamily: 'monospace', color: '#58a6ff' } },
+                            children: [text(() => app.selectedRelease()?.source?.kernel ?? 'None specified')],
+                        }),
+                    ],
+                }),
+                when(
+                    () => {
+                        const src = app.selectedRelease()?.source;
+                        return Boolean(src && src.parts && src.parts.length > 0);
+                    },
+                    () => element('Stack', {
+                        props: {
+                            style: {
+                                background: 'var(--surface, #21262d)',
+                                borderRadius: '4px',
+                                border: '1px solid var(--edge, #30363d)',
+                                overflow: 'hidden',
+                            },
+                        },
+                        children: [
+                            element('Grid', {
+                                props: {
+                                    columns: '140px 120px 1fr',
+                                    gap: 6,
+                                    style: {
+                                        padding: '6px 10px',
+                                        fontWeight: 'bold',
+                                        fontSize: '11px',
+                                        color: 'var(--ink-dim, #8b949e)',
+                                        borderBottom: '1px solid var(--edge, #30363d)',
+                                    },
+                                },
+                                children: [
+                                    element('Text', { children: [text('Part')] }),
+                                    element('Text', { children: [text('Source Range')] }),
+                                    element('Text', { children: [text('Kind')] }),
+                                ],
+                            }),
+                            each(
+                                () => app.selectedRelease()?.source?.parts ?? [],
+                                (p) => p.id,
+                                (p) => element('Grid', {
+                                    props: {
+                                        columns: '140px 120px 1fr',
+                                        gap: 6,
+                                        class: 'source-range-row',
+                                        style: {
+                                            padding: '6px 10px',
+                                            fontSize: '11px',
+                                            borderBottom: '1px solid var(--edge, #30363d)',
+                                            alignItems: 'center',
+                                        },
+                                    },
+                                    children: [
+                                        element('Span', { props: { bold: true }, children: [text(() => p().id)] }),
+                                        element('Span', {
+                                            props: { code: true, style: { fontFamily: 'monospace', color: '#58a6ff' } },
+                                            children: [text(() => p().version)],
+                                        }),
+                                        element('Span', { children: [text(() => p().kind)] }),
+                                    ],
+                                }),
+                            ),
+                        ],
+                    }),
+                ),
+            ],
+        }),
+    );
+}
+
 export function renderSelectedReleaseCard(app: ReleasesApi, isLive: () => boolean): Described {
     return when(
         () => app.selectedRelease() !== null,
@@ -203,12 +311,53 @@ export function renderSelectedReleaseCard(app: ReleasesApi, isLive: () => boolea
                 element('Row', {
                     props: { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' } },
                     children: [
-                        element('Heading', {
-                            props: { level: 2, style: { margin: '0', fontSize: '18px' } },
-                            children: [text(() => {
-                                const rel = app.selectedRelease();
-                                return rel?.name && rel.name !== '' ? rel.name : 'Selected Release';
-                            })],
+                        element('Row', {
+                            props: { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                            children: [
+                                element('Heading', {
+                                    props: { level: 2, style: { margin: '0', fontSize: '18px' } },
+                                    children: [text(() => {
+                                        const rel = app.selectedRelease();
+                                        return rel?.name && rel.name !== '' ? rel.name : 'Selected Release';
+                                    })],
+                                }),
+                                when(
+                                    () => app.selectedRelease()?.rolling === true,
+                                    () => element('Badge', {
+                                        props: {
+                                            class: 'badge-rolling',
+                                            style: {
+                                                padding: '2px 8px',
+                                                borderRadius: '4px',
+                                                background: 'rgba(88, 166, 255, 0.2)',
+                                                color: '#58a6ff',
+                                                fontWeight: 'bold',
+                                                fontSize: '11px',
+                                                border: '1px solid rgba(88, 166, 255, 0.4)',
+                                            },
+                                        },
+                                        children: [text('ROLLING RELEASE')],
+                                    }),
+                                ),
+                                when(
+                                    () => Boolean(app.selectedRelease()?.supersededBy),
+                                    () => element('Badge', {
+                                        props: {
+                                            class: 'badge-superseded',
+                                            style: {
+                                                padding: '2px 8px',
+                                                borderRadius: '4px',
+                                                background: 'rgba(210, 153, 34, 0.2)',
+                                                color: '#d29922',
+                                                fontWeight: 'bold',
+                                                fontSize: '11px',
+                                                border: '1px solid rgba(210, 153, 34, 0.4)',
+                                            },
+                                        },
+                                        children: [text('SUPERSEDED')],
+                                    }),
+                                ),
+                            ],
                         }),
                         when(
                             isLive,
@@ -228,6 +377,66 @@ export function renderSelectedReleaseCard(app: ReleasesApi, isLive: () => boolea
                         ),
                     ],
                 }),
+                when(
+                    () => Boolean(app.selectedRelease()?.supersededBy),
+                    () => element('Card', {
+                        props: {
+                            class: 'superseded-banner',
+                            style: {
+                                padding: '12px 16px',
+                                marginBottom: '14px',
+                                background: 'rgba(210, 153, 34, 0.1)',
+                                border: '1px solid rgba(210, 153, 34, 0.4)',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                            },
+                        },
+                        children: [
+                            element('Stack', {
+                                children: [
+                                    element('Span', {
+                                        props: { bold: true, style: { fontSize: '13px', color: '#d29922' } },
+                                        children: [text('⚠️ This rolling release has been superseded by a newer composition.')],
+                                    }),
+                                    element('Span', {
+                                        props: { style: { fontSize: '12px', color: 'var(--ink-dim, #8b949e)', marginTop: '2px' } },
+                                        children: [
+                                            text('Superseded by: '),
+                                            element('Span', {
+                                                props: { code: true, style: { fontFamily: 'monospace', color: '#58a6ff' } },
+                                                children: [text(() => app.selectedRelease()?.supersededBy ?? '')],
+                                            }),
+                                        ],
+                                    }),
+                                ],
+                            }),
+                            element('Button', {
+                                props: {
+                                    class: 'btn-superseded-by',
+                                    type: 'button',
+                                    style: {
+                                        padding: '6px 14px',
+                                        borderRadius: '4px',
+                                        background: '#d29922',
+                                        border: 'none',
+                                        color: '#0d1117',
+                                        fontWeight: 'bold',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                    },
+                                },
+                                intents: {
+                                    activate: {
+                                        action: command('releases.selectRelease', app.selectedRelease()?.supersededBy ?? ''),
+                                    },
+                                },
+                                children: [text('View Newer Release →')],
+                            }),
+                        ],
+                    }),
+                ),
                 element('Grid', {
                     props: { columns: '140px 1fr', gap: 6, style: { fontSize: '12px', marginBottom: '14px' } },
                     children: [
@@ -236,6 +445,40 @@ export function renderSelectedReleaseCard(app: ReleasesApi, isLive: () => boolea
                             props: { code: true, style: { fontFamily: 'monospace', color: '#58a6ff' } },
                             children: [text(() => app.selectedRelease()?.hash ?? '')],
                         }),
+                        element('Span', { props: { bold: true }, children: [text('Rolling:')] }),
+                        element('Span', {
+                            children: [text(() => (app.selectedRelease()?.rolling ? 'Yes (Follows source ranges)' : 'No (Pinned)'))],
+                        }),
+                        when(
+                            () => Boolean(app.selectedRelease()?.supersededBy),
+                            () => element('Span', { props: { bold: true }, children: [text('Superseded By:')] }),
+                        ),
+                        when(
+                            () => Boolean(app.selectedRelease()?.supersededBy),
+                            () => element('Button', {
+                                props: {
+                                    class: 'btn-superseded-by link-superseded-by',
+                                    type: 'button',
+                                    style: {
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#58a6ff',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        padding: '0',
+                                        fontFamily: 'monospace',
+                                        fontSize: '12px',
+                                        textDecoration: 'underline',
+                                    },
+                                },
+                                intents: {
+                                    activate: {
+                                        action: command('releases.selectRelease', app.selectedRelease()?.supersededBy ?? ''),
+                                    },
+                                },
+                                children: [text(() => `${app.selectedRelease()?.supersededBy ?? ''}`)],
+                            }),
+                        ),
                         element('Span', { props: { bold: true }, children: [text('Kernel Version:')] }),
                         element('Span', {
                             children: [text(() => {
@@ -254,6 +497,7 @@ export function renderSelectedReleaseCard(app: ReleasesApi, isLive: () => boolea
                         }),
                     ],
                 }),
+                renderSourceRanges(app),
                 ...renderIncludedParts(app),
                 renderDeployActionBox(app, isLive),
             ],

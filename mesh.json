@@ -35,7 +35,7 @@
         {
             "kind": "application",
             "id": "catalog",
-            "version": "0.2.12",
+            "version": "0.2.13",
             "entry": "src/catalog/index.ts",
             "kernel": "^0.15",
             "requiredParts": [
@@ -55,7 +55,11 @@
                         "partVersion.find",
                         "partVersion.get",
                         "partVersion.count",
-                        "catalog.resolve"
+                        "catalog.resolve",
+                        "catalog.declare",
+                        "builder.import_repo",
+                        "builder.release_part",
+                        "builder.release_repo"
                     ]
                 }
             ],
@@ -74,7 +78,7 @@
         {
             "kind": "application",
             "id": "releases",
-            "version": "0.2.11",
+            "version": "0.2.12",
             "entry": "src/releases/index.ts",
             "kernel": "^0.15",
             "requiredParts": [

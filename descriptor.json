@@ -1,9 +1,433 @@
 {
     "application": "chrome",
     "base": "/api",
-    "exposure": "sha256:7666743b61e795150b2e974e47feaeb9",
-    "shapeHash": "sha256:dfe2ad1fc81a549dc38bc3f82b085a99",
+    "exposure": "sha256:15ee479083475af99f36e998e5d95f84",
+    "shapeHash": "sha256:b0b863724d925002afc3191f3839a121",
     "calls": [
+        {
+            "key": "builder.import_repo",
+            "method": "POST",
+            "path": "/builder/imports",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "repository": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A clonable reference — never a path on a disk"
+                    },
+                    "ref": {
+                        "type": "string",
+                        "minLength": 1,
+                        "default": "HEAD",
+                        "description": "Branch, tag or commit to read the descriptor at"
+                    },
+                    "subdirectory": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Where in the repository the descriptor is"
+                    },
+                    "dryRun": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "repository"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "repository": {
+                        "type": "string"
+                    },
+                    "commit": {
+                        "type": "string",
+                        "description": "What the ref resolved to, so an import is a fact about a commit"
+                    },
+                    "parts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string"
+                                },
+                                "kind": {
+                                    "type": "string"
+                                },
+                                "entry": {
+                                    "type": "string"
+                                },
+                                "existed": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "required": [
+                                "name",
+                                "kind",
+                                "entry",
+                                "existed"
+                            ],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": [
+                    "repository",
+                    "commit",
+                    "parts"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": [],
+            "domain": "builder",
+            "action": "import_repo",
+            "description": "Read a repository descriptor and declare the parts it describes.",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            }
+        },
+        {
+            "key": "builder.release_part",
+            "method": "POST",
+            "path": "/builder/releases",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "part": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "→ part.name"
+                    },
+                    "bump": {
+                        "type": "string",
+                        "enum": [
+                            "patch",
+                            "minor",
+                            "major"
+                        ],
+                        "default": "patch"
+                    },
+                    "version": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "branch": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "dryRun": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "part"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "part": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "commit": {
+                        "type": "string"
+                    },
+                    "existed": {
+                        "type": "boolean"
+                    },
+                    "artifactDigest": {
+                        "type": "string"
+                    },
+                    "cached": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "part",
+                    "version",
+                    "commit",
+                    "existed",
+                    "cached"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": [],
+            "domain": "builder",
+            "action": "release_part",
+            "description": "Pull a part, mint the next version, publish it and build its artifact.",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            }
+        },
+        {
+            "key": "builder.release_repo",
+            "method": "POST",
+            "path": "/builder/repo-releases",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "repository": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "bump": {
+                        "type": "string",
+                        "enum": [
+                            "patch",
+                            "minor",
+                            "major"
+                        ],
+                        "default": "patch"
+                    },
+                    "branch": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "dryRun": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "repository"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "repository": {
+                        "type": "string"
+                    },
+                    "released": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "part": {
+                                    "type": "string"
+                                },
+                                "version": {
+                                    "type": "string"
+                                },
+                                "commit": {
+                                    "type": "string"
+                                },
+                                "artifactDigest": {
+                                    "type": "string"
+                                },
+                                "cached": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "required": [
+                                "part",
+                                "version",
+                                "commit",
+                                "cached"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "failed": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "part": {
+                                    "type": "string"
+                                },
+                                "reason": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "part",
+                                "reason"
+                            ],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": [
+                    "repository",
+                    "released",
+                    "failed"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": [],
+            "domain": "builder",
+            "action": "release_repo",
+            "description": "Release every part declared from one repository, kernels first.",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            }
+        },
+        {
+            "key": "catalog.declare",
+            "method": "PUT",
+            "path": "/catalog/parts/:name",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "kernel",
+                            "application",
+                            "extension"
+                        ]
+                    },
+                    "repository": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "declaration": {
+                        "type": "object",
+                        "properties": {
+                            "entry": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "branch": {
+                                "type": "string",
+                                "minLength": 1,
+                                "default": "HEAD"
+                            },
+                            "subdirectory": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "kernel": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "requires": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "default": []
+                            },
+                            "requiredParts": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "version": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "description": "A range, or * for any"
+                                        },
+                                        "optional": {
+                                            "type": "boolean",
+                                            "default": false
+                                        }
+                                    },
+                                    "required": [
+                                        "id",
+                                        "version"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "default": []
+                            }
+                        },
+                        "required": [
+                            "entry"
+                        ],
+                        "additionalProperties": false
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "homepage": {
+                        "type": "string"
+                    },
+                    "license": {
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "icon": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "kind",
+                    "repository",
+                    "declaration"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "partId": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "existed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "partId",
+                    "name",
+                    "existed"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": [],
+            "domain": "catalog",
+            "action": "declare",
+            "description": "Create or update a part and how it builds, without publishing a version.",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            }
+        },
         {
             "key": "catalog.resolve",
             "method": "POST",
@@ -185,6 +609,9 @@
                     "name": {
                         "type": "string",
                         "description": "A label for people. Never an identity."
+                    },
+                    "rolling": {
+                        "type": "boolean"
                     },
                     "dryRun": {
                         "type": "boolean"
@@ -2048,6 +2475,66 @@
                             "type": "string",
                             "minLength": 1
                         },
+                        "declaration": {
+                            "type": "object",
+                            "properties": {
+                                "entry": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "branch": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "default": "HEAD"
+                                },
+                                "subdirectory": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "kernel": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "requires": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "default": []
+                                },
+                                "requiredParts": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "version": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "description": "A range, or * for any"
+                                            },
+                                            "optional": {
+                                                "type": "boolean",
+                                                "default": false
+                                            }
+                                        },
+                                        "required": [
+                                            "id",
+                                            "version"
+                                        ],
+                                        "additionalProperties": false
+                                    },
+                                    "default": []
+                                }
+                            },
+                            "required": [
+                                "entry"
+                            ],
+                            "additionalProperties": false
+                        },
                         "description": {
                             "type": "string",
                             "default": ""
@@ -2171,6 +2658,66 @@
                     "publisher": {
                         "type": "string",
                         "minLength": 1
+                    },
+                    "declaration": {
+                        "type": "object",
+                        "properties": {
+                            "entry": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "branch": {
+                                "type": "string",
+                                "minLength": 1,
+                                "default": "HEAD"
+                            },
+                            "subdirectory": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "kernel": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "requires": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "default": []
+                            },
+                            "requiredParts": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "version": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "description": "A range, or * for any"
+                                        },
+                                        "optional": {
+                                            "type": "boolean",
+                                            "default": false
+                                        }
+                                    },
+                                    "required": [
+                                        "id",
+                                        "version"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "default": []
+                            }
+                        },
+                        "required": [
+                            "entry"
+                        ],
+                        "additionalProperties": false
                     },
                     "description": {
                         "type": "string",
@@ -2897,6 +3444,57 @@
                             },
                             "default": {}
                         },
+                        "rolling": {
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "source": {
+                            "type": "object",
+                            "properties": {
+                                "kernel": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "parts": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "application",
+                                                    "extension"
+                                                ]
+                                            },
+                                            "id": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "version": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            }
+                                        },
+                                        "required": [
+                                            "kind",
+                                            "id",
+                                            "version"
+                                        ],
+                                        "additionalProperties": false
+                                    }
+                                }
+                            },
+                            "required": [
+                                "kernel",
+                                "parts"
+                            ],
+                            "additionalProperties": false
+                        },
+                        "supersededBy": {
+                            "type": "string",
+                            "minLength": 1
+                        },
                         "composedAt": {
                             "type": "string",
                             "format": "date-time"
@@ -3050,6 +3648,57 @@
                             "type": "string"
                         },
                         "default": {}
+                    },
+                    "rolling": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "source": {
+                        "type": "object",
+                        "properties": {
+                            "kernel": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "parts": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                                "application",
+                                                "extension"
+                                            ]
+                                        },
+                                        "id": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "version": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        }
+                                    },
+                                    "required": [
+                                        "kind",
+                                        "id",
+                                        "version"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            }
+                        },
+                        "required": [
+                            "kernel",
+                            "parts"
+                        ],
+                        "additionalProperties": false
+                    },
+                    "supersededBy": {
+                        "type": "string",
+                        "minLength": 1
                     },
                     "composedAt": {
                         "type": "string",

@@ -1,14 +1,116 @@
 // GENERATED FILE — do not edit.
 //
 // Emitted from chrome's mesh.json by `mesh-serve client`.
-// Exposure: sha256:7666743b61e795150b2e974e47feaeb9
-// ShapeHash: sha256:dfe2ad1fc81a549dc38bc3f82b085a99
+// Exposure: sha256:15ee479083475af99f36e998e5d95f84
+// ShapeHash: sha256:b0b863724d925002afc3191f3839a121
 //
 // Regenerate rather than editing. The exposure and shape hashes above are checked at run time
 // against what the API reports, so a hand-edited client is a client that lies about a surface
 // nobody can verify.
 
 import { call, defineApi } from '@flybyme/mesh-web';
+
+export interface BuilderImportRepoInput {
+    /** A clonable reference — never a path on a disk */
+    readonly repository: string;
+    /** Branch, tag or commit to read the descriptor at */
+    readonly ref?: string;
+    /** Where in the repository the descriptor is */
+    readonly subdirectory?: string;
+    readonly dryRun?: boolean;
+}
+
+export interface BuilderImportRepoOutputPart {
+    readonly name: string;
+    readonly kind: string;
+    readonly entry: string;
+    readonly existed: boolean;
+}
+
+export interface BuilderImportRepoOutput {
+    readonly repository: string;
+    /** What the ref resolved to, so an import is a fact about a commit */
+    readonly commit: string;
+    readonly parts: readonly BuilderImportRepoOutputPart[];
+}
+
+export interface BuilderReleasePartInput {
+    /** → part.name */
+    readonly part: string;
+    readonly bump?: "patch" | "minor" | "major";
+    readonly version?: string;
+    readonly branch?: string;
+    readonly dryRun?: boolean;
+}
+
+export interface BuilderReleasePartOutput {
+    readonly part: string;
+    readonly version: string;
+    readonly commit: string;
+    readonly existed: boolean;
+    readonly artifactDigest?: string;
+    readonly cached: boolean;
+}
+
+export interface BuilderReleaseRepoInput {
+    readonly repository: string;
+    readonly bump?: "patch" | "minor" | "major";
+    readonly branch?: string;
+    readonly dryRun?: boolean;
+}
+
+export interface BuilderReleaseRepoOutputReleasedItem {
+    readonly part: string;
+    readonly version: string;
+    readonly commit: string;
+    readonly artifactDigest?: string;
+    readonly cached: boolean;
+}
+
+export interface BuilderReleaseRepoOutputFailedItem {
+    readonly part: string;
+    readonly reason: string;
+}
+
+export interface BuilderReleaseRepoOutput {
+    readonly repository: string;
+    readonly released: readonly BuilderReleaseRepoOutputReleasedItem[];
+    readonly failed: readonly BuilderReleaseRepoOutputFailedItem[];
+}
+
+export interface CatalogDeclareInputDeclarationRequiredPart {
+    readonly id: string;
+    /** A range, or * for any */
+    readonly version: string;
+    readonly optional?: boolean;
+}
+
+export interface CatalogDeclareInputDeclaration {
+    readonly entry: string;
+    readonly branch?: string;
+    readonly subdirectory?: string;
+    readonly kernel?: string;
+    readonly requires?: readonly string[];
+    readonly requiredParts?: readonly CatalogDeclareInputDeclarationRequiredPart[];
+}
+
+export interface CatalogDeclareInput {
+    readonly name: string;
+    readonly kind: "kernel" | "application" | "extension";
+    readonly repository: string;
+    readonly declaration: CatalogDeclareInputDeclaration;
+    readonly description?: string;
+    readonly homepage?: string;
+    readonly license?: string;
+    readonly keywords?: readonly string[];
+    readonly icon?: string;
+}
+
+export interface CatalogDeclareOutput {
+    readonly partId: string;
+    readonly name: string;
+    readonly existed: boolean;
+}
 
 export interface CatalogResolveInputPart {
     readonly name: string;
@@ -59,6 +161,7 @@ export interface CdnComposeInput {
     readonly policy?: Readonly<Record<string, string>>;
     /** A label for people. Never an identity. */
     readonly name?: string;
+    readonly rolling?: boolean;
     readonly dryRun?: boolean;
 }
 
@@ -432,11 +535,28 @@ export interface PartFindInput {
     readonly populate?: string | readonly string[];
 }
 
+export interface PartFindOutputItemDeclarationRequiredPart {
+    readonly id: string;
+    /** A range, or * for any */
+    readonly version: string;
+    readonly optional?: boolean;
+}
+
+export interface PartFindOutputItemDeclaration {
+    readonly entry: string;
+    readonly branch?: string;
+    readonly subdirectory?: string;
+    readonly kernel?: string;
+    readonly requires?: readonly string[];
+    readonly requiredParts?: readonly PartFindOutputItemDeclarationRequiredPart[];
+}
+
 export interface PartFindOutputItem {
     readonly name: string;
     readonly kind: "kernel" | "application" | "extension";
     readonly repository: string;
     readonly publisher: string;
+    readonly declaration?: PartFindOutputItemDeclaration;
     readonly description?: string;
     readonly homepage?: string;
     readonly license?: string;
@@ -455,11 +575,28 @@ export interface PartGetInput {
     readonly populate?: string | readonly string[];
 }
 
+export interface PartGetOutputDeclarationRequiredPart {
+    readonly id: string;
+    /** A range, or * for any */
+    readonly version: string;
+    readonly optional?: boolean;
+}
+
+export interface PartGetOutputDeclaration {
+    readonly entry: string;
+    readonly branch?: string;
+    readonly subdirectory?: string;
+    readonly kernel?: string;
+    readonly requires?: readonly string[];
+    readonly requiredParts?: readonly PartGetOutputDeclarationRequiredPart[];
+}
+
 export interface PartGetOutput {
     readonly name: string;
     readonly kind: "kernel" | "application" | "extension";
     readonly repository: string;
     readonly publisher: string;
+    readonly declaration?: PartGetOutputDeclaration;
     readonly description?: string;
     readonly homepage?: string;
     readonly license?: string;
@@ -601,6 +738,17 @@ export interface ReleaseFindOutputItemKernel {
     readonly digest: string;
 }
 
+export interface ReleaseFindOutputItemSourcePart {
+    readonly kind: "application" | "extension";
+    readonly id: string;
+    readonly version: string;
+}
+
+export interface ReleaseFindOutputItemSource {
+    readonly kernel: string;
+    readonly parts: readonly ReleaseFindOutputItemSourcePart[];
+}
+
 export interface ReleaseFindOutputItem {
     readonly hash: string;
     readonly name?: string;
@@ -612,6 +760,9 @@ export interface ReleaseFindOutputItem {
 }>>;
     readonly requires?: readonly string[];
     readonly policy?: Readonly<Record<string, string>>;
+    readonly rolling?: boolean;
+    readonly source?: ReleaseFindOutputItemSource;
+    readonly supersededBy?: string;
     readonly composedAt: string;
     readonly id: string;
     readonly createdAt: string;
@@ -631,6 +782,17 @@ export interface ReleaseGetOutputKernel {
     readonly digest: string;
 }
 
+export interface ReleaseGetOutputSourcePart {
+    readonly kind: "application" | "extension";
+    readonly id: string;
+    readonly version: string;
+}
+
+export interface ReleaseGetOutputSource {
+    readonly kernel: string;
+    readonly parts: readonly ReleaseGetOutputSourcePart[];
+}
+
 export interface ReleaseGetOutput {
     readonly hash: string;
     readonly name?: string;
@@ -642,6 +804,9 @@ export interface ReleaseGetOutput {
 }>>;
     readonly requires?: readonly string[];
     readonly policy?: Readonly<Record<string, string>>;
+    readonly rolling?: boolean;
+    readonly source?: ReleaseGetOutputSource;
+    readonly supersededBy?: string;
     readonly composedAt: string;
     readonly id: string;
     readonly createdAt: string;
@@ -835,10 +1000,34 @@ export interface SiteGetOutput {
 
 export const chromeApi = defineApi({
     id: "chrome",
-    exposure: "sha256:7666743b61e795150b2e974e47feaeb9",
-    shapeHash: "sha256:dfe2ad1fc81a549dc38bc3f82b085a99",
+    exposure: "sha256:15ee479083475af99f36e998e5d95f84",
+    shapeHash: "sha256:b0b863724d925002afc3191f3839a121",
     base: "/api",
     calls: {
+        /**
+         * Read a repository descriptor and declare the parts it describes.
+         *
+         * POST /builder/imports — auth: public, destructive
+         */
+        "builder.import_repo": call<BuilderImportRepoInput, BuilderImportRepoOutput, never>("POST", "/builder/imports", { kind: 'auth', level: 'public' }),
+        /**
+         * Pull a part, mint the next version, publish it and build its artifact.
+         *
+         * POST /builder/releases — auth: public, destructive
+         */
+        "builder.release_part": call<BuilderReleasePartInput, BuilderReleasePartOutput, never>("POST", "/builder/releases", { kind: 'auth', level: 'public' }),
+        /**
+         * Release every part declared from one repository, kernels first.
+         *
+         * POST /builder/repo-releases — auth: public, destructive
+         */
+        "builder.release_repo": call<BuilderReleaseRepoInput, BuilderReleaseRepoOutput, never>("POST", "/builder/repo-releases", { kind: 'auth', level: 'public' }),
+        /**
+         * Create or update a part and how it builds, without publishing a version.
+         *
+         * PUT /catalog/parts/:name — auth: public, destructive
+         */
+        "catalog.declare": call<CatalogDeclareInput, CatalogDeclareOutput, never>("PUT", "/catalog/parts/:name", { kind: 'auth', level: 'public' }),
         /**
          * Resolve version requirements against published versions.
          *

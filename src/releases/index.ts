@@ -83,6 +83,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
         { id: 'releases.dryRunCompose', title: 'Releases: Dry Run Compose' },
         { id: 'releases.commitCompose', title: 'Releases: Commit Compose' },
         { id: 'releases.deployRelease', title: 'Releases: Deploy Release' },
+        { id: 'releases.setComposeRolling', title: 'Releases: Set Rolling' },
     ];
 
     readonly views: readonly ViewDecl<Record<string, never>, ReleasesApi>[] = [
@@ -132,6 +133,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
         const composeName = cx.state.signal<string>('');
         const composeParts = cx.state.signal<readonly CdnComposeInputPart[]>([]);
         const composePartsText = cx.state.signal<string>('');
+        const composeRolling = cx.state.signal<boolean>(false);
         /** Cleared when the user edits, so seeding never overwrites something typed. */
         const composeSeededFrom = cx.state.signal<string | null>(null);
         const composeStatus = cx.state.signal<'idle' | 'composing' | 'success' | 'error'>('idle');
@@ -190,15 +192,22 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             const edited = composeKernel() !== '' || composeParts().length > 0;
             if (edited && composeSeededFrom() === null) return;
 
-            composeKernel.set(`^${release.kernel.version}`);
+            if (release.source) {
+                composeKernel.set(release.source.kernel);
+                composeParts.set(release.source.parts);
+                composePartsText.set(release.source.parts.map((p) => `${p.id}: ${p.version}`).join('\n'));
+            } else {
+                composeKernel.set(`^${release.kernel.version}`);
+                const seededParts: readonly CdnComposeInputPart[] = Object.entries(release.parts).map(([id, part]) => ({
+                    id,
+                    version: `^${part.version}`,
+                    kind: (id === 'chrome' || id === 'theme' || id === 'auth' || id === 'ui') ? 'extension' : 'application',
+                }));
+                composeParts.set(seededParts);
+                composePartsText.set(seededParts.map((p) => `${p.id}: ${p.version}`).join('\n'));
+            }
             composeName.set(release.name ?? '');
-            const seededParts: readonly CdnComposeInputPart[] = Object.entries(release.parts).map(([id, part]) => ({
-                id,
-                version: `^${part.version}`,
-                kind: (id === 'chrome' || id === 'theme' || id === 'auth' || id === 'ui') ? 'extension' : 'application',
-            }));
-            composeParts.set(seededParts);
-            composePartsText.set(seededParts.map((p) => `${p.id}: ${p.version}`).join('\n'));
+            composeRolling.set(release.rolling ?? false);
             composeSeededFrom.set(release.hash);
         });
 
@@ -278,7 +287,15 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
                     composePartsText.set(parsed.map((p) => `${p.id}: ${p.version}`).join('\n'));
                     composeSeededFrom.set(null);
                 }
+            } else if (field === 'rolling') {
+                composeRolling.set(val === true || val === 'true');
+                composeSeededFrom.set(null);
             }
+        };
+
+        const setComposeRolling = (rolling: boolean): void => {
+            composeRolling.set(rolling);
+            composeSeededFrom.set(null);
         };
 
         const addComposePart = (part?: Partial<CdnComposeInputPart>): void => {
@@ -386,6 +403,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
                 kernel,
                 parts,
                 dryRun,
+                rolling: composeRolling(),
                 ...(trimmedName !== '' ? { name: trimmedName } : {}),
             });
 
@@ -432,6 +450,16 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
                 deployError.set(`Deploy failed (${res.error.kind}): ${detail}`);
             }
         };
+
+        cx.commands.implement('releases.setComposeRolling', (val?: Json) => {
+            if (typeof val === 'boolean') {
+                setComposeRolling(val);
+            } else if (typeof val === 'string') {
+                setComposeRolling(val === 'true');
+            } else {
+                setComposeRolling(!composeRolling());
+            }
+        });
 
 
         cx.commands.implement('releases.selectSite', (val?: Json) => {
@@ -525,6 +553,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             composeName,
             composeParts,
             composePartsText,
+            composeRolling,
             composeStatus,
             composeResult,
             composeError,
@@ -538,6 +567,7 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
             setComposeName,
             setComposeParts,
             setComposePartsText,
+            setComposeRolling,
             addComposePart,
             removeComposePart,
             updateComposePart,

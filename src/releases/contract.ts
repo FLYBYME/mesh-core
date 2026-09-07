@@ -52,6 +52,11 @@ export const COMPOSE_FORM_SCHEMA: JsonSchema = {
                 required: ['id', 'version', 'kind'],
             },
         },
+        rolling: {
+            type: 'boolean',
+            title: 'Rolling Release',
+            description: 'Automatically re-compose when an included part publishes a new version',
+        },
     },
     required: ['kernel', 'parts'],
 };
@@ -75,6 +80,7 @@ export interface ReleasesApi {
     readonly composeName: Signal<string>;
     readonly composeParts: Signal<readonly CdnComposeInputPart[]>;
     readonly composePartsText: Signal<string>;
+    readonly composeRolling: Signal<boolean>;
     readonly composeStatus: Signal<'idle' | 'composing' | 'success' | 'error'>;
     readonly composeResult: Signal<CdnComposeOutput | null>;
     readonly composeError: Signal<string | null>;
@@ -90,6 +96,7 @@ export interface ReleasesApi {
     setComposeName(name: string): void;
     setComposeParts(parts: readonly CdnComposeInputPart[] | string): void;
     setComposePartsText(text: string): void;
+    setComposeRolling(rolling: boolean): void;
     addComposePart(part?: Partial<CdnComposeInputPart>): void;
     removeComposePart(index: number): void;
     updateComposePart(index: number, patch: Partial<CdnComposeInputPart>): void;
