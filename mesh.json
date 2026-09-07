@@ -87,7 +87,7 @@
         {
             "kind": "extension",
             "id": "auth",
-            "version": "0.3.0",
+            "version": "0.3.1",
             "entry": "src/auth/index.ts",
             "kernel": "^0.13",
             "mesh": [
