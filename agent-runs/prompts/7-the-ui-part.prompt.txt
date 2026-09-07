@@ -35,22 +35,88 @@ WHAT TO BUILD
 A new **Extension** part in this repository, `src/ui/`, following the file shape
 every other part here now has (`contract.ts`, `views/`, `index.ts`).
 
-**Start with what the measurements prove is needed, not with what a design system
-usually ships.** In order:
+**Start from the duplication that was measured, not from what a design system
+usually ships.** `agent-runs/reports/6-sections-are-functions.md` §4 compared the
+two decomposed consoles line by line. Read it — it is the requirements document,
+and it found four repeated shapes:
 
-1. **`ui.Field`** — a label, an input and an error message. Written eleven times
-   across the demos, differently each time. The highest-value component here.
-2. **`ui.Panel`** — the titled container both consoles rebuild.
-3. **`ui.Toolbar`** — a row of actions, which is `chrome`'s bar and both consoles'
-   headers.
-4. **`ui.Nav`** — and read `mesh-web/spec/components.md` on this one. It is the
-   first component that needs the **focus graph**: arrow-key movement inside the
-   bar, which `input.md` specifies as *focus groups* and nothing has needed until
-   now. If the kernel does not support it yet, build `Nav` without it and make the
-   gap the headline of your report.
+- **the entity list sidebar** — a fixed-width scrolling pane, an uppercase header
+  with a count, then *the same three branches in both consoles*: `loading` → muted
+  text, `error` → a card at `rgba(248,81,73,0.1)` with `1px solid #f85149`,
+  `ready && empty` → a muted message. Then list items as full-width buttons with a
+  selected state at `1px solid var(--accent)`.
+- **the detail surface** — an empty-selection placeholder card, then a `Card` at
+  `padding: 16px` / `var(--chrome)` / `1px solid var(--edge)` / `borderRadius: 6px`
+  with a title and a badge.
+- **the property grid** — `Grid` at `140px 1fr` or `180px 1fr`, every row a bold
+  `Span` label then a value, monospace for hashes.
+- **the table** — **neither console had one**, so both hand-stitched a header row
+  out of `Grid` plus a `Stack` with borders and rounded corners.
 
-Four is enough. **A vocabulary is discovered by use, not designed in advance** —
-the next four should come from the consoles telling you what is missing.
+Build in that order. Four is enough for one dispatch. **A vocabulary is discovered
+by use** — the next ones come from the second console telling you what is missing.
+
+Read `mesh-web/spec/components.md` for `Nav` and the focus graph before deciding
+whether it belongs in this round; it is the first component that would need
+arrow-key movement within a group, which is specified and unbuilt.
+
+================================================================================
+THE CONSTRAINT THAT SHAPES ALL OF IT
+================================================================================
+
+**A prop cannot be a function taking arguments.** From `description/types.ts`:
+
+```ts
+export type Props = { readonly [name: string]: Reactive<Json> | undefined };
+export type Reactive<T> = T | (() => T);
+export type Json = string | number | boolean | null | readonly Json[] | { … };
+```
+
+So a prop may be a value or a **getter returning a value**, and nothing else.
+Report 6 recommends `ui.entityList({ items, renderItem, onSelect })` — **that
+cannot exist.** `renderItem` takes an item and returns a Node; it is neither Json
+nor a getter of Json. Do not try to widen `Props` to allow it; the exactness of
+`Props` is why a prop typo is a compile error (`spec/type-safety.md` §4).
+
+**A component takes props and children. Per-item rendering belongs to the caller**,
+who writes the `each()`. So the sidebar component owns the frame — width, border,
+scroll, header, and the loading/error/empty presentation — and the caller supplies
+the rows.
+
+### Which means there is a real choice to make, and the report did not see it
+
+Two ways to package a repeated shape:
+
+- **a component** — a name in the registry, resolved **at render time**. Updating
+  `ui` and recomposing updates every site. **Late-bound.**
+- **a helper function** exported from `ui` — a plain function returning a Node,
+  bundled into the *consumer's* artifact at build time. Updating it means
+  rebuilding and republishing every consumer. **Early-bound**, and it couples two
+  independently versioned artifacts, which is the hazard
+  `~/code/surfdns/architecture/boundaries.md` names.
+
+> **Anything that should improve for every site by recomposing must be a
+> component, not a helper.**
+
+Push as much as possible into components. If something genuinely cannot be one,
+say why in the report — that list is the most useful thing this dispatch can
+produce, because it is the shape of what the description layer cannot express.
+
+**The loading/error/empty case is the test.** It looks like it needs a callback
+and it does not: `status` is a prop, the rows are children, and the component's
+own CSS decides what shows. Something like
+
+```ts
+element('ui.EntityList', {
+    props: { status: () => sites.status(), emptyMessage: 'No sites yet' },
+    children: [each(...)],
+})
+```
+
+with `[data-status="loading"] > *` hidden and the message supplied by the
+component. **Verify that this actually works before building four components on
+it** — if it does not, the whole vocabulary needs a different shape and that is
+worth finding out in the first hour.
 
 ### The rule every component follows
 
