@@ -1,8 +1,8 @@
 // GENERATED FILE — do not edit.
 //
 // Emitted from chrome's mesh.json by `mesh-serve client`.
-// Exposure: sha256:eab1870b84285abe282b8b5d8ebbb5b8
-// ShapeHash: sha256:41f3176513230fb821899d2b65a2e0b2
+// Exposure: sha256:dde09f35692589627fa2723a635b02ff
+// ShapeHash: sha256:0a785542daf482f4701322c1b8b27861
 //
 // Regenerate rather than editing. The exposure and shape hashes above are checked at run time
 // against what the API reports, so a hand-edited client is a client that lies about a surface
@@ -321,6 +321,28 @@ export interface NodeGetOutput {
     readonly id: string;
     readonly createdAt: string;
     readonly updatedAt: string;
+}
+
+export interface NodeProvisionInput {
+    readonly hostname: string;
+    readonly name: string;
+    readonly repository: string;
+    readonly ref: string;
+    readonly path?: string;
+    readonly dependsOn?: readonly string[];
+    readonly mountKey?: string;
+}
+
+export interface NodeProvisionOutput {
+    readonly hostname: string;
+    readonly name: string;
+    readonly repository: string;
+    readonly ref: string;
+    readonly applied: boolean;
+    readonly noop: boolean;
+    readonly message: string;
+    readonly path?: string;
+    readonly error?: string;
 }
 
 export interface NodeReconcileInput {
@@ -812,8 +834,8 @@ export interface SiteGetOutput {
 
 export const chromeApi = defineApi({
     id: "chrome",
-    exposure: "sha256:eab1870b84285abe282b8b5d8ebbb5b8",
-    shapeHash: "sha256:41f3176513230fb821899d2b65a2e0b2",
+    exposure: "sha256:dde09f35692589627fa2723a635b02ff",
+    shapeHash: "sha256:0a785542daf482f4701322c1b8b27861",
     base: "/api",
     calls: {
         /**
@@ -906,6 +928,12 @@ export const chromeApi = defineApi({
          * GET /nodes/:id — auth: public
          */
         "node.get": call<NodeGetInput, NodeGetOutput, never>("GET", "/nodes/:id", { kind: 'auth', level: 'public' }),
+        /**
+         * Provisions a service onto a node by acquiring its repository at a pinned ref, installing dependencies, and registering it in the Supervisor manifest.
+         *
+         * POST /node/provision — auth: public, destructive
+         */
+        "node.provision": call<NodeProvisionInput, NodeProvisionOutput, never>("POST", "/node/provision", { kind: 'auth', level: 'public' }),
         /**
          * Make what each node is running match what it should be running.
          *

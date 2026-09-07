@@ -1,8 +1,8 @@
 {
     "application": "chrome",
     "base": "/api",
-    "exposure": "sha256:eab1870b84285abe282b8b5d8ebbb5b8",
-    "shapeHash": "sha256:41f3176513230fb821899d2b65a2e0b2",
+    "exposure": "sha256:dde09f35692589627fa2723a635b02ff",
+    "shapeHash": "sha256:0a785542daf482f4701322c1b8b27861",
     "calls": [
         {
             "key": "catalog.resolve",
@@ -1528,6 +1528,106 @@
             "domain": "node",
             "action": "get",
             "description": "Get a specific node by ID.",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            }
+        },
+        {
+            "key": "node.provision",
+            "method": "POST",
+            "path": "/node/provision",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "hostname": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "repository": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "ref": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "path": {
+                        "type": "string"
+                    },
+                    "dependsOn": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    },
+                    "mountKey": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "hostname",
+                    "name",
+                    "repository",
+                    "ref"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "hostname": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "repository": {
+                        "type": "string"
+                    },
+                    "ref": {
+                        "type": "string"
+                    },
+                    "applied": {
+                        "type": "boolean"
+                    },
+                    "noop": {
+                        "type": "boolean"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "path": {
+                        "type": "string"
+                    },
+                    "error": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "hostname",
+                    "name",
+                    "repository",
+                    "ref",
+                    "applied",
+                    "noop",
+                    "message"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": [],
+            "domain": "node",
+            "action": "provision",
+            "description": "Provisions a service onto a node by acquiring its repository at a pinned ref, installing dependencies, and registering it in the Supervisor manifest.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
