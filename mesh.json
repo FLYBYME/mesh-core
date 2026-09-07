@@ -35,7 +35,7 @@
         {
             "kind": "application",
             "id": "catalog",
-            "version": "0.2.3",
+            "version": "0.2.4",
             "entry": "src/catalog/index.ts",
             "kernel": "^0.15",
             "requiredParts": [

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, mountPart } from '@flybyme/mesh-web/testing';
 import CatalogApp, { CATALOG } from '../src/catalog/index.js';
+import UiExtension from '../src/ui/index.js';
 import type {
     CatalogResolveOutput,
     PartFindOutputItem,
@@ -148,7 +149,10 @@ describe('CatalogApp', () => {
 
     it('loads and renders catalog parts, their kinds, and details', async () => {
         const s = await mountPart({
-            parts: [{ id: 'catalog', contribution: CatalogApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'catalog', contribution: CatalogApp },
+            ],
         });
         site = s;
         s.assertSingleFramework();
@@ -176,7 +180,10 @@ describe('CatalogApp', () => {
 
     it('displays versions in a Grid and shows provenance information', async () => {
         const s = await mountPart({
-            parts: [{ id: 'catalog', contribution: CatalogApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'catalog', contribution: CatalogApp },
+            ],
         });
         site = s;
 
@@ -201,7 +208,10 @@ describe('CatalogApp', () => {
 
     it('filters parts by search query and kind buttons', async () => {
         const s = await mountPart({
-            parts: [{ id: 'catalog', contribution: CatalogApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'catalog', contribution: CatalogApp },
+            ],
         });
         site = s;
 
@@ -233,7 +243,10 @@ describe('CatalogApp', () => {
 
     it('executes catalog.resolve to inspect what requirements resolve to', async () => {
         const s = await mountPart({
-            parts: [{ id: 'catalog', contribution: CatalogApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'catalog', contribution: CatalogApp },
+            ],
         });
         site = s;
 
@@ -261,7 +274,10 @@ describe('CatalogApp', () => {
         shouldFail = true;
 
         const s = await mountPart({
-            parts: [{ id: 'catalog', contribution: CatalogApp }],
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'catalog', contribution: CatalogApp },
+            ],
         });
         site = s;
 
