@@ -4,7 +4,7 @@
         {
             "kind": "extension",
             "id": "chrome",
-            "version": "0.2.0",
+            "version": "0.2.1",
             "entry": "src/chrome/index.ts",
             "kernel": "^0.13",
             "description": "The shell every site gets: a window list, a mode switch, and the area the windows live in.",
