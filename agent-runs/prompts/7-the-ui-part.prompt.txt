@@ -1,0 +1,149 @@
+Code lives in:  FLYBYME/mesh-core — this worktree. All commits go here.
+
+**BLOCKED until mesh-web dispatch 13 lands** — an Extension cannot provide a
+component before that. Check `node_modules/@flybyme/mesh-web` supports component
+contribution before starting; if it does not, stop and say so.
+
+================================================================================
+THE TASK
+================================================================================
+
+**Build `ui`: the design system, as a part.** Specification:
+`mesh-web/spec/components.md` and `~/code/surfdns/architecture/boundaries.md`.
+
+The measurements this exists to fix, across the ten demo applications:
+
+| | |
+| --- | --- |
+| `element()` calls | 578 |
+| inline `style: {}` objects | **446** — 77% of call sites |
+| hard-coded hex colours | **318** |
+| uses of a theme token | 93 |
+| shared UI modules | **0** |
+| `.css` files, though C8 allows them | **0** |
+
+`Button` appears 124 times and there is no shared button. `padding: '16px'` is
+written 26 times. Eleven `Form`s and eighteen `Input`s, each with its own label,
+spacing and error text. **Most applications ignore the theme extension that exists
+to drive them**, because a token is a discipline and a hex literal is what
+discipline achieves.
+
+================================================================================
+WHAT TO BUILD
+================================================================================
+
+A new **Extension** part in this repository, `src/ui/`, following the file shape
+every other part here now has (`contract.ts`, `views/`, `index.ts`).
+
+**Start with what the measurements prove is needed, not with what a design system
+usually ships.** In order:
+
+1. **`ui.Field`** — a label, an input and an error message. Written eleven times
+   across the demos, differently each time. The highest-value component here.
+2. **`ui.Panel`** — the titled container both consoles rebuild.
+3. **`ui.Toolbar`** — a row of actions, which is `chrome`'s bar and both consoles'
+   headers.
+4. **`ui.Nav`** — and read `mesh-web/spec/components.md` on this one. It is the
+   first component that needs the **focus graph**: arrow-key movement inside the
+   bar, which `input.md` specifies as *focus groups* and nothing has needed until
+   now. If the kernel does not support it yet, build `Nav` without it and make the
+   gap the headline of your report.
+
+Four is enough. **A vocabulary is discovered by use, not designed in advance** —
+the next four should come from the consoles telling you what is missing.
+
+### The rule every component follows
+
+> **Reach for the native element whose accessibility you would otherwise rewrite.**
+
+`Input` already maps to `<input>` and passes `type` through, so
+`<input type="range">` renders today and brings arrow keys, Home/End and Page
+Up/Down — the non-pointer path `input.md` §3 *requires* of every action. The
+kernel already follows this rule: `Dialog` uses `<dialog>` for top layer with no
+z-index arithmetic, `Heading` picks a real `h1`–`h6`. A design system that reaches
+for `div` inherits the maintenance of every behaviour a browser already ships.
+
+### Styling: CSS, not TypeScript
+
+`ui` ships a **stylesheet** with its artifact (C8 — a part imports a `.css` file,
+esbuild emits it, the cdn emits a `<link>`). Values come from the thirteen theme
+tokens that already exist:
+
+```
+--page  --chrome  --surface  --surface-hover  --ink  --ink-dim
+--edge  --accent  --on-accent  --info  --warn  --error  --shadow
+```
+
+**Wrap every rule in `@layer`.** This is not decoration and it removes a problem
+rather than working around one: `mesh-serve/src/cdn/methods/page.ts` emits part
+stylesheets **alphabetically by part id**, so `ui` loads after `calc`, `catalog`
+and `chrome`. In the CSS cascade an **unlayered** declaration beats a **layered**
+one regardless of source order — so `ui` in a layer is overridable by an
+application's own unlayered CSS no matter what order the links appear in.
+
+That means **no change to `page.ts` is needed**, which is the point: the ordering
+is solved inside this part rather than by a rule about filenames. Verify it in a
+browser test rather than trusting this paragraph.
+
+================================================================================
+AND ADOPT IT — same dispatch
+================================================================================
+
+**A capability with no consumer is not done** — `~/code/surfdns/decisions/0001`.
+`models` shipped with zero production readers and its first adoption found, in a
+day, that it does not refresh after mutations made through explicit contracts.
+
+So this dispatch also **adopts `ui` in one console** — pick `catalog` or
+`releases`, whichever is smaller after dispatch 6's decomposition — and deletes
+the inline styling it replaces. The other console follows later.
+
+`catalog` and `releases` must declare `requiredParts: [{ id: 'ui', version: '^0.1' }]`
+in `mesh.json`. `checkComposition` already refuses a release missing a required
+part, so nothing new is needed for that — confirm it and say so.
+
+================================================================================
+WHAT NOT TO DO
+================================================================================
+
+**Do not build a layout system.** `Stack`, `Row` and `Grid` are kernel primitives.
+Primitives own structure; `ui` owns appearance and composite widgets. A second
+layout system over `Grid` is two ways to do one thing.
+
+**Do not add components nothing asked for.** Every component in this dispatch must
+replace something a real part is writing today. If you cannot name the call sites
+it deletes, it does not go in.
+
+**Do not touch `chrome` or `auth`.** They are live on all six sites and adopting
+`ui` in the shell is a later, more careful dispatch.
+
+**Zero `as any`, zero `as never`, zero casts.** Foreground commands, commit as you
+go.
+
+================================================================================
+WHAT GOOD LOOKS LIKE
+================================================================================
+
+- `src/ui/` exists, declared in `mesh.json` as an extension at `0.1.0`, kernel
+  `^0.13` (or whatever 13 bumps it to).
+- Browser tests: each component renders, is reachable and operable **from the
+  keyboard**, and picks up a changed theme token without touching the part.
+- **A stated count**: how many inline `style: {}` objects and hex literals the
+  adopted console lost. That number is whether this worked.
+- All existing tests passing — 28 today, plus dispatch 6's. `npm run typecheck`
+  clean.
+- Patch or minor bumps for the adopting console; `ui` at `0.1.0`.
+
+================================================================================
+YOUR REPORT
+================================================================================
+
+`agent-runs/reports/7-the-ui-part.md`
+
+- **style objects and hex literals removed from the adopted console**, counted
+- what `Nav` needed from the focus graph, and whether it was there
+- **what the second console will need that these four do not cover** — you will
+  have seen one console closely; predicting the next is the most valuable thing
+  here, and being wrong is fine
+- whether `@layer` actually made link order irrelevant, tested rather than assumed
+- what the demo applications would need beyond this, in rough order
+- anything for the reader audit
