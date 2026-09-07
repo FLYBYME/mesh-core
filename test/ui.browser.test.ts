@@ -12,10 +12,17 @@ import {
     type ViewDecl,
 } from '@flybyme/mesh-web';
 import UiExtension, {
+    renderForm,
+    UI_BUTTON_ROW,
     UI_DETAIL_SURFACE,
+    UI_DIALOG,
     UI_ENTITY_ITEM,
     UI_ENTITY_LIST,
+    UI_FIELD,
+    UI_FORM,
+    UI_LABEL,
     UI_PROPERTY_GRID,
+    UI_SELECT,
     UI_TABLE,
     UI_TABLE_ROW,
 } from '../src/ui/index.js';
@@ -49,6 +56,12 @@ describe('ui design system extension', () => {
         expect(s.components.get(UI_PROPERTY_GRID)).toBeDefined();
         expect(s.components.get(UI_TABLE)).toBeDefined();
         expect(s.components.get(UI_TABLE_ROW)).toBeDefined();
+        expect(s.components.get(UI_FORM)).toBeDefined();
+        expect(s.components.get(UI_FIELD)).toBeDefined();
+        expect(s.components.get(UI_LABEL)).toBeDefined();
+        expect(s.components.get(UI_SELECT)).toBeDefined();
+        expect(s.components.get(UI_BUTTON_ROW)).toBeDefined();
+        expect(s.components.get(UI_DIALOG)).toBeDefined();
     });
 
     it('ui.EntityList renders loading, error, ready and empty states reactively', async () => {
@@ -487,4 +500,339 @@ describe('ui design system extension', () => {
 
         styleTag.remove();
     });
+
+    it('ui.Field, ui.Label, ui.Select, ui.ButtonRow, ui.Dialog render correctly', async () => {
+        const dialogOpen = signal(false);
+        const selectValue = signal('opt1');
+
+        class TestApp implements Application<typeof APP_NEEDS, readonly []> {
+            readonly needs = APP_NEEDS;
+            readonly views: readonly ViewDecl[] = [
+                {
+                    id: 'main',
+                    title: 'Main',
+                    render: (): Described => element(UI_FORM, {
+                        props: { class: 'test-form' },
+                        children: [
+                            element(UI_FIELD, {
+                                props: {
+                                    label: 'Choose Option',
+                                    name: 'choice',
+                                    required: true,
+                                    hint: 'Pick from list',
+                                    error: 'Selection required',
+                                },
+                                children: [
+                                    element(UI_SELECT, {
+                                        props: {
+                                            class: 'test-select',
+                                            value: () => selectValue(),
+                                            options: [
+                                                { value: 'opt1', label: 'Option One' },
+                                                { value: 'opt2', label: 'Option Two' },
+                                            ],
+                                        },
+                                    }),
+                                ],
+                            }),
+                            element(UI_BUTTON_ROW, {
+                                props: { align: 'end', gap: 12 },
+                                children: [
+                                    element('Button', {
+                                        props: { class: 'btn-open-dialog' },
+                                        children: [text('Open Dialog')],
+                                    }),
+                                ],
+                            }),
+                            element(UI_DIALOG, {
+                                props: {
+                                    open: () => dialogOpen(),
+                                    title: 'Test Dialog',
+                                },
+                                children: [
+                                    element('Text', { children: [text('Dialog Body Content')] }),
+                                ],
+                            }),
+                        ],
+                    }),
+                },
+            ];
+
+            async start(_cx: Context<typeof APP_NEEDS, readonly []>): Promise<void> {}
+        }
+
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'test_app', contribution: TestApp },
+            ],
+            open: [{ application: 'test_app', views: ['main'] }],
+        });
+        site = s;
+
+        const form = document.querySelector('form.ui-form');
+        expect(form).not.toBeNull();
+
+        const field = document.querySelector('.ui-field');
+        expect(field).not.toBeNull();
+        expect(field?.getAttribute('data-field-name')).toBe('choice');
+        expect(field?.getAttribute('data-required')).toBe('true');
+        expect(field?.getAttribute('data-invalid')).toBe('true');
+
+        const labelText = document.querySelector('.ui-field-label-text');
+        expect(labelText?.textContent).toBe('Choose Option');
+
+        const hint = document.querySelector('.ui-field-hint');
+        expect(hint?.textContent).toBe('Pick from list');
+
+        const error = document.querySelector('.ui-field-error');
+        expect(error?.textContent).toBe('Selection required');
+
+        const select = document.querySelector<HTMLSelectElement>('.test-select');
+        expect(select).not.toBeNull();
+        expect(select?.value).toBe('opt1');
+        expect(select?.options.length).toBe(2);
+        expect(select?.options[0]?.textContent).toBe('Option One');
+
+        const buttonRow = document.querySelector('.ui-button-row');
+        expect(buttonRow?.getAttribute('data-align')).toBe('end');
+
+        const dialog = document.querySelector<HTMLDialogElement>('.ui-dialog');
+        expect(dialog).not.toBeNull();
+        expect(dialog?.hasAttribute('open')).toBe(false);
+
+        dialogOpen.set(true);
+        await new Promise((r) => setTimeout(r, 20));
+        expect(dialog?.hasAttribute('open')).toBe(true);
+        const dialogTitle = document.querySelector('.ui-dialog-title');
+        expect(dialogTitle?.textContent).toBe('Test Dialog');
+    });
+
+    it('renderForm generates schema-driven form listening for input and handles empty number as undefined', async () => {
+        const formState = signal<Record<string, any>>({
+            title: 'Initial Title',
+            count: 5,
+            active: true,
+            role: 'editor',
+        });
+        let lastSubmitted: Record<string, any> | null = null;
+
+        const schema = {
+            type: 'object',
+            properties: {
+                title: { type: 'string', title: 'Site Title', description: 'Enter title' },
+                count: { type: 'number', title: 'Item Count' },
+                active: { type: 'boolean', title: 'Active Flag' },
+                role: { type: 'string', enum: ['admin', 'editor', 'viewer'] },
+            },
+            required: ['title', 'role'],
+        };
+
+        class TestApp implements Application<typeof APP_NEEDS, readonly []> {
+            readonly needs = APP_NEEDS;
+            readonly commands = [
+                { id: 'form.change', title: 'Change' },
+                { id: 'form.submit', title: 'Submit' },
+            ];
+
+            readonly views: readonly ViewDecl[] = [
+                {
+                    id: 'main',
+                    title: 'Main',
+                    render: (): Described => renderForm({
+                        schema,
+                        values: () => formState(),
+                        onFieldChange: 'form.change',
+                        onSubmit: 'form.submit',
+                        submitLabel: 'Save Record',
+                    }),
+                },
+            ];
+
+            async start(cx: Context<typeof APP_NEEDS, readonly []>): Promise<void> {
+                cx.commands.implement('form.change', (field: unknown, val: unknown) => {
+                    const curr = { ...formState() };
+                    curr[String(field)] = val;
+                    formState.set(curr);
+                });
+                cx.commands.implement('form.submit', () => {
+                    lastSubmitted = { ...formState() };
+                });
+            }
+        }
+
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'test_app', contribution: TestApp },
+            ],
+            open: [{ application: 'test_app', views: ['main'] }],
+        });
+        site = s;
+
+        const form = document.querySelector('.ui-schema-form');
+        expect(form).not.toBeNull();
+
+        // Check rendered fields
+        const titleInput = document.querySelector<HTMLInputElement>('.input-title');
+        const countInput = document.querySelector<HTMLInputElement>('.input-count');
+        const activeInput = document.querySelector<HTMLInputElement>('.input-active');
+        const roleSelect = document.querySelector<HTMLSelectElement>('.input-role');
+
+        expect(titleInput).not.toBeNull();
+        expect(titleInput?.value).toBe('Initial Title');
+
+        expect(countInput).not.toBeNull();
+        expect(countInput?.value).toBe('5');
+
+        expect(activeInput).not.toBeNull();
+        expect(activeInput?.checked).toBe(true);
+
+        expect(roleSelect).not.toBeNull();
+        expect(roleSelect?.value).toBe('editor');
+        expect(roleSelect?.options.length).toBe(3);
+
+        // Required indicators
+        const titleField = document.querySelector('.field-title');
+        expect(titleField?.getAttribute('data-required')).toBe('true');
+
+        // Test input event dispatch (typing directly fires change intent without blur)
+        titleInput!.value = 'New Title';
+        titleInput!.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 20));
+        expect(formState().title).toBe('New Title');
+
+        // Test empty number field is undefined, not 0
+        countInput!.value = '';
+        countInput!.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 20));
+        expect(formState().count).toBeUndefined();
+
+        // Submit form
+        const submitBtn = document.querySelector<HTMLButtonElement>('.btn-submit');
+        expect(submitBtn?.textContent).toBe('Save Record');
+        submitBtn?.click();
+        expect(lastSubmitted !== null).toBe(true);
+        if (lastSubmitted !== null) {
+            expect(lastSubmitted['title']).toBe('New Title');
+            expect(lastSubmitted['count']).toBeUndefined();
+        }
+    });
+
+    it('renderForm supports the override seam refining fields rather than replacing the form', async () => {
+        const formState = signal<Record<string, any>>({
+            hiddenField: 'secret',
+            normalField: 'hello',
+            customField: 'custom-val',
+            wrappedField: 'wrap-me',
+        });
+
+        const schema = {
+            type: 'object',
+            properties: {
+                hiddenField: { type: 'string' },
+                normalField: { type: 'string' },
+                customField: { type: 'string' },
+                wrappedField: { type: 'string' },
+            },
+        };
+
+        class TestApp implements Application<typeof APP_NEEDS, readonly []> {
+            readonly needs = APP_NEEDS;
+            readonly commands = [
+                { id: 'form.change', title: 'Change' },
+                { id: 'custom.pick', title: 'Pick Custom' },
+            ];
+
+            readonly views: readonly ViewDecl[] = [
+                {
+                    id: 'main',
+                    title: 'Main',
+                    render: (): Described => renderForm({
+                        schema,
+                        values: () => formState(),
+                        onFieldChange: 'form.change',
+                        overrides: {
+                            // Custom ordering: customField first
+                            fieldOrder: ['customField', 'normalField', 'wrappedField', 'hiddenField'],
+                            fields: {
+                                hiddenField: {
+                                    hidden: true,
+                                },
+                                normalField: {
+                                    label: 'Custom Normal Label',
+                                    hint: 'A helpful hint',
+                                },
+                                customField: {
+                                    renderControl: (ctx) => element('Button', {
+                                        props: { class: 'btn-custom-picker' },
+                                        intents: { activate: { action: command('custom.pick') } },
+                                        children: [text(() => `Picked: ${String(ctx.value())}`)],
+                                    }),
+                                },
+                                wrappedField: {
+                                    renderField: (ctx) => element('Stack', {
+                                        props: { class: 'wrapped-field-container' },
+                                        children: [
+                                            element('Span', { props: { class: 'badge-notice' }, children: [text('Important')] }),
+                                            ctx.defaultField(),
+                                        ],
+                                    }),
+                                },
+                            },
+                        },
+                    }),
+                },
+            ];
+
+            async start(cx: Context<typeof APP_NEEDS, readonly []>): Promise<void> {
+                cx.commands.implement('form.change', (field: unknown, val: unknown) => {
+                    const curr = { ...formState() };
+                    curr[String(field)] = val;
+                    formState.set(curr);
+                });
+                cx.commands.implement('custom.pick', () => {
+                    formState.set({ ...formState(), customField: 'picked-special' });
+                });
+            }
+        }
+
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'test_app', contribution: TestApp },
+            ],
+            open: [{ application: 'test_app', views: ['main'] }],
+        });
+        site = s;
+
+        // Hidden field must not be rendered
+        expect(document.querySelector('.field-hiddenField')).toBeNull();
+
+        // Normal field has overridden label & hint
+        const normalLabel = document.querySelector('.field-normalField .ui-field-label-text');
+        expect(normalLabel?.textContent).toBe('Custom Normal Label');
+        const normalHint = document.querySelector('.field-normalField .ui-field-hint');
+        expect(normalHint?.textContent).toBe('A helpful hint');
+
+        // customField rendered using renderControl
+        const customBtn = document.querySelector<HTMLButtonElement>('.btn-custom-picker');
+        expect(customBtn).not.toBeNull();
+        expect(customBtn?.textContent).toBe('Picked: custom-val');
+        customBtn?.click();
+        await new Promise((r) => setTimeout(r, 20));
+        expect(customBtn?.textContent).toBe('Picked: picked-special');
+
+        // wrappedField rendered using renderField wrapping defaultField()
+        const wrappedContainer = document.querySelector('.wrapped-field-container');
+        expect(wrappedContainer).not.toBeNull();
+        expect(wrappedContainer?.querySelector('.badge-notice')?.textContent).toBe('Important');
+        expect(wrappedContainer?.querySelector('.field-wrappedField')).not.toBeNull();
+
+        // Verify order: customField precedes normalField
+        const fields = document.querySelectorAll('.ui-field');
+        expect(fields[0]?.getAttribute('data-field-name')).toBe('customField');
+        expect(fields[1]?.getAttribute('data-field-name')).toBe('normalField');
+    });
 });
+

@@ -19,7 +19,7 @@
         {
             "kind": "extension",
             "id": "ui",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "entry": "src/ui/index.ts",
             "kernel": "^0.15",
             "description": "The design system: composite components and theme-driven styles for platform consoles and applications.",
