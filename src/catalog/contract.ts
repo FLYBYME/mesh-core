@@ -22,6 +22,7 @@ export interface CatalogApi {
     readonly selectedVersionNumber: Signal<string | null>;
     readonly selectedVersion: () => PartVersionFindOutputItem | null;
     readonly status: ReadonlySignal<CollectionStatus>;
+    readonly live: ReadonlySignal<boolean>;
     readonly errorMessage: () => string | null;
     readonly versionStatus: ReadonlySignal<CollectionStatus>;
     readonly versionErrorMessage: () => string | null;

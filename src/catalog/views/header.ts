@@ -101,6 +101,20 @@ export function renderCatalogHeader(app: CatalogApi): Described {
                             text(() => `${String(app.filteredParts().length)} of ${String(app.parts().length)} parts`),
                         ],
                     }),
+                    element('Span', {
+                        props: {
+                            class: 'catalog-live-indicator live-indicator',
+                            style: () => ({
+                                padding: '2px 8px',
+                                borderRadius: '10px',
+                                fontSize: '11px',
+                                background: app.live() ? 'rgba(56, 139, 253, 0.15)' : 'var(--surface, #21262d)',
+                                color: app.live() ? 'var(--accent, #58a6ff)' : 'var(--ink-dim, #8b949e)',
+                                border: '1px solid var(--edge, #30363d)',
+                            }),
+                        },
+                        children: [text(() => (app.live() ? '● live' : '○ not following'))],
+                    }),
                 ],
             }),
             element('Row', {
@@ -126,23 +140,6 @@ export function renderCatalogHeader(app: CatalogApi): Described {
                         },
                     }),
                     ...renderKindFilterButtons(app),
-                    element('Button', {
-                        props: {
-                            class: 'btn-refresh-parts',
-                            title: 'Reload catalog from mesh',
-                            style: {
-                                padding: '5px 12px',
-                                borderRadius: '6px',
-                                background: 'var(--surface, #21262d)',
-                                border: '1px solid var(--edge, #30363d)',
-                                color: 'var(--ink, #e6edf3)',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                            },
-                        },
-                        intents: { activate: { action: command('catalog.refresh') } },
-                        children: [text('↻ Refresh')],
-                    }),
                 ],
             }),
         ],

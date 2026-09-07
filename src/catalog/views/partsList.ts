@@ -67,6 +67,7 @@ export function renderPartsList(app: CatalogApi): Described {
             errorMessage: () => app.errorMessage() ?? 'Unknown catalog error',
             errorClass: 'catalog-error-card',
             emptyMessage: 'No parts match the search criteria.',
+            idleMessage: 'Sign in to view catalog parts.',
             count: () => app.filteredParts().length,
         },
         children: [
