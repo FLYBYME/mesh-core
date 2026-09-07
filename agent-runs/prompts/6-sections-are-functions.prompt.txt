@@ -1,0 +1,109 @@
+Code lives in:  FLYBYME/mesh-core — this worktree. All commits go here.
+
+================================================================================
+THE TASK
+================================================================================
+
+**Decompose the two console views.** `~/code/surfdns/architecture/boundaries.md`
+rule 5 — read it first, including the section *"Rule 4 was necessary and not
+sufficient"*, which is why this dispatch exists.
+
+Dispatch 5 split the parts into `contract.ts` / pure / `views/` / `index.ts`, and
+that was right. It also left this:
+
+    src/releases/views/console.ts    885-line function in an 897-line file
+    src/catalog/views/browser.ts     816-line function in an 873-line file
+
+**A view alone in a file is easier to find and exactly as hard to read.** The
+split moved boundaries that already existed; it drew no new ones.
+
+================================================================================
+THE SEAM IS ALREADY IN THE CODE
+================================================================================
+
+`renderReleasesView` is a sequence of `const`s, each holding one `element(...)`,
+with the last statement composing them:
+
+    header               ~54 lines
+    sitesSection        ~115
+    releasesSection     ~128
+    leftPane             ~19   composes the two above
+    isLive                ~6   a predicate
+    selectedReleaseCard ~241
+    composerCard        ~238
+    rightPane            ~42   composes the two above
+    return                ~31   composes leftPane + rightPane
+
+**They are already sections. They are just not functions.** Make each one a named
+function, and let the view compose them — the same rule rule 4 applies at the file
+level, one level down.
+
+`browser.ts` has the same shape. Read it and find its own seams rather than
+assuming they match.
+
+**Where the functions live is yours to decide.** A 240-line section is probably
+its own file next to the view; a 19-line composer probably is not. State the rule
+you applied in the report, because the next person needs one they can follow.
+
+================================================================================
+WHAT THIS IS NOT
+================================================================================
+
+**Not a styling fix.** `console.ts` carries 74 `style: {}` objects and 188
+style-property lines — 21% of the file. That is real and it is **not this task**:
+it needs the `ui.*` component vocabulary (`mesh-web/spec/components.md`), which
+does not exist yet. Do not invent a local component layer, do not add a
+`styles.ts`, do not extract shared style constants — a helper shared between two
+parts couples two independently versioned artifacts, which is the hazard
+`boundaries.md` names. Leave the styling where it is and let it move once.
+
+**Not a behaviour change.** `console.localhost` is live on both parts right now.
+The diff must be extraction and composition, nothing else. No renamed exports, no
+changed props, no fixes in passing — find a bug, report it, leave it.
+
+**Not a rewrite of what dispatch 4 did.** Both consoles were moved onto the
+`models` capability. Do not adjust that.
+
+================================================================================
+ONE THING TO CHECK FIRST
+================================================================================
+
+`node_modules/@flybyme/mesh-web` must be **0.13.0**:
+
+    node -e "console.log(require('./node_modules/@flybyme/mesh-web/package.json').version)"
+
+npm reuses a cached git dependency when the lockfile still resolves to an older
+commit, and dispatch 4's tests passed against **0.11.1** while `package.json` said
+0.13.0 — a kernel that predates the `models` capability that dispatch adopted. If
+it is not 0.13.0: `rm -rf node_modules/@flybyme/mesh-web && npm install`.
+
+================================================================================
+WHAT GOOD LOOKS LIKE
+================================================================================
+
+- No function in either file over **~120 lines**, and the top-level view function
+  reading as a list of what the screen is made of.
+- **All 28 tests passing, none edited.** They are the proof this was extraction.
+  If a test needs a real change, something moved that should not have — stop and
+  say so in the report.
+- `npm run typecheck` clean, **zero casts**.
+- Patch bumps in `mesh.json`: `catalog` 0.2.1 → 0.2.2, `releases` 0.2.2 → 0.2.3
+  (`releases` was already bumped today, check the current value rather than
+  assuming). Kernel stays `^0.13`.
+
+**Run every command in the foreground. Commit as you go — one file per commit.**
+
+================================================================================
+YOUR REPORT
+================================================================================
+
+`agent-runs/reports/6-sections-are-functions.md`
+
+- the rule you applied for when a section becomes its own file
+- longest remaining function in each file, and why it did not decompose further
+- **which sections were nearly identical between the two consoles.** Both render
+  a list, a detail card and a form. If they duplicate each other, that is the
+  first evidence of what the `ui.*` vocabulary needs, and it is worth more than
+  the refactor.
+- bugs found and deliberately left, with file and line
+- anything for the reader audit
