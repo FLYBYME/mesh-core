@@ -305,13 +305,14 @@ export function renderComposerCard(app: ReleasesApi): Described {
                     name: app.composeName(),
                     kernel: app.composeKernel(),
                     parts: partsToJson(app.composeParts()),
+                    rolling: app.composeRolling(),
                 }),
                 onFieldChange: 'releases.setField',
                 onSubmit: 'releases.commitCompose',
                 submitLabel: () => (app.composeStatus() === 'composing' ? 'Composing...' : '✓ Compose Release'),
                 disabled: () => app.composeStatus() === 'composing',
                 overrides: {
-                    fieldOrder: ['name', 'kernel', 'parts'],
+                    fieldOrder: ['name', 'kernel', 'parts', 'rolling'],
                     fields: {
                         name: {
                             label: 'Release Label',
@@ -327,6 +328,31 @@ export function renderComposerCard(app: ReleasesApi): Described {
                             label: 'Parts & Version Requirements',
                             hint: 'Repeating group of parts: ID, version range requirement, and part kind',
                             renderControl: () => renderPartsGroup(app),
+                        },
+                        rolling: {
+                            label: 'Rolling Release',
+                            hint: 'Automatically re-compose when an included part publishes a new version',
+                            renderControl: () => element('Row', {
+                                props: {
+                                    style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' },
+                                },
+                                children: [
+                                    element('Input', {
+                                        props: {
+                                            type: 'checkbox',
+                                            class: 'input-rolling input-compose-rolling',
+                                            checked: () => app.composeRolling(),
+                                        },
+                                        intents: {
+                                            change: { action: command('releases.setComposeRolling') },
+                                        },
+                                    }),
+                                    element('Span', {
+                                        props: { style: { fontSize: '12px', color: 'var(--ink, #e6edf3)' } },
+                                        children: [text('Track version ranges and automatically re-compose on new part versions')],
+                                    }),
+                                ],
+                            }),
                         },
                     },
                     renderActions: () => element('Row', {

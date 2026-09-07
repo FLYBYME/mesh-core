@@ -43,9 +43,50 @@ function renderReleaseItem(rel: () => ReleaseFindOutputItem, app: ReleasesApi): 
             element('Row', {
                 props: { style: { display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' } },
                 children: [
-                    element('Span', {
-                        props: { bold: true, style: { fontSize: '13px' } },
-                        children: [text(() => (rel().name && rel().name !== '' ? rel().name ?? '' : 'Unnamed Release'))],
+                    element('Row', {
+                        props: { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                        children: [
+                            element('Span', {
+                                props: { bold: true, style: { fontSize: '13px' } },
+                                children: [text(() => (rel().name && rel().name !== '' ? rel().name ?? '' : 'Unnamed Release'))],
+                            }),
+                            when(
+                                () => rel().rolling === true,
+                                () => element('Badge', {
+                                    props: {
+                                        class: 'badge-rolling',
+                                        style: {
+                                            fontSize: '9px',
+                                            fontWeight: 'bold',
+                                            padding: '1px 5px',
+                                            borderRadius: '3px',
+                                            background: 'rgba(88, 166, 255, 0.2)',
+                                            color: '#58a6ff',
+                                            border: '1px solid rgba(88, 166, 255, 0.4)',
+                                        },
+                                    },
+                                    children: [text('ROLLING')],
+                                }),
+                            ),
+                            when(
+                                () => Boolean(rel().supersededBy),
+                                () => element('Badge', {
+                                    props: {
+                                        class: 'badge-superseded',
+                                        style: {
+                                            fontSize: '9px',
+                                            fontWeight: 'bold',
+                                            padding: '1px 5px',
+                                            borderRadius: '3px',
+                                            background: 'rgba(210, 153, 34, 0.2)',
+                                            color: '#d29922',
+                                            border: '1px solid rgba(210, 153, 34, 0.4)',
+                                        },
+                                    },
+                                    children: [text('SUPERSEDED')],
+                                }),
+                            ),
+                        ],
                     }),
                     when(
                         isLiveOnSelected,

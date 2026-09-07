@@ -15,6 +15,10 @@ import { renderPartsList } from './partsList.js';
 import { renderVersionTable } from './versionTable.js';
 import { renderVersionProvenanceCard } from './versionProvenanceCard.js';
 import { renderRangeResolverCard } from './rangeResolverCard.js';
+import { renderImportRepoCard } from './importRepoCard.js';
+import { renderDeclarationCard } from './declarationCard.js';
+import { renderReleasePartCard } from './releasePartCard.js';
+import { renderReleaseRepoCard } from './releaseRepoCard.js';
 
 /**
  * Every field reads through `app.selectedPart()` **at render time**, never from a value captured
@@ -131,6 +135,10 @@ function renderPartDetails(app: CatalogApi): Described {
                 }),
             ),
             element('Divider', { props: { orientation: 'horizontal', style: { marginBottom: '16px' } } }),
+            renderDeclarationCard(app),
+            renderReleasePartCard(app),
+            renderReleaseRepoCard(app),
+            element('Divider', { props: { orientation: 'horizontal', style: { marginBottom: '16px' } } }),
             renderVersionTable(app),
             renderVersionProvenanceCard(app),
             element('Divider', { props: { orientation: 'horizontal', style: { marginBottom: '16px' } } }),
@@ -165,6 +173,7 @@ function renderRightDetailsPane(app: CatalogApi): Described {
             },
         },
         children: [
+            renderImportRepoCard(app),
             when(
                 () => app.selectedPart() !== null,
                 () => renderPartDetails(app),
