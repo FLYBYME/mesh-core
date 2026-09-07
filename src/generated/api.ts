@@ -1,10 +1,11 @@
 // GENERATED FILE — do not edit.
 //
 // Emitted from chrome's mesh.json by `mesh-serve client`.
-// Exposure: sha256:5c9617cccad0f34fc0bcaebfeb2ba4eb
+// Exposure: sha256:ce460b1bbed1495dafc4c00cad068d6e
+// ShapeHash: sha256:335697d156a520c521c5299ae02b01a6
 //
-// Regenerate rather than editing. The exposure hash above is checked at run time against
-// the one the API reports, so a hand-edited client is a client that lies about a surface
+// Regenerate rather than editing. The exposure and shape hashes above are checked at run time
+// against what the API reports, so a hand-edited client is a client that lies about a surface
 // nobody can verify.
 
 import { call, defineApi } from '@flybyme/mesh-web';
@@ -95,6 +96,91 @@ export interface CdnDeployOutput {
     readonly unusedGrants: readonly string[];
 }
 
+export interface GroupCountInput {
+    /** Search text. */
+    readonly search?: string;
+    /** Fields for search. */
+    readonly searchFields?: string | readonly string[];
+    /** Query object. */
+    readonly query?: Readonly<Record<string, unknown>>;
+}
+
+export interface GroupCreateInput {
+    readonly name: string;
+    readonly services?: readonly string[];
+    readonly description?: string;
+}
+
+export interface GroupCreateOutput {
+    readonly name: string;
+    readonly services?: readonly string[];
+    readonly description?: string;
+    readonly id: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+}
+
+export interface GroupFindInput {
+    /** Max count of rows. */
+    readonly limit?: number;
+    /** Number of skipped rows. */
+    readonly offset?: number;
+    /** Fields to return. */
+    readonly fields?: string | readonly string[];
+    /** Sorted fields. Use '-' prefix for descending. */
+    readonly sort?: string | readonly string[];
+    /** Search text. */
+    readonly search?: string;
+    /** Fields for search. */
+    readonly searchFields?: string | readonly string[];
+    /** Query object. */
+    readonly query?: Readonly<Record<string, unknown>>;
+    /** Populated fields. */
+    readonly populate?: string | readonly string[];
+}
+
+export interface GroupFindOutputItem {
+    readonly name: string;
+    readonly services?: readonly string[];
+    readonly description?: string;
+    readonly id: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+}
+
+export interface GroupGetInput {
+    readonly id: string;
+    /** Fields to return. */
+    readonly fields?: string | readonly string[];
+    /** Populated fields. */
+    readonly populate?: string | readonly string[];
+}
+
+export interface GroupGetOutput {
+    readonly name: string;
+    readonly services?: readonly string[];
+    readonly description?: string;
+    readonly id: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+}
+
+export interface GroupUpdateInput {
+    readonly name?: string;
+    readonly services?: readonly string[];
+    readonly description?: string;
+    readonly id: string;
+}
+
+export interface GroupUpdateOutput {
+    readonly name: string;
+    readonly services?: readonly string[];
+    readonly description?: string;
+    readonly id: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+}
+
 export interface IdentityTicketIssueInput {
     readonly email: string;
     readonly password: string;
@@ -119,6 +205,131 @@ export interface IdentityWhoamiOutput {
     readonly displayName: string;
     readonly roles: readonly string[];
     readonly organizations: readonly IdentityWhoamiOutputOrganization[];
+}
+
+export interface NodeAssignInput {
+    readonly hostname: string;
+    readonly services?: readonly string[];
+    readonly groups?: readonly string[];
+}
+
+export interface NodeAssignOutput {
+    readonly hostname: string;
+    readonly services: readonly string[];
+    readonly applied: boolean;
+    readonly started?: readonly string[];
+    readonly stopped?: readonly string[];
+    readonly error?: string;
+}
+
+export interface NodeCountInput {
+    /** Search text. */
+    readonly search?: string;
+    /** Fields for search. */
+    readonly searchFields?: string | readonly string[];
+    /** Query object. */
+    readonly query?: Readonly<Record<string, unknown>>;
+}
+
+export interface NodeFindInput {
+    /** Max count of rows. */
+    readonly limit?: number;
+    /** Number of skipped rows. */
+    readonly offset?: number;
+    /** Fields to return. */
+    readonly fields?: string | readonly string[];
+    /** Sorted fields. Use '-' prefix for descending. */
+    readonly sort?: string | readonly string[];
+    /** Search text. */
+    readonly search?: string;
+    /** Fields for search. */
+    readonly searchFields?: string | readonly string[];
+    /** Query object. */
+    readonly query?: Readonly<Record<string, unknown>>;
+    /** Populated fields. */
+    readonly populate?: string | readonly string[];
+}
+
+export interface NodeFindOutputItem {
+    readonly hostname: string;
+    readonly services?: readonly string[];
+    readonly groups?: readonly string[];
+    readonly id: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+}
+
+export interface NodeGetInput {
+    readonly id: string;
+    /** Fields to return. */
+    readonly fields?: string | readonly string[];
+    /** Populated fields. */
+    readonly populate?: string | readonly string[];
+}
+
+export interface NodeGetOutput {
+    readonly hostname: string;
+    readonly services?: readonly string[];
+    readonly groups?: readonly string[];
+    readonly id: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+}
+
+export interface NodeReconcileInput {
+    readonly hostname?: string;
+    readonly group?: string;
+}
+
+export interface NodeReconcileOutputReconciledItem {
+    readonly hostname: string;
+    readonly services: readonly string[];
+    readonly applied: boolean;
+    readonly started?: readonly string[];
+    readonly stopped?: readonly string[];
+    readonly error?: string;
+}
+
+export interface NodeReconcileOutput {
+    readonly reconciled: readonly NodeReconcileOutputReconciledItem[];
+}
+
+export interface NodeStatusInput {
+    readonly hostname?: string;
+}
+
+export interface NodeStatusOutputPeer {
+    readonly nodeID: string;
+    readonly hostname?: string;
+    readonly addresses?: readonly string[];
+}
+
+export interface NodeStatusOutputService {
+    readonly name: string;
+    readonly domain?: string;
+    readonly status: "stopped" | "running" | "error";
+    readonly dependsOn?: readonly string[];
+    readonly error?: string;
+}
+
+export interface NodeStatusOutputNode {
+    readonly hostname: string;
+    readonly nodeID?: string;
+    readonly connected: boolean;
+    readonly desiredServices: readonly string[];
+    readonly runningServices: readonly string[];
+}
+
+export interface NodeStatusOutput {
+    readonly hostname: string;
+    readonly nodeID?: string;
+    readonly connected: boolean;
+    readonly peers: readonly NodeStatusOutputPeer[];
+    readonly desiredServices: readonly string[];
+    readonly runningServices: readonly string[];
+    readonly services?: readonly NodeStatusOutputService[];
+    readonly nodes?: readonly NodeStatusOutputNode[];
+    readonly error?: string;
 }
 
 export interface PartCountInput {
@@ -329,7 +540,6 @@ export interface ReleaseFindOutputItem {
 }>>;
     readonly requires?: readonly string[];
     readonly policy?: Readonly<Record<string, string>>;
-    readonly exposure?: string;
     readonly composedAt: string;
     readonly id: string;
     readonly createdAt: string;
@@ -360,7 +570,6 @@ export interface ReleaseGetOutput {
 }>>;
     readonly requires?: readonly string[];
     readonly policy?: Readonly<Record<string, string>>;
-    readonly exposure?: string;
     readonly composedAt: string;
     readonly id: string;
     readonly createdAt: string;
@@ -400,14 +609,14 @@ export interface SiteFindOutputItemMeshItem {
     readonly version: string;
     readonly contracts: readonly ({
     readonly key: string;
-    readonly auth: "public" | "user" | "admin";
+    readonly auth: "public" | "user" | "admin" | "operator";
 } | {
     readonly key: string;
     readonly permission: string;
 })[];
     readonly events?: readonly ({
     readonly key: string;
-    readonly auth: "public" | "user" | "admin";
+    readonly auth: "public" | "user" | "admin" | "operator";
 } | {
     readonly key: string;
     readonly permission: string;
@@ -446,14 +655,14 @@ export interface SiteGetOutputMeshItem {
     readonly version: string;
     readonly contracts: readonly ({
     readonly key: string;
-    readonly auth: "public" | "user" | "admin";
+    readonly auth: "public" | "user" | "admin" | "operator";
 } | {
     readonly key: string;
     readonly permission: string;
 })[];
     readonly events?: readonly ({
     readonly key: string;
-    readonly auth: "public" | "user" | "admin";
+    readonly auth: "public" | "user" | "admin" | "operator";
 } | {
     readonly key: string;
     readonly permission: string;
@@ -481,7 +690,8 @@ export interface SiteGetOutput {
 
 export const chromeApi = defineApi({
     id: "chrome",
-    exposure: "sha256:5c9617cccad0f34fc0bcaebfeb2ba4eb",
+    exposure: "sha256:ce460b1bbed1495dafc4c00cad068d6e",
+    shapeHash: "sha256:335697d156a520c521c5299ae02b01a6",
     base: "/api",
     calls: {
         /**
@@ -489,102 +699,168 @@ export const chromeApi = defineApi({
          *
          * POST /catalog/resolve — auth: public
          */
-        "catalog.resolve": call<CatalogResolveInput, CatalogResolveOutput, never>("POST", "/catalog/resolve"),
+        "catalog.resolve": call<CatalogResolveInput, CatalogResolveOutput, never>("POST", "/catalog/resolve", { kind: 'auth', level: 'public' }),
         /**
          * Resolve version requirements into a release, and record what holds together.
          *
          * POST /releases — auth: public, destructive
          */
-        "cdn.compose": call<CdnComposeInput, CdnComposeOutput, never>("POST", "/releases"),
+        "cdn.compose": call<CdnComposeInput, CdnComposeOutput, never>("POST", "/releases", { kind: 'auth', level: 'public' }),
         /**
          * Point a hostname at a release.
          *
          * POST /sites/:host/deploy — auth: public, destructive
          */
-        "cdn.deploy": call<CdnDeployInput, CdnDeployOutput, never>("POST", "/sites/:host/deploy"),
+        "cdn.deploy": call<CdnDeployInput, CdnDeployOutput, never>("POST", "/sites/:host/deploy", { kind: 'auth', level: 'public' }),
+        /**
+         * Get the number of groups by query.
+         *
+         * GET /groups/count — auth: public
+         */
+        "group.count": call<GroupCountInput, number, never>("GET", "/groups/count", { kind: 'auth', level: 'public' }),
+        /**
+         * Create a new group.
+         *
+         * POST /groups — auth: public, destructive
+         */
+        "group.create": call<GroupCreateInput, GroupCreateOutput, never>("POST", "/groups", { kind: 'auth', level: 'public' }),
+        /**
+         * Find groups by query.
+         *
+         * GET /groups — auth: public
+         */
+        "group.find": call<GroupFindInput, readonly GroupFindOutputItem[], never>("GET", "/groups", { kind: 'auth', level: 'public' }),
+        /**
+         * Get a specific group by ID.
+         *
+         * GET /groups/:id — auth: public
+         */
+        "group.get": call<GroupGetInput, GroupGetOutput, never>("GET", "/groups/:id", { kind: 'auth', level: 'public' }),
+        /**
+         * Update an existing group. Only specified fields will be updated.
+         *
+         * PATCH /groups/:id — auth: public, destructive
+         */
+        "group.update": call<GroupUpdateInput, GroupUpdateOutput, never>("PATCH", "/groups/:id", { kind: 'auth', level: 'public' }),
         /**
          * Exchange credentials for an opaque ticket.
          *
          * POST /identity/ticket — auth: public, destructive
          */
-        "identity.ticket_issue": call<IdentityTicketIssueInput, IdentityTicketIssueOutput, never>("POST", "/identity/ticket"),
+        "identity.ticket_issue": call<IdentityTicketIssueInput, IdentityTicketIssueOutput, never>("POST", "/identity/ticket", { kind: 'auth', level: 'public' }),
         /**
          * Who the caller is, and which organizations they belong to.
          *
          * GET /identity/whoami — auth: public
          */
-        "identity.whoami": call<void, IdentityWhoamiOutput, never>("GET", "/identity/whoami"),
+        "identity.whoami": call<void, IdentityWhoamiOutput, never>("GET", "/identity/whoami", { kind: 'auth', level: 'public' }),
+        /**
+         * Assigns desired services to a node by hostname, switching services live on running nodes.
+         *
+         * POST /node/assign — auth: public, destructive
+         */
+        "node.assign": call<NodeAssignInput, NodeAssignOutput, never>("POST", "/node/assign", { kind: 'auth', level: 'public' }),
+        /**
+         * Get the number of nodes by query.
+         *
+         * GET /nodes/count — auth: public
+         */
+        "node.count": call<NodeCountInput, number, never>("GET", "/nodes/count", { kind: 'auth', level: 'public' }),
+        /**
+         * Find nodes by query.
+         *
+         * GET /nodes — auth: public
+         */
+        "node.find": call<NodeFindInput, readonly NodeFindOutputItem[], never>("GET", "/nodes", { kind: 'auth', level: 'public' }),
+        /**
+         * Get a specific node by ID.
+         *
+         * GET /nodes/:id — auth: public
+         */
+        "node.get": call<NodeGetInput, NodeGetOutput, never>("GET", "/nodes/:id", { kind: 'auth', level: 'public' }),
+        /**
+         * Make what each node is running match what it should be running.
+         *
+         * POST /node/reconcile — auth: public, destructive
+         */
+        "node.reconcile": call<NodeReconcileInput, NodeReconcileOutput, never>("POST", "/node/reconcile", { kind: 'auth', level: 'public' }),
+        /**
+         * Answers what a node (or this node) is running and what it is connected to.
+         *
+         * GET /node/status — auth: public
+         */
+        "node.status": call<NodeStatusInput, NodeStatusOutput, never>("GET", "/node/status", { kind: 'auth', level: 'public' }),
         /**
          * Get the number of parts by query.
          *
          * GET /parts/count — auth: public
          */
-        "part.count": call<PartCountInput, number, never>("GET", "/parts/count"),
+        "part.count": call<PartCountInput, number, never>("GET", "/parts/count", { kind: 'auth', level: 'public' }),
         /**
          * Find parts by query.
          *
          * GET /parts — auth: public
          */
-        "part.find": call<PartFindInput, readonly PartFindOutputItem[], never>("GET", "/parts"),
+        "part.find": call<PartFindInput, readonly PartFindOutputItem[], never>("GET", "/parts", { kind: 'auth', level: 'public' }),
         /**
          * Get a specific part by ID.
          *
          * GET /parts/:id — auth: public
          */
-        "part.get": call<PartGetInput, PartGetOutput, never>("GET", "/parts/:id"),
+        "part.get": call<PartGetInput, PartGetOutput, never>("GET", "/parts/:id", { kind: 'auth', level: 'public' }),
         /**
          * Get the number of part-versions by query.
          *
          * GET /part-versions/count — auth: public
          */
-        "partVersion.count": call<PartVersionCountInput, number, never>("GET", "/part-versions/count"),
+        "partVersion.count": call<PartVersionCountInput, number, never>("GET", "/part-versions/count", { kind: 'auth', level: 'public' }),
         /**
          * Find part-versions by query.
          *
          * GET /part-versions — auth: public
          */
-        "partVersion.find": call<PartVersionFindInput, readonly PartVersionFindOutputItem[], never>("GET", "/part-versions"),
+        "partVersion.find": call<PartVersionFindInput, readonly PartVersionFindOutputItem[], never>("GET", "/part-versions", { kind: 'auth', level: 'public' }),
         /**
          * Get a specific partVersion by ID.
          *
          * GET /part-versions/:id — auth: public
          */
-        "partVersion.get": call<PartVersionGetInput, PartVersionGetOutput, never>("GET", "/part-versions/:id"),
+        "partVersion.get": call<PartVersionGetInput, PartVersionGetOutput, never>("GET", "/part-versions/:id", { kind: 'auth', level: 'public' }),
         /**
          * Get the number of releases by query.
          *
          * GET /releases/count — auth: public
          */
-        "release.count": call<ReleaseCountInput, number, never>("GET", "/releases/count"),
+        "release.count": call<ReleaseCountInput, number, never>("GET", "/releases/count", { kind: 'auth', level: 'public' }),
         /**
          * Find releases by query.
          *
          * GET /releases — auth: public
          */
-        "release.find": call<ReleaseFindInput, readonly ReleaseFindOutputItem[], never>("GET", "/releases"),
+        "release.find": call<ReleaseFindInput, readonly ReleaseFindOutputItem[], never>("GET", "/releases", { kind: 'auth', level: 'public' }),
         /**
          * Get a specific release by ID.
          *
          * GET /releases/:id — auth: public
          */
-        "release.get": call<ReleaseGetInput, ReleaseGetOutput, never>("GET", "/releases/:id"),
+        "release.get": call<ReleaseGetInput, ReleaseGetOutput, never>("GET", "/releases/:id", { kind: 'auth', level: 'public' }),
         /**
          * Get the number of sites by query.
          *
          * GET /sites/count — auth: public
          */
-        "site.count": call<SiteCountInput, number, never>("GET", "/sites/count"),
+        "site.count": call<SiteCountInput, number, never>("GET", "/sites/count", { kind: 'auth', level: 'public' }),
         /**
          * Find sites by query.
          *
          * GET /sites — auth: public
          */
-        "site.find": call<SiteFindInput, readonly SiteFindOutputItem[], never>("GET", "/sites"),
+        "site.find": call<SiteFindInput, readonly SiteFindOutputItem[], never>("GET", "/sites", { kind: 'auth', level: 'public' }),
         /**
          * Get a specific site by ID.
          *
          * GET /sites/:id — auth: public
          */
-        "site.get": call<SiteGetInput, SiteGetOutput, never>("GET", "/sites/:id"),
+        "site.get": call<SiteGetInput, SiteGetOutput, never>("GET", "/sites/:id", { kind: 'auth', level: 'public' }),
     },
 });

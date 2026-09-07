@@ -1,7 +1,8 @@
 {
     "application": "chrome",
     "base": "/api",
-    "exposure": "sha256:5c9617cccad0f34fc0bcaebfeb2ba4eb",
+    "exposure": "sha256:ce460b1bbed1495dafc4c00cad068d6e",
+    "shapeHash": "sha256:335697d156a520c521c5299ae02b01a6",
     "calls": [
         {
             "key": "catalog.resolve",
@@ -345,6 +346,444 @@
             "errors": []
         },
         {
+            "key": "group.count",
+            "domain": "group",
+            "action": "count",
+            "description": "Get the number of groups by query.",
+            "method": "GET",
+            "path": "/groups/count",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "search": {
+                        "type": "string",
+                        "description": "Search text."
+                    },
+                    "searchFields": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Fields for search."
+                    },
+                    "query": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Query object."
+                    }
+                },
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "number",
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": false,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "group.create",
+            "domain": "group",
+            "action": "create",
+            "description": "Create a new group.",
+            "method": "POST",
+            "path": "/groups",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    },
+                    "description": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "name",
+                    "id",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "group.find",
+            "domain": "group",
+            "action": "find",
+            "description": "Find groups by query.",
+            "method": "GET",
+            "path": "/groups",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "number",
+                        "default": 100,
+                        "description": "Max count of rows."
+                    },
+                    "offset": {
+                        "type": "number",
+                        "default": 0,
+                        "description": "Number of skipped rows."
+                    },
+                    "fields": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Fields to return."
+                    },
+                    "sort": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Sorted fields. Use '-' prefix for descending."
+                    },
+                    "search": {
+                        "type": "string",
+                        "description": "Search text."
+                    },
+                    "searchFields": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Fields for search."
+                    },
+                    "query": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Query object."
+                    },
+                    "populate": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Populated fields."
+                    }
+                },
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "services": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "default": []
+                        },
+                        "description": {
+                            "type": "string"
+                        },
+                        "id": {
+                            "type": "string"
+                        },
+                        "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    "required": [
+                        "name",
+                        "id",
+                        "createdAt",
+                        "updatedAt"
+                    ],
+                    "additionalProperties": false
+                },
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": false,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "group.get",
+            "domain": "group",
+            "action": "get",
+            "description": "Get a specific group by ID.",
+            "method": "GET",
+            "path": "/groups/:id",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "fields": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Fields to return."
+                    },
+                    "populate": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Populated fields."
+                    }
+                },
+                "required": [
+                    "id"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "name",
+                    "id",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": false,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "group.update",
+            "domain": "group",
+            "action": "update",
+            "description": "Update an existing group. Only specified fields will be updated.",
+            "method": "PATCH",
+            "path": "/groups/:id",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "name",
+                    "id",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": []
+        },
+        {
             "key": "identity.ticket_issue",
             "domain": "identity",
             "action": "ticket_issue",
@@ -467,6 +906,614 @@
                     "displayName",
                     "roles",
                     "organizations"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": false,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "node.assign",
+            "domain": "node",
+            "action": "assign",
+            "description": "Assigns desired services to a node by hostname, switching services live on running nodes.",
+            "method": "POST",
+            "path": "/node/assign",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "hostname": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "hostname"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "hostname": {
+                        "type": "string"
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "applied": {
+                        "type": "boolean"
+                    },
+                    "started": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "stopped": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "error": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "hostname",
+                    "services",
+                    "applied"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "node.count",
+            "domain": "node",
+            "action": "count",
+            "description": "Get the number of nodes by query.",
+            "method": "GET",
+            "path": "/nodes/count",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "search": {
+                        "type": "string",
+                        "description": "Search text."
+                    },
+                    "searchFields": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Fields for search."
+                    },
+                    "query": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Query object."
+                    }
+                },
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "number",
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": false,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "node.find",
+            "domain": "node",
+            "action": "find",
+            "description": "Find nodes by query.",
+            "method": "GET",
+            "path": "/nodes",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "number",
+                        "default": 100,
+                        "description": "Max count of rows."
+                    },
+                    "offset": {
+                        "type": "number",
+                        "default": 0,
+                        "description": "Number of skipped rows."
+                    },
+                    "fields": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Fields to return."
+                    },
+                    "sort": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Sorted fields. Use '-' prefix for descending."
+                    },
+                    "search": {
+                        "type": "string",
+                        "description": "Search text."
+                    },
+                    "searchFields": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Fields for search."
+                    },
+                    "query": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Query object."
+                    },
+                    "populate": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Populated fields."
+                    }
+                },
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "hostname": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "services": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "default": []
+                        },
+                        "groups": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "default": []
+                        },
+                        "id": {
+                            "type": "string"
+                        },
+                        "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    "required": [
+                        "hostname",
+                        "id",
+                        "createdAt",
+                        "updatedAt"
+                    ],
+                    "additionalProperties": false
+                },
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": false,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "node.get",
+            "domain": "node",
+            "action": "get",
+            "description": "Get a specific node by ID.",
+            "method": "GET",
+            "path": "/nodes/:id",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "fields": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Fields to return."
+                    },
+                    "populate": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ],
+                        "description": "Populated fields."
+                    }
+                },
+                "required": [
+                    "id"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "hostname": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "hostname",
+                    "id",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": false,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "node.reconcile",
+            "domain": "node",
+            "action": "reconcile",
+            "description": "Make what each node is running match what it should be running.",
+            "method": "POST",
+            "path": "/node/reconcile",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "hostname": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "reconciled": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "hostname": {
+                                    "type": "string"
+                                },
+                                "services": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "applied": {
+                                    "type": "boolean"
+                                },
+                                "started": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "stopped": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "error": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "hostname",
+                                "services",
+                                "applied"
+                            ],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": [
+                    "reconciled"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": true,
+            "stream": false,
+            "errors": []
+        },
+        {
+            "key": "node.status",
+            "domain": "node",
+            "action": "status",
+            "description": "Answers what a node (or this node) is running and what it is connected to.",
+            "method": "GET",
+            "path": "/node/status",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            },
+            "input": {
+                "type": "object",
+                "properties": {
+                    "hostname": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "hostname": {
+                        "type": "string"
+                    },
+                    "nodeID": {
+                        "type": "string"
+                    },
+                    "connected": {
+                        "type": "boolean"
+                    },
+                    "peers": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "nodeID": {
+                                    "type": "string"
+                                },
+                                "hostname": {
+                                    "type": "string"
+                                },
+                                "addresses": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "required": [
+                                "nodeID"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "desiredServices": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "runningServices": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string"
+                                },
+                                "domain": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "stopped",
+                                        "running",
+                                        "error"
+                                    ]
+                                },
+                                "dependsOn": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "default": []
+                                },
+                                "error": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "name",
+                                "status"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "nodes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "hostname": {
+                                    "type": "string"
+                                },
+                                "nodeID": {
+                                    "type": "string"
+                                },
+                                "connected": {
+                                    "type": "boolean"
+                                },
+                                "desiredServices": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "runningServices": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "required": [
+                                "hostname",
+                                "connected",
+                                "desiredServices",
+                                "runningServices"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "error": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "hostname",
+                    "connected",
+                    "peers",
+                    "desiredServices",
+                    "runningServices"
                 ],
                 "additionalProperties": false,
                 "$schema": "http://json-schema.org/draft-07/schema#"
@@ -1491,10 +2538,6 @@
                             },
                             "default": {}
                         },
-                        "exposure": {
-                            "type": "string",
-                            "minLength": 1
-                        },
                         "composedAt": {
                             "type": "string",
                             "format": "date-time"
@@ -1648,10 +2691,6 @@
                             "type": "string"
                         },
                         "default": {}
-                    },
-                    "exposure": {
-                        "type": "string",
-                        "minLength": 1
                     },
                     "composedAt": {
                         "type": "string",
@@ -1882,7 +2921,8 @@
                                                             "enum": [
                                                                 "public",
                                                                 "user",
-                                                                "admin"
+                                                                "admin",
+                                                                "operator"
                                                             ]
                                                         }
                                                     },
@@ -1930,7 +2970,8 @@
                                                             "enum": [
                                                                 "public",
                                                                 "user",
-                                                                "admin"
+                                                                "admin",
+                                                                "operator"
                                                             ]
                                                         }
                                                     },
@@ -2137,7 +3178,8 @@
                                                         "enum": [
                                                             "public",
                                                             "user",
-                                                            "admin"
+                                                            "admin",
+                                                            "operator"
                                                         ]
                                                     }
                                                 },
@@ -2185,7 +3227,8 @@
                                                         "enum": [
                                                             "public",
                                                             "user",
-                                                            "admin"
+                                                            "admin",
+                                                            "operator"
                                                         ]
                                                     }
                                                 },
