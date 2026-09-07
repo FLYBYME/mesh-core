@@ -143,6 +143,12 @@ export const entityListComponent: ComponentDefinition = {
             return true;
         }
 
+        if (name === 'class') {
+            const extra = typeof value === 'string' ? value : '';
+            el.className = `ui-entity-list ${extra}`.trim();
+            return true;
+        }
+
         return false;
     },
 };
@@ -157,6 +163,13 @@ export const entityItemComponent: ComponentDefinition = {
         return el;
     },
     apply(el: Element, name: string, value: Json): boolean | void {
+        if (name === 'class') {
+            const extra = typeof value === 'string' ? value : '';
+            const isSel = el.getAttribute('data-selected') === 'true';
+            el.className = `ui-entity-item ${extra}${isSel ? ' selected' : ''}`.trim();
+            return true;
+        }
+
         if (name === 'selected') {
             const isSel = Boolean(value);
             if (isSel) {

@@ -130,6 +130,12 @@ export const tableComponent: ComponentDefinition = {
             return true;
         }
 
+        if (name === 'class') {
+            const extra = typeof value === 'string' ? value : '';
+            el.className = `ui-table ${extra}`.trim();
+            return true;
+        }
+
         return false;
     },
 };
@@ -145,6 +151,13 @@ export const tableRowComponent: ComponentDefinition = {
         return el;
     },
     apply(el: Element, name: string, value: Json): boolean | void {
+        if (name === 'class') {
+            const extra = typeof value === 'string' ? value : '';
+            const isSel = el.getAttribute('data-selected') === 'true';
+            el.className = `ui-table-row ${extra}${isSel ? ' selected active-version' : ''}`.trim();
+            return true;
+        }
+
         if (name === 'selected') {
             const isSel = Boolean(value);
             if (isSel) {

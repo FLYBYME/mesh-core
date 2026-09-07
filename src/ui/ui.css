@@ -139,7 +139,9 @@
     .ui-entity-list-items > button[data-selected="true"],
     .ui-entity-item.selected,
     .ui-entity-item[data-selected="true"] {
+        --edge: var(--accent);
         border: 1px solid var(--accent);
+        border-color: var(--accent);
         background: rgba(88, 166, 255, 0.12);
     }
 
@@ -356,6 +358,8 @@
     .ui-table-row.active-version,
     .ui-table-row.selected,
     .ui-table-row[data-selected="true"] {
+        --edge: var(--accent);
+        border-color: var(--accent);
         background: rgba(88, 166, 255, 0.15);
     }
 

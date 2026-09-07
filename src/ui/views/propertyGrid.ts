@@ -29,6 +29,12 @@ export const propertyGridComponent: ComponentDefinition = {
             return true;
         }
 
+        if (name === 'class') {
+            const extra = typeof value === 'string' ? value : '';
+            el.className = `ui-property-grid ${extra}`.trim();
+            return true;
+        }
+
         return false;
     },
 };

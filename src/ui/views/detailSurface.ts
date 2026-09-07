@@ -120,6 +120,12 @@ export const detailSurfaceComponent: ComponentDefinition = {
             return true;
         }
 
+        if (name === 'class') {
+            const extra = typeof value === 'string' ? value : '';
+            el.className = `ui-detail-surface ${extra}`.trim();
+            return true;
+        }
+
         return false;
     },
 };
