@@ -2,16 +2,34 @@ import {
     type Application,
     type CommandDecl,
     type Context,
+    type Json,
     type ViewDecl,
-} from '@flybyme/mesh-web';
+} from "@flybyme/mesh-web";
 
-import { chromeApi } from '../generated/api.js';
-import type { NodeStatusOutput } from '../generated/api.js';
+import { chromeApi } from "../generated/api.js";
+import type { NodeProvisionInput, NodeProvisionOutput, NodeStatusOutput } from "../generated/api.js";
 
-import { CONSUMES, CORE_SERVICES, FLEET, NEEDS, type FleetApi, type FleetNode } from './contract.js';
-import { renderFleetView } from './views/fleet.js';
+import {
+    CONSUMES,
+    CORE_SERVICES,
+    FLEET,
+    NEEDS,
+    isBranchRef,
+    type FleetApi,
+    type FleetNode,
+} from "./contract.js";
+import { renderFleetView } from "./views/fleet.js";
 
-export * from './contract.js';
+export * from "./contract.js";
+
+function isAllowlistRefusal(err: object): boolean {
+    if ("name" in err && err.name === "repository_not_allowed") return true;
+    if ("detail" in err && typeof err.detail === "string") {
+        const d = err.detail.toLowerCase();
+        return d.includes("allowlist") || d.includes("repository_not_allowed");
+    }
+    return false;
+}
 
 /**
  * The fleet console.
@@ -32,19 +50,21 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
     readonly api = chromeApi;
 
     readonly commands: readonly CommandDecl[] = [
-        { id: 'fleet.refresh', title: 'Fleet: Refresh' },
-        { id: 'fleet.select', title: 'Fleet: Select Machine' },
-        { id: 'fleet.toggleService', title: 'Fleet: Toggle Service' },
-        { id: 'fleet.toggleGroup', title: 'Fleet: Toggle Group' },
-        { id: 'fleet.reconcile', title: 'Fleet: Reconcile' },
-        { id: 'fleet.reconcileAll', title: 'Fleet: Reconcile Every Machine' },
+        { id: "fleet.refresh", title: "Fleet: Refresh" },
+        { id: "fleet.select", title: "Fleet: Select Machine" },
+        { id: "fleet.toggleService", title: "Fleet: Toggle Service" },
+        { id: "fleet.toggleGroup", title: "Fleet: Toggle Group" },
+        { id: "fleet.reconcile", title: "Fleet: Reconcile" },
+        { id: "fleet.reconcileAll", title: "Fleet: Reconcile Every Machine" },
+        { id: "fleet.setProvisionField", title: "Fleet: Set Provision Field" },
+        { id: "fleet.provision", title: "Fleet: Provision Service" },
     ];
 
     readonly views: readonly ViewDecl<Record<string, never>, FleetApi>[] = [
         {
-            id: 'fleet',
-            title: 'Fleet',
-            instances: 'one',
+            id: "fleet",
+            title: "Fleet",
+            instances: "one",
             defaultSize: { width: 980, height: 640 },
             minSize: { width: 520, height: 380 },
             render: renderFleetView,
@@ -52,8 +72,8 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
     ];
 
     async start(cx: Context<typeof NEEDS, typeof CONSUMES, typeof chromeApi>): Promise<FleetApi> {
-        const nodes = cx.models('node');
-        const groups = cx.models('group');
+        const nodes = cx.models("node");
+        const groups = cx.models("group");
 
         const selectedHostname = cx.state.signal<string | null>(null);
         const status = cx.state.signal<NodeStatusOutput | null>(null);
@@ -61,10 +81,23 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
         const busy = cx.state.signal(false);
         const lastAction = cx.state.signal<string | null>(null);
 
+        // Provisioning form signals
+        const provisionHostname = cx.state.signal("");
+        const provisionName = cx.state.signal("");
+        const provisionRepository = cx.state.signal("");
+        const provisionRef = cx.state.signal("");
+        const provisionPath = cx.state.signal("");
+        const provisionDependsOn = cx.state.signal("");
+        const provisionMountKey = cx.state.signal("");
+        const provisionStatus = cx.state.signal<"idle" | "provisioning" | "success" | "error">("idle");
+        const provisionResult = cx.state.signal<NodeProvisionOutput | null>(null);
+        const provisionError = cx.state.signal<string | null>(null);
+        const provisionFieldErrors = cx.state.signal<Record<string, string>>({});
+
         const nodesError = cx.state.computed<string | null>(() => {
             const err = nodes.error();
             if (err === null) return null;
-            const detail = 'detail' in err && typeof err.detail === 'string' ? err.detail : err.kind;
+            const detail = "detail" in err && typeof err.detail === "string" ? err.detail : err.kind;
             return `Could not read the fleet (${err.kind}): ${detail}`;
         });
 
@@ -85,6 +118,8 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
                 const seen = observed.get(row.hostname);
                 const services = row.services ?? [];
                 const running = seen?.runningServices ?? [];
+                const provisioned = seen?.provisionedServices
+                    ?? (status()?.hostname === row.hostname ? (status()?.provisionedServices ?? []) : []);
 
                 return {
                     hostname: row.hostname,
@@ -92,6 +127,7 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
                     groups: row.groups ?? [],
                     connected: seen?.connected ?? false,
                     running,
+                    provisioned,
                     missing: services.filter((s) => !running.includes(s)),
                     extra: running.filter((s) => !services.includes(s)),
                 };
@@ -114,7 +150,14 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             const all = new Set<string>();
             for (const n of nodes.rows()) for (const s of n.services ?? []) all.add(s);
             for (const g of groups.rows()) for (const s of g.services ?? []) all.add(s);
-            for (const n of status()?.nodes ?? []) for (const s of n.runningServices ?? []) all.add(s);
+            for (const n of status()?.nodes ?? []) {
+                for (const s of n.runningServices ?? []) all.add(s);
+                for (const s of n.provisionedServices ?? []) all.add(s);
+            }
+            const currentStatus = status();
+            if (currentStatus?.provisionedServices) {
+                for (const s of currentStatus.provisionedServices) all.add(s);
+            }
 
             // Core services run because the node runs and no assignment can switch them, so
             // offering them as toggles is offering a button that cannot work. Assigning one used to
@@ -125,12 +168,12 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
         };
 
         const loadStatus = async (): Promise<void> => {
-            const result = await cx.mesh.call('node.status', {});
+            const result = await cx.mesh.call("node.status", {});
             if (result.ok) {
                 status.set(result.value);
                 statusError.set(null);
             } else {
-                const detail = 'detail' in result.error && typeof result.error.detail === 'string'
+                const detail = "detail" in result.error && typeof result.error.detail === "string"
                     ? result.error.detail
                     : result.error.kind;
                 statusError.set(`Could not read live status (${result.error.kind}): ${detail}`);
@@ -143,7 +186,132 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
 
         const select = async (hostname: string): Promise<void> => {
             selectedHostname.set(hostname);
+            provisionHostname.set(hostname);
             await loadStatus();
+        };
+
+        const setProvisionField = (field: string, value?: Json): void => {
+            const val = value !== undefined && value !== null ? String(value) : "";
+            switch (field) {
+                case "hostname":
+                    provisionHostname.set(val);
+                    break;
+                case "name":
+                    provisionName.set(val);
+                    break;
+                case "repository":
+                    provisionRepository.set(val);
+                    break;
+                case "ref":
+                    provisionRef.set(val);
+                    if (isBranchRef(val)) {
+                        provisionFieldErrors.set({
+                            ...provisionFieldErrors(),
+                            ref: `node.provision requires a pinned commit SHA or tag, not a branch: "${val}". A node that follows a branch changes behaviour when somebody else pushes.`,
+                        });
+                    } else {
+                        const next = { ...provisionFieldErrors() };
+                        delete next.ref;
+                        provisionFieldErrors.set(next);
+                    }
+                    break;
+                case "path":
+                    provisionPath.set(val);
+                    break;
+                case "dependsOn":
+                    provisionDependsOn.set(val);
+                    break;
+                case "mountKey":
+                    provisionMountKey.set(val);
+                    break;
+            }
+        };
+
+        const provision = async (override?: Partial<NodeProvisionInput>): Promise<void> => {
+            const host = override?.hostname ?? provisionHostname().trim();
+            const name = override?.name ?? provisionName().trim();
+            const repository = override?.repository ?? provisionRepository().trim();
+            const ref = override?.ref ?? provisionRef().trim();
+            const path = override?.path ?? (provisionPath().trim() || undefined);
+            const mountKey = override?.mountKey ?? (provisionMountKey().trim() || undefined);
+            const rawDeps = override?.dependsOn
+                ?? provisionDependsOn().split(",").map((s) => s.trim()).filter(Boolean);
+
+            const errors: Record<string, string> = {};
+            if (!host) errors.hostname = "Target machine is required.";
+            if (!name) errors.name = "Service name is required.";
+            if (!repository) errors.repository = "Repository URL is required.";
+            if (!ref) {
+                errors.ref = "Ref (commit SHA or tag) is required.";
+            } else if (isBranchRef(ref)) {
+                errors.ref = `node.provision requires a pinned commit SHA or tag, not a branch: "${ref}". A node that follows a branch changes behaviour when somebody else pushes.`;
+            }
+
+            if (Object.keys(errors).length > 0) {
+                provisionFieldErrors.set(errors);
+                provisionStatus.set("error");
+                const first = errors.ref ?? errors.repository ?? errors.name ?? errors.hostname;
+                provisionError.set(first ?? "Please complete all required fields.");
+                return;
+            }
+
+            // Dangerous operation confirmation naming repository and machine
+            const ok = await cx.confirmation.ask({
+                message: `Provision repository "${repository}" onto machine "${host}"? This runs npm install on the machine.`,
+                confirmLabel: "Provision",
+                destructive: true,
+            });
+            if (!ok) return;
+
+            busy.set(true);
+            provisionStatus.set("provisioning");
+            provisionError.set(null);
+            provisionResult.set(null);
+            provisionFieldErrors.set({});
+            lastAction.set(`Provisioning "${name}" onto ${host}...`);
+
+            try {
+                const result = await cx.mesh.call("node.provision", {
+                    hostname: host,
+                    name,
+                    repository,
+                    ref,
+                    ...(path ? { path } : {}),
+                    ...(rawDeps.length > 0 ? { dependsOn: rawDeps } : {}),
+                    ...(mountKey ? { mountKey } : {}),
+                });
+
+                if (result.ok) {
+                    provisionStatus.set("success");
+                    provisionResult.set(result.value);
+                    lastAction.set(result.value.noop
+                        ? `Service "${name}" was already provisioned at ref "${ref}" on ${host} (no-op).`
+                        : `Provisioned "${name}" onto ${host} at ref "${ref}".`);
+                } else {
+                    provisionStatus.set("error");
+                    const err = result.error;
+                    const isAllowlist = isAllowlistRefusal(err);
+                    const detail = "detail" in err && typeof err.detail === "string" ? err.detail : "";
+
+                    if (isAllowlist) {
+                        const msg = `This repository is not permitted: "${repository}" is not in the allowlist (MESH_PROVISION_ALLOWED_REPOSITORIES).`;
+                        provisionError.set(msg);
+                        lastAction.set(msg);
+                    } else {
+                        const msg = `Provisioning failed (${err.kind}): ${detail || err.kind}`;
+                        provisionError.set(msg);
+                        lastAction.set(msg);
+                    }
+                }
+            } catch (e) {
+                provisionStatus.set("error");
+                const msg = `Provisioning error: ${e instanceof Error ? e.message : String(e)}`;
+                provisionError.set(msg);
+                lastAction.set(msg);
+            } finally {
+                busy.set(false);
+                await refresh();
+            }
         };
 
         /**
@@ -163,7 +331,7 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             busy.set(true);
             lastAction.set(null);
             try {
-                const result = await cx.mesh.call('node.assign', {
+                const result = await cx.mesh.call("node.assign", {
                     hostname,
                     services: [...services],
                     groups: [...groupNames],
@@ -193,7 +361,7 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             if (has) {
                 const ok = await cx.confirmation.ask({
                     message: `Stop "${service}" on ${node.hostname}?`,
-                    confirmLabel: 'Stop it',
+                    confirmLabel: "Stop it",
                     destructive: true,
                 });
                 if (!ok) return;
@@ -203,7 +371,7 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
                 ? node.services.filter((s) => s !== service)
                 : [...node.services, service];
 
-            await assign(node.hostname, next, node.groups, `${has ? 'Stop' : 'Start'} ${service}`);
+            await assign(node.hostname, next, node.groups, `${has ? "Stop" : "Start"} ${service}`);
         };
 
         const toggleGroup = async (group: string): Promise<void> => {
@@ -215,7 +383,7 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
                 ? node.groups.filter((g) => g !== group)
                 : [...node.groups, group];
 
-            await assign(node.hostname, node.services, next, `${has ? 'Leave' : 'Join'} ${group}`);
+            await assign(node.hostname, node.services, next, `${has ? "Leave" : "Join"} ${group}`);
         };
 
         /**
@@ -228,9 +396,9 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
         const reconcile = async (hostname?: string): Promise<void> => {
             if (hostname === undefined) {
                 const ok = await cx.confirmation.ask({
-                    message: 'Reconcile every machine in the fleet? Each one will start and stop '
-                        + 'services to match what it has been assigned.',
-                    confirmLabel: 'Reconcile all',
+                    message: "Reconcile every machine in the fleet? Each one will start and stop "
+                        + "services to match what it has been assigned.",
+                    confirmLabel: "Reconcile all",
                 });
                 if (!ok) return;
             }
@@ -238,7 +406,7 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             busy.set(true);
             lastAction.set(null);
             try {
-                const result = await cx.mesh.call('node.reconcile',
+                const result = await cx.mesh.call("node.reconcile",
                     hostname === undefined ? {} : { hostname });
 
                 if (result.ok) {
@@ -248,7 +416,7 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
                     lastAction.set(failed.length === 0
                         ? `Reconciled ${String(applied.length)} of ${String(rows.length)} machine(s).`
                         : `Reconciled ${String(applied.length)}; ${String(failed.length)} failed: `
-                          + failed.map((r) => `${r.hostname} (${r.error ?? 'unknown'})`).join(', '));
+                          + failed.map((r) => `${r.hostname} (${r.error ?? "unknown"})`).join(", "));
                 } else {
                     lastAction.set(`Reconcile failed: ${result.error.kind}`);
                 }
@@ -258,34 +426,24 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             }
         };
 
-        cx.commands.implement('fleet.refresh', refresh);
-        cx.commands.implement('fleet.select', async (hostname) => { await select(String(hostname)); });
-        cx.commands.implement('fleet.toggleService', async (s) => { await toggleService(String(s)); });
-        cx.commands.implement('fleet.toggleGroup', async (g) => { await toggleGroup(String(g)); });
-        cx.commands.implement('fleet.reconcile', async (h) => { await reconcile(String(h)); });
-        cx.commands.implement('fleet.reconcileAll', async () => { await reconcile(); });
+        cx.commands.implement("fleet.refresh", refresh);
+        cx.commands.implement("fleet.select", async (hostname) => { await select(String(hostname)); });
+        cx.commands.implement("fleet.toggleService", async (s) => { await toggleService(String(s)); });
+        cx.commands.implement("fleet.toggleGroup", async (g) => { await toggleGroup(String(g)); });
+        cx.commands.implement("fleet.reconcile", async (h) => { await reconcile(String(h)); });
+        cx.commands.implement("fleet.reconcileAll", async () => { await reconcile(); });
+        cx.commands.implement("fleet.setProvisionField", async (f, v) => { setProvisionField(String(f), v); });
+        cx.commands.implement("fleet.provision", async () => { await provision(); });
 
         // Observed state is not a collection, so nothing fetches it for us.
         void loadStatus();
 
         /**
          * **An Application opens its own window, and nothing else will.**
-         *
-         * `defaultOpen` in the kernel maps every Application to `{ application }` with no `views`,
-         * and the loop that follows it is `for (const view of entry.views ?? [])` — so a composition
-         * that names no views opens *no* windows. Declaring `views` makes a view renderable; it does
-         * not make one appear. This Application started, made all its calls, and drew nothing, which
-         * is indistinguishable from not having been installed.
-         *
-         * `queueMicrotask` because `start()` has not returned yet: the window is rendered from the
-         * API this function is still in the middle of building.
-         *
-         * The `own().length === 0` guard is what makes a restart idempotent — a remembered window
-         * restored from the device hive must not be joined by a second empty one.
          */
         queueMicrotask(() => {
             if (cx.windows.own().length === 0) {
-                cx.windows.open({ view: 'fleet' });
+                cx.windows.open({ view: "fleet" });
             }
         });
 
@@ -302,11 +460,24 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             knownServices,
             busy,
             lastAction,
+            provisionHostname,
+            provisionName,
+            provisionRepository,
+            provisionRef,
+            provisionPath,
+            provisionDependsOn,
+            provisionMountKey,
+            provisionStatus,
+            provisionResult,
+            provisionError,
+            provisionFieldErrors,
             select,
             refresh,
             toggleService,
             toggleGroup,
             reconcile,
+            setProvisionField,
+            provision,
         };
     }
 }
