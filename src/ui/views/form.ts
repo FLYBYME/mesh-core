@@ -10,6 +10,9 @@ export const formComponent: ComponentDefinition = {
         const el = document.createElement('form');
         el.className = 'ui-form';
         el.setAttribute('novalidate', '');
+        el.addEventListener('submit', (e) => {
+            e.preventDefault();
+        });
         return el;
     },
     apply(el: Element, name: string, value: Json): boolean | void {

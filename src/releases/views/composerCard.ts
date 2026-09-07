@@ -4,86 +4,194 @@ import {
     element,
     text,
     when,
+    type Json,
     type Node as Described,
 } from '@flybyme/mesh-web';
 
-import type { CdnComposeOutput } from '../../generated/api.js';
-import type { ReleasesApi } from '../contract.js';
+import type { CdnComposeInputPart, CdnComposeOutput } from '../../generated/api.js';
+import { UI_SELECT } from '../../ui/contract.js';
+import { renderForm } from '../../ui/views/schemaForm.js';
+import { COMPOSE_FORM_SCHEMA, type ReleasesApi } from '../contract.js';
 
-function renderComposerInputs(app: ReleasesApi): Described[] {
-    return [
-        element('Grid', {
-            props: { columns: '140px 1fr', gap: 10, style: { marginBottom: '12px', alignItems: 'center' } },
-            children: [
-                element('Span', { props: { bold: true, style: { fontSize: '12px' } }, children: [text('Release Label:')] }),
-                element('Input', {
-                    props: {
-                        class: 'input-compose-name',
-                        value: () => app.composeName(),
-                        placeholder: 'Human label for this release',
-                        style: {
-                            padding: '6px 10px',
-                            borderRadius: '4px',
-                            background: 'var(--surface, #21262d)',
-                            border: '1px solid var(--edge, #30363d)',
-                            color: 'var(--ink, #e6edf3)',
-                            fontSize: '12px',
-                        },
+function partsToJson(parts: readonly CdnComposeInputPart[]): readonly Json[] {
+    const list: Json[] = [];
+    for (const p of parts) {
+        list.push({
+            id: p.id,
+            version: p.version,
+            kind: p.kind,
+        });
+    }
+    return list;
+}
+
+function renderPartRow(item: () => CdnComposeInputPart & { index: number }): Described {
+    return element('Grid', {
+        props: {
+            columns: '140px 140px 120px 40px',
+            gap: 8,
+            class: () => `part-row composer-part-row part-row-${item().index}`,
+            style: { alignItems: 'center', padding: '2px 0' },
+        },
+        children: [
+            element('Input', {
+                props: {
+                    class: () => `input-part-id input-part-id-${item().index}`,
+                    type: 'text',
+                    placeholder: 'e.g. chrome',
+                    value: () => item().id,
+                    style: {
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        borderRadius: '4px',
+                        background: 'var(--surface, #21262d)',
+                        border: '1px solid var(--edge, #30363d)',
+                        color: 'var(--ink, #e6edf3)',
                     },
-                    intents: { change: { action: command('releases.setComposeName') } },
-                }),
-                element('Span', { props: { bold: true, style: { fontSize: '12px' } }, children: [text('Kernel Range:')] }),
-                element('Input', {
-                    props: {
-                        class: 'input-compose-kernel',
-                        value: () => app.composeKernel(),
-                        // A shape, not a version. A placeholder naming a real kernel is a
-                        // hardcoded version wearing a disguise, and goes stale the same way.
-                        placeholder: '^major.minor',
-                        style: {
-                            padding: '6px 10px',
-                            borderRadius: '4px',
-                            background: 'var(--surface, #21262d)',
-                            border: '1px solid var(--edge, #30363d)',
-                            color: 'var(--ink, #e6edf3)',
-                            fontSize: '12px',
-                            width: '120px',
-                        },
+                },
+                intents: {
+                    change: {
+                        action: command('releases.updatePartId', String(item().index)),
                     },
-                    intents: { change: { action: command('releases.setComposeKernel') } },
-                }),
-            ],
-        }),
-        element('Stack', {
-            props: { style: { marginBottom: '14px' } },
-            children: [
-                element('Span', {
-                    props: { bold: true, style: { fontSize: '12px', marginBottom: '4px', display: 'block' } },
-                    children: [text('Parts & Version Requirements (one per line, "id: range"):')],
-                }),
-                element('TextArea', {
-                    props: {
-                        class: 'textarea-compose-parts',
-                        value: () => app.composePartsText(),
-                        placeholder: 'part-id: ^major.minor.patch\nanother-part: ^major.minor.patch',
-                        rows: 4,
-                        style: {
-                            width: '100%',
-                            padding: '8px 10px',
-                            borderRadius: '4px',
-                            background: 'var(--surface, #21262d)',
-                            border: '1px solid var(--edge, #30363d)',
-                            color: 'var(--ink, #e6edf3)',
-                            fontFamily: 'monospace',
-                            fontSize: '12px',
-                            boxSizing: 'border-box',
-                        },
+                },
+            }),
+            element('Input', {
+                props: {
+                    class: () => `input-part-version input-part-version-${item().index}`,
+                    type: 'text',
+                    placeholder: '^1.0.0',
+                    value: () => item().version,
+                    style: {
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        borderRadius: '4px',
+                        background: 'var(--surface, #21262d)',
+                        border: '1px solid var(--edge, #30363d)',
+                        color: 'var(--ink, #e6edf3)',
                     },
-                    intents: { change: { action: command('releases.setComposeParts') } },
+                },
+                intents: {
+                    change: {
+                        action: command('releases.updatePartVersion', String(item().index)),
+                    },
+                },
+            }),
+            element(UI_SELECT, {
+                props: {
+                    class: () => `select-part-kind select-part-kind-${item().index}`,
+                    value: () => item().kind,
+                    options: [
+                        { value: 'application', label: 'application' },
+                        { value: 'extension', label: 'extension' },
+                    ],
+                    style: {
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        borderRadius: '4px',
+                        background: 'var(--surface, #21262d)',
+                        border: '1px solid var(--edge, #30363d)',
+                        color: 'var(--ink, #e6edf3)',
+                    },
+                },
+                intents: {
+                    change: {
+                        action: command('releases.updatePartKind', String(item().index)),
+                    },
+                },
+            }),
+            element('Button', {
+                props: {
+                    class: () => `btn-remove-part btn-remove-part-${item().index}`,
+                    type: 'button',
+                    title: 'Remove part',
+                    style: {
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        borderRadius: '4px',
+                        background: 'transparent',
+                        border: '1px solid var(--edge, #30363d)',
+                        color: 'var(--error, #f85149)',
+                        cursor: 'pointer',
+                    },
+                },
+                intents: {
+                    activate: {
+                        action: command('releases.removeComposePart', String(item().index)),
+                    },
+                },
+                children: [text('×')],
+            }),
+        ],
+    });
+}
+
+function renderPartsGroup(app: ReleasesApi): Described {
+    return element('Stack', {
+        props: {
+            class: 'compose-parts-group composer-parts-list',
+            style: { display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' },
+        },
+        children: [
+            element('Grid', {
+                props: {
+                    columns: '140px 140px 120px 40px',
+                    gap: 8,
+                    class: 'parts-table-header',
+                    style: {
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        color: 'var(--ink-dim, #8b949e)',
+                        padding: '4px 8px',
+                        background: 'var(--surface, #21262d)',
+                        borderRadius: '4px',
+                    },
+                },
+                children: [
+                    element('Span', { children: [text('Part ID')] }),
+                    element('Span', { children: [text('Version Range')] }),
+                    element('Span', { children: [text('Kind')] }),
+                    element('Span', { children: [text('')] }),
+                ],
+            }),
+            when(
+                () => app.composeParts().length === 0,
+                () => element('Text', {
+                    props: {
+                        class: 'empty-parts-message',
+                        style: { fontSize: '12px', color: 'var(--ink-dim, #8b949e)', padding: '8px' },
+                    },
+                    children: [text('No parts added. Click "+ Add Part" below.')],
                 }),
-            ],
-        }),
-    ];
+            ),
+            each(
+                () => app.composeParts().map((p, idx) => ({ ...p, index: idx })),
+                (item) => `${item.index}`,
+                (item) => renderPartRow(item),
+            ),
+            element('Row', {
+                props: { style: { display: 'flex', justifyContent: 'flex-start', marginTop: '4px' } },
+                children: [
+                    element('Button', {
+                        props: {
+                            class: 'btn-add-part',
+                            type: 'button',
+                            style: {
+                                padding: '4px 10px',
+                                fontSize: '12px',
+                                borderRadius: '4px',
+                                background: 'var(--surface, #21262d)',
+                                border: '1px solid var(--edge, #30363d)',
+                                color: 'var(--ink, #e6edf3)',
+                                cursor: 'pointer',
+                            },
+                        },
+                        intents: { activate: { action: command('releases.addComposePart') } },
+                        children: [text('+ Add Part')],
+                    }),
+                ],
+            }),
+        ],
+    });
 }
 
 function renderComposeResultBox(res: CdnComposeOutput): Described {
@@ -122,7 +230,7 @@ function renderComposeResultBox(res: CdnComposeOutput): Described {
                             () => res.problems,
                             (prob) => `${prob.kind}:${prob.message}`,
                             (prob) => element('Text', {
-                                props: { style: { color: '#f85149', marginBottom: '4px' } },
+                                props: { class: 'compose-problem-item', style: { color: '#f85149', marginBottom: '4px' } },
                                 children: [text(() => `• [${prob().kind}] ${prob().message}`)],
                             }),
                         ),
@@ -190,47 +298,85 @@ export function renderComposerCard(app: ReleasesApi): Described {
                     text('Compose resolves version ranges, validates that parts hold together, and reports problems. Nothing goes live until cdn.deploy is called.'),
                 ],
             }),
-            ...renderComposerInputs(app),
-            element('Row', {
-                props: { style: { display: 'flex', gap: '10px', marginBottom: '14px' } },
-                children: [
-                    element('Button', {
-                        props: {
-                            class: 'btn-dryrun-compose',
-                            title: 'Inspect resolution without creating a release record',
-                            style: {
-                                padding: '7px 14px',
-                                borderRadius: '6px',
-                                background: 'var(--surface, #21262d)',
-                                border: '1px solid var(--edge, #30363d)',
-                                color: 'var(--ink, #e6edf3)',
-                                fontWeight: '600',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                            },
+            renderForm({
+                schema: COMPOSE_FORM_SCHEMA,
+                class: 'release-composer-form',
+                values: () => ({
+                    name: app.composeName(),
+                    kernel: app.composeKernel(),
+                    parts: partsToJson(app.composeParts()),
+                }),
+                onFieldChange: 'releases.setField',
+                onSubmit: 'releases.commitCompose',
+                submitLabel: () => (app.composeStatus() === 'composing' ? 'Composing...' : '✓ Compose Release'),
+                disabled: () => app.composeStatus() === 'composing',
+                overrides: {
+                    fieldOrder: ['name', 'kernel', 'parts'],
+                    fields: {
+                        name: {
+                            label: 'Release Label',
+                            hint: 'Human label for this release',
+                            placeholder: 'e.g. Release 0.2.0',
                         },
-                        intents: { activate: { action: command('releases.dryRunCompose') } },
-                        children: [text(() => (app.composeStatus() === 'composing' ? 'Inspecting...' : '⚡ Inspect Resolution (Dry Run)'))],
-                    }),
-                    element('Button', {
-                        props: {
-                            class: 'btn-commit-compose',
-                            title: 'Compose release and record immutable row',
-                            style: {
-                                padding: '7px 16px',
-                                borderRadius: '6px',
-                                background: 'var(--accent, #58a6ff)',
-                                border: 'none',
-                                color: 'var(--on-accent, #0d1117)',
-                                fontWeight: '600',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                            },
+                        kernel: {
+                            label: 'Kernel Range',
+                            hint: 'Target kernel version range',
+                            placeholder: '^major.minor',
                         },
-                        intents: { activate: { action: command('releases.commitCompose') } },
-                        children: [text(() => (app.composeStatus() === 'composing' ? 'Composing...' : '✓ Compose Release'))],
+                        parts: {
+                            label: 'Parts & Version Requirements',
+                            hint: 'Repeating group of parts: ID, version range requirement, and part kind',
+                            renderControl: () => renderPartsGroup(app),
+                        },
+                    },
+                    renderActions: () => element('Row', {
+                        props: {
+                            style: { display: 'flex', gap: '10px', marginTop: '14px', marginBottom: '14px' },
+                        },
+                        children: [
+                            element('Button', {
+                                props: {
+                                    class: 'btn-dryrun-compose',
+                                    type: 'button',
+                                    title: 'Inspect resolution without creating a release record',
+                                    style: {
+                                        padding: '7px 14px',
+                                        borderRadius: '6px',
+                                        background: 'var(--surface, #21262d)',
+                                        border: '1px solid var(--edge, #30363d)',
+                                        color: 'var(--ink, #e6edf3)',
+                                        fontWeight: '600',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                    },
+                                    disabled: () => app.composeStatus() === 'composing',
+                                },
+                                intents: { activate: { action: command('releases.dryRunCompose') } },
+                                children: [text(() => (app.composeStatus() === 'composing' ? 'Inspecting...' : '⚡ Inspect Resolution (Dry Run)'))],
+                            }),
+                            element('Button', {
+                                props: {
+                                    class: 'ui-button ui-button-primary btn-commit-compose btn-submit',
+                                    type: 'submit',
+                                    title: 'Compose release and record immutable row',
+                                    style: {
+                                        padding: '7px 16px',
+                                        borderRadius: '6px',
+                                        background: 'var(--accent, #58a6ff)',
+                                        border: 'none',
+                                        color: 'var(--on-accent, #0d1117)',
+                                        fontWeight: '600',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                    },
+                                    disabled: () => app.composeStatus() === 'composing',
+                                },
+                                intents: { activate: { action: command('releases.commitCompose') } },
+                                children: [text(() => (app.composeStatus() === 'composing' ? 'Composing...' : '✓ Compose Release'))],
+                            }),
+                        ],
                     }),
-                ],
+                },
             }),
             when(
                 () => app.composeStatus() === 'error',
