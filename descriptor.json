@@ -1,8 +1,8 @@
 {
     "application": "chrome",
     "base": "/api",
-    "exposure": "sha256:ce460b1bbed1495dafc4c00cad068d6e",
-    "shapeHash": "sha256:335697d156a520c521c5299ae02b01a6",
+    "exposure": "sha256:c7b66ed16b476e095ec5c3746a8097ce",
+    "shapeHash": "sha256:2c9bc8258a550b75c89f6419d20fb80f",
     "calls": [
         {
             "key": "catalog.resolve",
@@ -1431,6 +1431,13 @@
                             "type": "string"
                         }
                     },
+                    "provisionedServices": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    },
                     "services": {
                         "type": "array",
                         "items": {
@@ -1489,6 +1496,12 @@
                                     }
                                 },
                                 "runningServices": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "provisionedServices": {
                                     "type": "array",
                                     "items": {
                                         "type": "string"

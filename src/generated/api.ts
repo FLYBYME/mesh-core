@@ -1,8 +1,8 @@
 // GENERATED FILE — do not edit.
 //
 // Emitted from chrome's mesh.json by `mesh-serve client`.
-// Exposure: sha256:ce460b1bbed1495dafc4c00cad068d6e
-// ShapeHash: sha256:335697d156a520c521c5299ae02b01a6
+// Exposure: sha256:c7b66ed16b476e095ec5c3746a8097ce
+// ShapeHash: sha256:2c9bc8258a550b75c89f6419d20fb80f
 //
 // Regenerate rather than editing. The exposure and shape hashes above are checked at run time
 // against what the API reports, so a hand-edited client is a client that lies about a surface
@@ -318,6 +318,7 @@ export interface NodeStatusOutputNode {
     readonly connected: boolean;
     readonly desiredServices: readonly string[];
     readonly runningServices: readonly string[];
+    readonly provisionedServices?: readonly string[];
 }
 
 export interface NodeStatusOutput {
@@ -327,6 +328,7 @@ export interface NodeStatusOutput {
     readonly peers: readonly NodeStatusOutputPeer[];
     readonly desiredServices: readonly string[];
     readonly runningServices: readonly string[];
+    readonly provisionedServices?: readonly string[];
     readonly services?: readonly NodeStatusOutputService[];
     readonly nodes?: readonly NodeStatusOutputNode[];
     readonly error?: string;
@@ -690,8 +692,8 @@ export interface SiteGetOutput {
 
 export const chromeApi = defineApi({
     id: "chrome",
-    exposure: "sha256:ce460b1bbed1495dafc4c00cad068d6e",
-    shapeHash: "sha256:335697d156a520c521c5299ae02b01a6",
+    exposure: "sha256:c7b66ed16b476e095ec5c3746a8097ce",
+    shapeHash: "sha256:2c9bc8258a550b75c89f6419d20fb80f",
     base: "/api",
     calls: {
         /**
