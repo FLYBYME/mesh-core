@@ -1,8 +1,8 @@
 {
     "application": "chrome",
     "base": "/api",
-    "exposure": "sha256:dde09f35692589627fa2723a635b02ff",
-    "shapeHash": "sha256:0a785542daf482f4701322c1b8b27861",
+    "exposure": "sha256:7666743b61e795150b2e974e47feaeb9",
+    "shapeHash": "sha256:dfe2ad1fc81a549dc38bc3f82b085a99",
     "calls": [
         {
             "key": "catalog.resolve",
@@ -1849,6 +1849,9 @@
                                     "items": {
                                         "type": "string"
                                     }
+                                },
+                                "error": {
+                                    "type": "string"
                                 }
                             },
                             "required": [
