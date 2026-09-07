@@ -4,6 +4,8 @@ function isHTMLElement(el: unknown): el is HTMLElement {
     return typeof HTMLElement !== 'undefined' && el instanceof HTMLElement;
 }
 
+const entityListHeaders = new WeakMap<Element, HTMLElement>();
+
 export const entityListComponent: ComponentDefinition = {
     name: 'ui.EntityList',
     create(): Element {
@@ -30,6 +32,8 @@ export const entityListComponent: ComponentDefinition = {
         heading.appendChild(countSpan);
         header.appendChild(heading);
 
+        entityListHeaders.set(el, header);
+
         const loading = document.createElement('div');
         loading.className = 'ui-entity-list-loading';
         loading.setAttribute('role', 'status');
@@ -49,7 +53,6 @@ export const entityListComponent: ComponentDefinition = {
         empty.setAttribute('role', 'status');
         empty.textContent = 'No items found.';
 
-        el.appendChild(header);
         el.appendChild(loading);
         el.appendChild(error);
         el.appendChild(items);
@@ -70,23 +73,30 @@ export const entityListComponent: ComponentDefinition = {
         }
 
         if (name === 'title' || name === 'heading') {
-            const header = el.querySelector('.ui-entity-list-header');
-            const title = el.querySelector('.ui-entity-list-title');
+            const header = entityListHeaders.get(el);
+            const title = header?.querySelector('.ui-entity-list-title');
             if (isHTMLElement(header) && isHTMLElement(title)) {
                 if (value) {
+                    if (!el.contains(header)) {
+                        el.insertBefore(header, el.firstChild);
+                    }
                     header.style.display = '';
                     title.textContent = String(value);
                     el.setAttribute('aria-label', String(value));
                 } else {
                     header.style.display = 'none';
                     title.textContent = '';
+                    if (el.contains(header)) {
+                        header.remove();
+                    }
                 }
             }
             return true;
         }
 
         if (name === 'count') {
-            const count = el.querySelector('.ui-entity-list-count');
+            const header = entityListHeaders.get(el);
+            const count = header?.querySelector('.ui-entity-list-count');
             if (isHTMLElement(count)) {
                 if (value !== null && value !== undefined) {
                     count.textContent = `(${String(value)})`;
