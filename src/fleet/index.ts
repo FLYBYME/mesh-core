@@ -8,7 +8,7 @@ import {
 import { chromeApi } from '../generated/api.js';
 import type { NodeStatusOutput } from '../generated/api.js';
 
-import { CONSUMES, FLEET, NEEDS, type FleetApi, type FleetNode } from './contract.js';
+import { CONSUMES, CORE_SERVICES, FLEET, NEEDS, type FleetApi, type FleetNode } from './contract.js';
 import { renderFleetView } from './views/fleet.js';
 
 export * from './contract.js';
@@ -115,6 +115,12 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             for (const n of nodes.rows()) for (const s of n.services ?? []) all.add(s);
             for (const g of groups.rows()) for (const s of g.services ?? []) all.add(s);
             for (const n of status()?.nodes ?? []) for (const s of n.runningServices ?? []) all.add(s);
+
+            // Core services run because the node runs and no assignment can switch them, so
+            // offering them as toggles is offering a button that cannot work. Assigning one used to
+            // answer "Unknown service: api" — the Supervisor does not own them and never will.
+            for (const core of CORE_SERVICES) all.delete(core);
+
             return [...all].sort();
         };
 

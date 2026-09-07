@@ -6,15 +6,8 @@
     "calls": [
         {
             "key": "catalog.resolve",
-            "domain": "catalog",
-            "action": "resolve",
-            "description": "Resolve version requirements against published versions.",
             "method": "POST",
             "path": "/catalog/resolve",
-            "gate": {
-                "kind": "auth",
-                "level": "public"
-            },
             "input": {
                 "type": "object",
                 "properties": {
@@ -133,19 +126,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "cdn.compose",
-            "domain": "cdn",
-            "action": "compose",
-            "description": "Resolve version requirements into a release, and record what holds together.",
-            "method": "POST",
-            "path": "/releases",
+            "errors": [],
+            "domain": "catalog",
+            "action": "resolve",
+            "description": "Resolve version requirements against published versions.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "cdn.compose",
+            "method": "POST",
+            "path": "/releases",
             "input": {
                 "type": "object",
                 "properties": {
@@ -280,19 +273,19 @@
             },
             "destructive": true,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "cdn.deploy",
+            "errors": [],
             "domain": "cdn",
-            "action": "deploy",
-            "description": "Point a hostname at a release.",
-            "method": "POST",
-            "path": "/sites/:host/deploy",
+            "action": "compose",
+            "description": "Resolve version requirements into a release, and record what holds together.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "cdn.deploy",
+            "method": "POST",
+            "path": "/sites/:host/deploy",
             "input": {
                 "type": "object",
                 "properties": {
@@ -343,19 +336,19 @@
             },
             "destructive": true,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "group.count",
-            "domain": "group",
-            "action": "count",
-            "description": "Get the number of groups by query.",
-            "method": "GET",
-            "path": "/groups/count",
+            "errors": [],
+            "domain": "cdn",
+            "action": "deploy",
+            "description": "Point a hostname at a release.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "group.count",
+            "method": "GET",
+            "path": "/groups/count",
             "input": {
                 "type": "object",
                 "properties": {
@@ -392,19 +385,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "group.create",
+            "errors": [],
             "domain": "group",
-            "action": "create",
-            "description": "Create a new group.",
-            "method": "POST",
-            "path": "/groups",
+            "action": "count",
+            "description": "Get the number of groups by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "group.create",
+            "method": "POST",
+            "path": "/groups",
             "input": {
                 "type": "object",
                 "properties": {
@@ -469,19 +462,19 @@
             },
             "destructive": true,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "group.find",
+            "errors": [],
             "domain": "group",
-            "action": "find",
-            "description": "Find groups by query.",
-            "method": "GET",
-            "path": "/groups",
+            "action": "create",
+            "description": "Create a new group.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "group.find",
+            "method": "GET",
+            "path": "/groups",
             "input": {
                 "type": "object",
                 "properties": {
@@ -607,19 +600,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "group.get",
+            "errors": [],
             "domain": "group",
-            "action": "get",
-            "description": "Get a specific group by ID.",
-            "method": "GET",
-            "path": "/groups/:id",
+            "action": "find",
+            "description": "Find groups by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "group.get",
+            "method": "GET",
+            "path": "/groups/:id",
             "input": {
                 "type": "object",
                 "properties": {
@@ -701,19 +694,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "group.update",
+            "errors": [],
             "domain": "group",
-            "action": "update",
-            "description": "Update an existing group. Only specified fields will be updated.",
-            "method": "PATCH",
-            "path": "/groups/:id",
+            "action": "get",
+            "description": "Get a specific group by ID.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "group.update",
+            "method": "PATCH",
+            "path": "/groups/:id",
             "input": {
                 "type": "object",
                 "properties": {
@@ -781,19 +774,19 @@
             },
             "destructive": true,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "identity.ticket_issue",
-            "domain": "identity",
-            "action": "ticket_issue",
-            "description": "Exchange credentials for an opaque ticket.",
-            "method": "POST",
-            "path": "/identity/ticket",
+            "errors": [],
+            "domain": "group",
+            "action": "update",
+            "description": "Update an existing group. Only specified fields will be updated.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "identity.ticket_issue",
+            "method": "POST",
+            "path": "/identity/ticket",
             "input": {
                 "type": "object",
                 "properties": {
@@ -839,19 +832,19 @@
             },
             "destructive": true,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "identity.whoami",
+            "errors": [],
             "domain": "identity",
-            "action": "whoami",
-            "description": "Who the caller is, and which organizations they belong to.",
-            "method": "GET",
-            "path": "/identity/whoami",
+            "action": "ticket_issue",
+            "description": "Exchange credentials for an opaque ticket.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "identity.whoami",
+            "method": "GET",
+            "path": "/identity/whoami",
             "input": {
                 "type": "object",
                 "properties": {},
@@ -912,19 +905,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "node.assign",
-            "domain": "node",
-            "action": "assign",
-            "description": "Assigns desired services to a node by hostname, switching services live on running nodes.",
-            "method": "POST",
-            "path": "/node/assign",
+            "errors": [],
+            "domain": "identity",
+            "action": "whoami",
+            "description": "Who the caller is, and which organizations they belong to.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "node.assign",
+            "method": "POST",
+            "path": "/node/assign",
             "input": {
                 "type": "object",
                 "properties": {
@@ -992,19 +985,19 @@
             },
             "destructive": true,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "node.count",
+            "errors": [],
             "domain": "node",
-            "action": "count",
-            "description": "Get the number of nodes by query.",
-            "method": "GET",
-            "path": "/nodes/count",
+            "action": "assign",
+            "description": "Assigns desired services to a node by hostname, switching services live on running nodes.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "node.count",
+            "method": "GET",
+            "path": "/nodes/count",
             "input": {
                 "type": "object",
                 "properties": {
@@ -1041,19 +1034,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "node.find",
+            "errors": [],
             "domain": "node",
-            "action": "find",
-            "description": "Find nodes by query.",
-            "method": "GET",
-            "path": "/nodes",
+            "action": "count",
+            "description": "Get the number of nodes by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "node.find",
+            "method": "GET",
+            "path": "/nodes",
             "input": {
                 "type": "object",
                 "properties": {
@@ -1183,19 +1176,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "node.get",
+            "errors": [],
             "domain": "node",
-            "action": "get",
-            "description": "Get a specific node by ID.",
-            "method": "GET",
-            "path": "/nodes/:id",
+            "action": "find",
+            "description": "Find nodes by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "node.get",
+            "method": "GET",
+            "path": "/nodes/:id",
             "input": {
                 "type": "object",
                 "properties": {
@@ -1281,19 +1274,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "node.reconcile",
+            "errors": [],
             "domain": "node",
-            "action": "reconcile",
-            "description": "Make what each node is running match what it should be running.",
-            "method": "POST",
-            "path": "/node/reconcile",
+            "action": "get",
+            "description": "Get a specific node by ID.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "node.reconcile",
+            "method": "POST",
+            "path": "/node/reconcile",
             "input": {
                 "type": "object",
                 "properties": {
@@ -1360,19 +1353,19 @@
             },
             "destructive": true,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "node.status",
+            "errors": [],
             "domain": "node",
-            "action": "status",
-            "description": "Answers what a node (or this node) is running and what it is connected to.",
-            "method": "GET",
-            "path": "/node/status",
+            "action": "reconcile",
+            "description": "Make what each node is running match what it should be running.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "node.status",
+            "method": "GET",
+            "path": "/node/status",
             "input": {
                 "type": "object",
                 "properties": {
@@ -1533,19 +1526,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "part.count",
-            "domain": "part",
-            "action": "count",
-            "description": "Get the number of parts by query.",
-            "method": "GET",
-            "path": "/parts/count",
+            "errors": [],
+            "domain": "node",
+            "action": "status",
+            "description": "Answers what a node (or this node) is running and what it is connected to.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "part.count",
+            "method": "GET",
+            "path": "/parts/count",
             "input": {
                 "type": "object",
                 "properties": {
@@ -1582,19 +1575,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "part.find",
+            "errors": [],
             "domain": "part",
-            "action": "find",
-            "description": "Find parts by query.",
-            "method": "GET",
-            "path": "/parts",
+            "action": "count",
+            "description": "Get the number of parts by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "part.find",
+            "method": "GET",
+            "path": "/parts",
             "input": {
                 "type": "object",
                 "properties": {
@@ -1749,19 +1742,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "part.get",
+            "errors": [],
             "domain": "part",
-            "action": "get",
-            "description": "Get a specific part by ID.",
-            "method": "GET",
-            "path": "/parts/:id",
+            "action": "find",
+            "description": "Find parts by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "part.get",
+            "method": "GET",
+            "path": "/parts/:id",
             "input": {
                 "type": "object",
                 "properties": {
@@ -1872,19 +1865,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "partVersion.count",
-            "domain": "partVersion",
-            "action": "count",
-            "description": "Get the number of part-versions by query.",
-            "method": "GET",
-            "path": "/part-versions/count",
+            "errors": [],
+            "domain": "part",
+            "action": "get",
+            "description": "Get a specific part by ID.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "partVersion.count",
+            "method": "GET",
+            "path": "/part-versions/count",
             "input": {
                 "type": "object",
                 "properties": {
@@ -1921,19 +1914,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "partVersion.find",
+            "errors": [],
             "domain": "partVersion",
-            "action": "find",
-            "description": "Find part-versions by query.",
-            "method": "GET",
-            "path": "/part-versions",
+            "action": "count",
+            "description": "Get the number of part-versions by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "partVersion.find",
+            "method": "GET",
+            "path": "/part-versions",
             "input": {
                 "type": "object",
                 "properties": {
@@ -2151,19 +2144,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "partVersion.get",
+            "errors": [],
             "domain": "partVersion",
-            "action": "get",
-            "description": "Get a specific partVersion by ID.",
-            "method": "GET",
-            "path": "/part-versions/:id",
+            "action": "find",
+            "description": "Find part-versions by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "partVersion.get",
+            "method": "GET",
+            "path": "/part-versions/:id",
             "input": {
                 "type": "object",
                 "properties": {
@@ -2337,19 +2330,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "release.count",
-            "domain": "release",
-            "action": "count",
-            "description": "Get the number of releases by query.",
-            "method": "GET",
-            "path": "/releases/count",
+            "errors": [],
+            "domain": "partVersion",
+            "action": "get",
+            "description": "Get a specific partVersion by ID.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "release.count",
+            "method": "GET",
+            "path": "/releases/count",
             "input": {
                 "type": "object",
                 "properties": {
@@ -2386,19 +2379,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "release.find",
+            "errors": [],
             "domain": "release",
-            "action": "find",
-            "description": "Find releases by query.",
-            "method": "GET",
-            "path": "/releases",
+            "action": "count",
+            "description": "Get the number of releases by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "release.find",
+            "method": "GET",
+            "path": "/releases",
             "input": {
                 "type": "object",
                 "properties": {
@@ -2583,19 +2576,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "release.get",
+            "errors": [],
             "domain": "release",
-            "action": "get",
-            "description": "Get a specific release by ID.",
-            "method": "GET",
-            "path": "/releases/:id",
+            "action": "find",
+            "description": "Find releases by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "release.get",
+            "method": "GET",
+            "path": "/releases/:id",
             "input": {
                 "type": "object",
                 "properties": {
@@ -2736,19 +2729,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "site.count",
-            "domain": "site",
-            "action": "count",
-            "description": "Get the number of sites by query.",
-            "method": "GET",
-            "path": "/sites/count",
+            "errors": [],
+            "domain": "release",
+            "action": "get",
+            "description": "Get a specific release by ID.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "site.count",
+            "method": "GET",
+            "path": "/sites/count",
             "input": {
                 "type": "object",
                 "properties": {
@@ -2785,19 +2778,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "site.find",
+            "errors": [],
             "domain": "site",
-            "action": "find",
-            "description": "Find sites by query.",
-            "method": "GET",
-            "path": "/sites",
+            "action": "count",
+            "description": "Get the number of sites by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "site.find",
+            "method": "GET",
+            "path": "/sites",
             "input": {
                 "type": "object",
                 "properties": {
@@ -3085,19 +3078,19 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
-        },
-        {
-            "key": "site.get",
+            "errors": [],
             "domain": "site",
-            "action": "get",
-            "description": "Get a specific site by ID.",
-            "method": "GET",
-            "path": "/sites/:id",
+            "action": "find",
+            "description": "Find sites by query.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
-            },
+            }
+        },
+        {
+            "key": "site.get",
+            "method": "GET",
+            "path": "/sites/:id",
             "input": {
                 "type": "object",
                 "properties": {
@@ -3341,7 +3334,14 @@
             },
             "destructive": false,
             "stream": false,
-            "errors": []
+            "errors": [],
+            "domain": "site",
+            "action": "get",
+            "description": "Get a specific site by ID.",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            }
         }
     ]
 }

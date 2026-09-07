@@ -74,5 +74,15 @@ export interface FleetApi {
 
 export const FLEET: ProviderToken<FleetApi> = provider<FleetApi>('fleet');
 
+/**
+ * Services every node runs and no assignment can switch — `bin/node.mjs` registers them directly
+ * and the Supervisor never owns them.
+ *
+ * Stated here rather than imported: mesh-core does not depend on mesh-serve's source, and a
+ * generated client carries contracts, not constants. It is a small duplication with a real cost if
+ * it drifts, so it is written down in both places with the same reason attached.
+ */
+export const CORE_SERVICES: readonly string[] = ['api', 'identity', 'fleet', 'supervisor'];
+
 export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation');
 export const CONSUMES = consumes();

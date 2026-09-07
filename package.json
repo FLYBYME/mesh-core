@@ -13,7 +13,7 @@
     },
     "devDependencies": {
         "@flybyme/mesh-serve": "file:../mesh-serve",
-        "@flybyme/mesh-web": "github:FLYBYME/mesh-web#v0.15.7",
+        "@flybyme/mesh-web": "github:FLYBYME/mesh-web#v0.15.8",
         "@vitest/browser": "^2.1.9",
         "playwright": "^1.62.1",
         "typescript": "^5.9.3",
