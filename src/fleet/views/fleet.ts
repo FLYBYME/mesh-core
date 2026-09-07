@@ -10,6 +10,7 @@ import {
 
 import { UI_DETAIL_SURFACE, UI_ENTITY_ITEM, UI_ENTITY_LIST } from '../../ui/contract.js';
 import type { FleetApi, FleetNode } from '../contract.js';
+import { renderProvisionCard } from './provisionCard.js';
 
 /**
  * The fleet, as a list of machines beside one machine in detail.
@@ -82,9 +83,9 @@ function renderNodeItem(node: () => FleetNode, app: FleetApi): Described {
                     text(() => {
                         const n = node();
                         const desired = n.services.length + (n.groups.length > 0 ? n.groups.length : 0);
-                        // Two numbers, never one. A single "healthy" would hide the only fact worth
-                        // reading, and there is deliberately no such field anywhere in this system.
-                        return `${String(n.running.length)} running · ${String(n.services.length)} assigned`
+                        // Three numbers: what is running, what can run (provisioned), what should run (assigned).
+                        // Provision makes switches exist; assign flips them.
+                        return `${String(n.running.length)} running · ${String(n.provisioned.length)} provisioned · ${String(n.services.length)} assigned`
                             + (n.groups.length > 0 ? ` · ${n.groups.join(', ')}` : '')
                             + (desired === 0 ? ' · unassigned' : '');
                     }),
@@ -183,11 +184,19 @@ function renderDetail(app: FleetApi): Described {
                                     children: [text('Observed')],
                                 }),
                                 element('Text', {
-                                    props: { style: { fontSize: '12px', color: 'var(--ink-dim)' } },
+                                    props: { class: 'fleet-observed-provisioned', style: { fontSize: '12px', color: 'var(--ink-dim)' } },
+                                    children: [
+                                        text(str((n) => (n.provisioned.length === 0
+                                            ? 'Provisioned (can run): None.'
+                                            : `Provisioned (can run): ${n.provisioned.join(', ')}`))),
+                                    ],
+                                }),
+                                element('Text', {
+                                    props: { class: 'fleet-observed-running', style: { fontSize: '12px', color: 'var(--ink-dim)' } },
                                     children: [
                                         text(str((n) => (n.running.length === 0
-                                            ? 'Nothing running.'
-                                            : `Running: ${n.running.join(', ')}`))),
+                                            ? 'Running (active): Nothing running.'
+                                            : `Running (active): ${n.running.join(', ')}`))),
                                     ],
                                 }),
                                 when(
@@ -310,10 +319,13 @@ export function renderFleetView(vx: ViewContext<Record<string, never>, FleetApi>
                         props: {
                             style: {
                                 display: 'flex', flexDirection: 'column', flex: '1 1 auto',
-                                minWidth: '0', overflowY: 'auto', padding: '16px',
+                                minWidth: '0', overflowY: 'auto', padding: '16px', gap: '16px',
                             },
                         },
-                        children: [renderDetail(app)],
+                        children: [
+                            renderDetail(app),
+                            renderProvisionCard(app),
+                        ],
                     }),
                 ],
             }),

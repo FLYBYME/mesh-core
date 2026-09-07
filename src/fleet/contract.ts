@@ -3,6 +3,7 @@ import {
     needs,
     provider,
     type CollectionStatus,
+    type Json,
     type ProviderToken,
     type ReadonlySignal,
     type Signal,
@@ -11,8 +12,11 @@ import {
 import type {
     GroupFindOutputItem,
     NodeFindOutputItem,
+    NodeProvisionInput,
+    NodeProvisionOutput,
     NodeStatusOutput,
 } from '../generated/api.js';
+import type { JsonSchema } from '../ui/contract.js';
 
 /**
  * A machine as the console shows it: **desired beside observed**, never merged.
@@ -25,6 +29,9 @@ import type {
  * flag anywhere in this system, deliberately — health is *what it should be running* against *what
  * it is running*, and a screen that showed a green dot instead would be hiding the only fact worth
  * looking at.
+ *
+ * `provisioned` tracks what code is present on the machine (the switches that exist).
+ * `running` tracks what processes are active (switches flipped on).
  */
 export interface FleetNode {
     readonly hostname: string;
@@ -32,13 +39,70 @@ export interface FleetNode {
     readonly groups: readonly string[];
     /** Observed: is this machine on the mesh right now. */
     readonly connected: boolean;
-    /** Observed: what its Supervisor says is running. */
+    /** Observed: what its Supervisor says is running (active services). */
     readonly running: readonly string[];
+    /** Observed: what its Supervisor says is provisioned (code on machine, can run). */
+    readonly provisioned: readonly string[];
     /** Desired minus running — the reason to look at this row. */
     readonly missing: readonly string[];
     /** Running minus desired. */
     readonly extra: readonly string[];
 }
+
+/**
+ * Pinned ref validator: branches (main, master, refs/heads/…) are strictly refused.
+ * A node that follows a branch changes behaviour when somebody else pushes.
+ */
+export function isBranchRef(ref: string): boolean {
+    const trimmed = ref.trim();
+    if (!trimmed) return false;
+    return /^(main|master|trunk|dev|development|head)$/i.test(trimmed) || trimmed.startsWith('refs/heads/');
+}
+
+/**
+ * The input schema for node.provision, reflecting the descriptor served by GET /api/_describe.
+ */
+export const PROVISION_FORM_SCHEMA: JsonSchema = {
+    type: 'object',
+    properties: {
+        hostname: {
+            type: 'string',
+            title: 'Target Machine',
+            description: 'The machine to provision this service onto.',
+        },
+        name: {
+            type: 'string',
+            title: 'Service Name',
+            description: 'Name of the service entry in the Supervisor manifest.',
+        },
+        repository: {
+            type: 'string',
+            title: 'Repository URL',
+            description: 'Git repository URL to clone or pull.',
+        },
+        ref: {
+            type: 'string',
+            title: 'Ref (Commit SHA or Tag)',
+            description: 'Pinned commit SHA or tag. Branch names (main, master, refs/heads/…) are strictly refused.',
+        },
+        path: {
+            type: 'string',
+            title: 'Entry Path',
+            description: 'Optional path to compiled service entry module relative to repository root.',
+        },
+        dependsOn: {
+            type: 'string',
+            title: 'Dependencies',
+            description: 'Optional dependencies that must be running before this service starts (comma-separated).',
+        },
+        mountKey: {
+            type: 'string',
+            title: 'Mount Key',
+            description: 'Optional mountKey alias for running isolated instances.',
+        },
+    },
+    required: ['hostname', 'name', 'repository', 'ref'],
+};
 
 export interface FleetApi {
     readonly nodes: ReadonlySignal<readonly NodeFindOutputItem[]>;
@@ -62,6 +126,19 @@ export interface FleetApi {
     readonly busy: Signal<boolean>;
     readonly lastAction: Signal<string | null>;
 
+    // Provisioning state
+    readonly provisionHostname: Signal<string>;
+    readonly provisionName: Signal<string>;
+    readonly provisionRepository: Signal<string>;
+    readonly provisionRef: Signal<string>;
+    readonly provisionPath: Signal<string>;
+    readonly provisionDependsOn: Signal<string>;
+    readonly provisionMountKey: Signal<string>;
+    readonly provisionStatus: Signal<'idle' | 'provisioning' | 'success' | 'error'>;
+    readonly provisionResult: Signal<NodeProvisionOutput | null>;
+    readonly provisionError: Signal<string | null>;
+    readonly provisionFieldErrors: Signal<Record<string, string>>;
+
     select(hostname: string): Promise<void>;
     refresh(): Promise<void>;
     /** Add or remove one service on the selected machine, and reconcile it. */
@@ -70,6 +147,11 @@ export interface FleetApi {
     toggleGroup(group: string): Promise<void>;
     /** Make running match desired — for one machine, or for all of them. */
     reconcile(hostname?: string): Promise<void>;
+
+    /** Set a field value in the provisioning form. */
+    setProvisionField(field: string, value?: Json): void;
+    /** Provision a service onto a node (clones/pulls repo at pinned ref, runs npm install, registers manifest). */
+    provision(override?: Partial<NodeProvisionInput>): Promise<void>;
 }
 
 export const FLEET: ProviderToken<FleetApi> = provider<FleetApi>('fleet');
