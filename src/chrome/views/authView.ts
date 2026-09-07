@@ -77,6 +77,12 @@ export function renderAuthView(props: AuthViewProps): Described {
                 class: 'chrome-auth chrome-auth-signed-out',
                 style: {
                     display: 'flex',
+                    // Named even though `row` is the initial value. The kernel stylesheet used to
+                    // set `flex-direction: column` on every bare `form`, and an inline style only
+                    // wins the properties it names — so this box said `flex` and rendered a column.
+                    // The kernel no longer does that; declaring it here means this view does not
+                    // depend on that having been fixed.
+                    flexDirection: 'row',
                     alignItems: 'center',
                     gap: '6px',
                     margin: '0',
