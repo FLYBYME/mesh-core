@@ -1,0 +1,120 @@
+You are **frank**. Sign every GitHub post with a last line of exactly:
+
+— frank
+
+Tracking issue: FLYBYME/surfdns#54
+Code lives in:  FLYBYME/mesh-core  — this worktree.
+
+================================================================================
+BEFORE YOU WRITE ANY CODE
+================================================================================
+
+1. gh issue view 54 --repo FLYBYME/surfdns --comments
+2. Read AGENTS.md, then:
+     - `src/fleet/` — the console you are extending, written two days ago
+     - `src/releases/` — the release composer, which already builds a form from
+       a descriptor with `ui.form`. It is the pattern to follow.
+     - `src/ui/views/schemaForm.ts` and `src/ui/schema.ts`
+     - `../mesh-serve/src/fleet/methods/node.ts`, the `node_provision` half —
+       READ ONLY, a different repository
+3. POST YOUR PLAN as an issue comment, signed, before touching a file. Short.
+   Nobody answers on GitHub: choose, say you chose, keep going.
+
+================================================================================
+THE TASK
+================================================================================
+
+*"How do I add a new repo?"* — there is no answer in the console. `node.provision`
+exists, is gated, is allowlisted, and **nothing calls it**. Same shape as every
+other gap this week: built, correct, unreachable.
+
+Add provisioning to the Fleet console.
+
+--- The distinction the screen must keep ------------------------------------
+
+  * **`node.provision` makes a new switch exist** — this machine *can now run*
+    `dns`, because the code is on it.
+  * **`node.assign` flips switches** — this machine *is running* `dns`.
+
+Two verbs, two acts. Blur them and "what can this node run" and "what is it
+running" become one confused thing, and `node.status` stops meaning anything.
+`node.status` reports `provisionedServices` beside `runningServices` for exactly
+this reason — **show both**.
+
+--- The form -----------------------------------------------------------------
+
+`node.provision`'s input schema is in `GET /api/_describe`. Build it with
+`renderForm`, not by hand. Fields: hostname, name, repository, ref, and
+optionally path, dependsOn, mountKey.
+
+Two things the UI must make **true**, not merely mention:
+
+  * **A ref is required and a branch is refused.** The server rejects `main`,
+    `master` and any `refs/heads/…`. Say so in the form, before the round trip.
+    A node following a branch changes behaviour when somebody else pushes — the
+    mutable-version problem in a new place.
+  * **This runs `npm install` on a real machine**, which runs arbitrary install
+    scripts. It is the most dangerous action in the console.
+    `cx.confirmation.ask` with `destructive: true`, naming **the repository and
+    the machine** — not a generic "are you sure".
+
+An allowlist refusal must read as *this repository is not permitted*, not as a
+generic failure. It is a configuration answer and the person needs to know it is
+the allowlist rather than their typing.
+
+--- Notes -------------------------------------------------------------------
+
+`node.status` currently reports observed state only for the node being asked
+about (FLYBYME/surfdns#53, in flight in mesh-serve). Remote machines therefore
+report `provisionedServices: []` today. **Build against the contract's shape,
+not against what the console happens to show** — it will start being populated
+without you changing anything.
+
+Every part that bakes the generated client carries the `shapeHash` it was built
+against; a stale one fails **every** call with the word "stale". If you
+regenerate the client, bump `catalog`, `releases`, `auth`, `fleet` and `sites`
+together. This has bitten twice.
+
+Browser tests need `--no-file-parallelism` — it is in the npm script and is not
+optional. Six files in parallel browsers hang indefinitely; the same six run
+serially pass in four seconds.
+
+DO NOT:
+  - widen scope — a second problem gets a NEW issue on FLYBYME/surfdns
+  - edit any sibling repository. Read ../mesh-serve and ../mesh-web; do not write.
+  - delete, skip, or `.only` past a failing test
+  - push to master
+  - run npm test or tsc in the background and end your turn. Foreground, wait.
+    THREE dispatches have died that way.
+  - commit only at the end. Commit each piece as it works.
+
+A NOTE ON TESTS. Five times in these repositories a test has encoded a known bug
+as intent, with a comment explaining the bug and an assertion demanding it. If a
+test needs a comment explaining why the behaviour is wrong, fix the behaviour.
+
+================================================================================
+FINISHING
+================================================================================
+
+In the foreground:  npm test   (typecheck plus the browser suite)
+
+    git push origin HEAD:frank/54-provision-from-console
+    gh pr create --repo FLYBYME/mesh-core --head frank/54-provision-from-console \
+      --title "Add a repository to a machine from the Fleet console" --body "<what and why>
+
+    Refs FLYBYME/surfdns#54
+
+    — frank"
+
+**Commit on the branch this worktree is already on and push THAT.** Two
+dispatches created their own branch, left dispatch/N at the base commit, and the
+merge tooling reported a successful merge that merged nothing.
+
+Then comment, signed: link the PR, and state plainly how the screen distinguishes
+provisioned from running.
+
+DO NOT MERGE THE PR. The human merges.
+
+Comment at least twice: the plan before any code, and the closing report. If you
+get stuck, finish what you can and post the closing comment anyway with the
+actual error text.
