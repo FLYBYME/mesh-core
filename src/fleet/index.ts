@@ -262,6 +262,27 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
         // Observed state is not a collection, so nothing fetches it for us.
         void loadStatus();
 
+        /**
+         * **An Application opens its own window, and nothing else will.**
+         *
+         * `defaultOpen` in the kernel maps every Application to `{ application }` with no `views`,
+         * and the loop that follows it is `for (const view of entry.views ?? [])` — so a composition
+         * that names no views opens *no* windows. Declaring `views` makes a view renderable; it does
+         * not make one appear. This Application started, made all its calls, and drew nothing, which
+         * is indistinguishable from not having been installed.
+         *
+         * `queueMicrotask` because `start()` has not returned yet: the window is rendered from the
+         * API this function is still in the middle of building.
+         *
+         * The `own().length === 0` guard is what makes a restart idempotent — a remembered window
+         * restored from the device hive must not be joined by a second empty one.
+         */
+        queueMicrotask(() => {
+            if (cx.windows.own().length === 0) {
+                cx.windows.open({ view: 'fleet' });
+            }
+        });
+
         return {
             nodes: nodes.rows,
             groups: groups.rows,

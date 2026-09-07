@@ -141,7 +141,7 @@
         {
             "kind": "application",
             "id": "fleet",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "entry": "src/fleet/index.ts",
             "kernel": "^0.15",
             "requiredParts": [
