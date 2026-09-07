@@ -8,6 +8,7 @@ import {
 } from '@flybyme/mesh-web';
 
 import type { CatalogApi } from '../contract.js';
+import type { PartFindOutputItem } from '../../generated/api.js';
 import { renderKindBadge } from './badges.js';
 import { renderCatalogHeader } from './header.js';
 import { renderPartsList } from './partsList.js';
@@ -15,9 +16,25 @@ import { renderVersionTable } from './versionTable.js';
 import { renderVersionProvenanceCard } from './versionProvenanceCard.js';
 import { renderRangeResolverCard } from './rangeResolverCard.js';
 
+/**
+ * Every field reads through `app.selectedPart()` **at render time**, never from a value captured
+ * when the description was built.
+ *
+ * This panel froze on whichever part was selected first, while the version table beside it updated
+ * correctly. The cause is the pair of things above and below: the call site is
+ * `when(() => app.selectedPart() !== null, () => renderPartDetails(app), …)`, and `when` rebuilds
+ * its branch only when the **boolean** changes. Selecting a different part keeps it `true`, so the
+ * branch is never rebuilt — and `const p = app.selectedPart()` had already baked one part's values
+ * into static text.
+ *
+ * `Reactive<T> = T | (() => T)` permits both, which is what makes this easy to get wrong: a plain
+ * value compiles and renders, and is simply never read again.
+ */
 function renderPartDetails(app: CatalogApi): Described {
-    const p = app.selectedPart();
-    if (p === null) return element('EmptyNode');
+    const part = (): PartFindOutputItem | null => app.selectedPart();
+    const str = (pick: (p: PartFindOutputItem) => string | undefined): (() => string) =>
+        () => { const p = part(); return p === null ? '' : pick(p) ?? ''; };
+
     return element('Stack', {
         children: [
             element('Row', {
@@ -35,14 +52,14 @@ function renderPartDetails(app: CatalogApi): Described {
                         children: [
                             element('Heading', {
                                 props: { level: 2, style: { margin: '0', fontSize: '22px' } },
-                                children: [text(p.name)],
+                                children: [text(str((p) => p.name))],
                             }),
-                            renderKindBadge(() => p.kind),
+                            renderKindBadge(str((p) => p.kind)),
                         ],
                     }),
                     element('Span', {
                         props: { style: { fontSize: '13px', color: 'var(--ink-dim, #8b949e)' } },
-                        children: [text(`Published by: ${p.publisher}`)],
+                        children: [text(str((p) => `Published by: ${p.publisher}`))],
                     }),
                 ],
             }),
@@ -55,7 +72,7 @@ function renderPartDetails(app: CatalogApi): Described {
                         color: 'var(--ink, #e6edf3)',
                     },
                 },
-                children: [text(p.description ?? 'No description provided.')],
+                children: [text(str((p) => p.description ?? 'No description provided.'))],
             }),
             element('Row', {
                 props: {
@@ -69,20 +86,20 @@ function renderPartDetails(app: CatalogApi): Described {
                 },
                 children: [
                     element('Span', {
-                        children: [text(`Repository: ${p.repository}`)],
+                        children: [text(str((p) => `Repository: ${p.repository}`))],
                     }),
                     when(
-                        () => p.license !== undefined,
-                        () => element('Span', { children: [text(`License: ${p.license ?? ''}`)] }),
+                        () => part()?.license !== undefined,
+                        () => element('Span', { children: [text(str((p) => `License: ${p.license ?? ''}`))] }),
                     ),
                     when(
-                        () => p.homepage !== undefined,
-                        () => element('Span', { children: [text(`Homepage: ${p.homepage ?? ''}`)] }),
+                        () => part()?.homepage !== undefined,
+                        () => element('Span', { children: [text(str((p) => `Homepage: ${p.homepage ?? ''}`))] }),
                     ),
                 ],
             }),
             when(
-                () => p.keywords !== undefined && p.keywords.length > 0,
+                () => { const p = part(); return p !== null && p.keywords !== undefined && p.keywords.length > 0; },
                 () => element('Row', {
                     props: {
                         style: {
@@ -93,8 +110,8 @@ function renderPartDetails(app: CatalogApi): Described {
                         },
                     },
                     children: [
-                        each(
-                            () => p.keywords ?? [],
+                        each<string>(
+                            () => part()?.keywords ?? [],
                             (kw) => kw,
                             (kw) => element('Badge', {
                                 props: {

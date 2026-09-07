@@ -36,8 +36,22 @@ export function renderShell(props: ShellViewProps): Described {
             element('Row', {
                 props: {
                     class: 'chrome-bar',
+                    /**
+                     * `display: flex` is not optional here, and its absence is why the bar's
+                     * contents stacked vertically and the controls jumped as titles changed.
+                     *
+                     * `Row` renders a bare `<div>` — the kernel styles no primitive — so
+                     * `alignItems` and `gap` did nothing and every child was a block. 107 of the
+                     * 140 `Row` uses across mesh-core and mesh-demos set this by hand; this was
+                     * one of the 33 that did not.
+                     *
+                     * `minWidth: 0` so the window list can actually shrink and scroll instead of
+                     * forcing the bar wider than the page — a flex item's default `min-width: auto`
+                     * refuses to shrink below its content, which is the other half of the jumping.
+                     */
                     style: {
-                        flex: '0 0 auto', alignItems: 'center', gap: '8px',
+                        display: 'flex', flex: '0 0 auto', alignItems: 'center', gap: '8px',
+                        minWidth: '0',
                         padding: '6px 10px', background: 'var(--chrome, #161b22)',
                         borderBottom: '1px solid var(--edge, #30363d)',
                     },
