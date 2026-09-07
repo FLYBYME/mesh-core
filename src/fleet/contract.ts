@@ -109,6 +109,7 @@ export interface FleetApi {
     readonly groups: ReadonlySignal<readonly GroupFindOutputItem[]>;
     readonly nodesStatus: ReadonlySignal<CollectionStatus>;
     readonly nodesError: () => string | null;
+    readonly live: ReadonlySignal<boolean>;
 
     /** Desired joined to observed. The list the screen actually draws. */
     readonly fleet: () => readonly FleetNode[];

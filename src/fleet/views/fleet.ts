@@ -262,13 +262,19 @@ export function renderFleetView(vx: ViewContext<Record<string, never>, FleetApi>
                         props: { level: 2, style: { fontSize: '14px', margin: '0', flex: '1 1 auto' } },
                         children: [text(() => `Fleet — ${String(app.fleet().length)} machine(s)`)],
                     }),
-                    element('Button', {
+                    element('Span', {
                         props: {
-                            style: { padding: '4px 12px', fontSize: '12px' },
-                            disabled: () => app.busy(),
+                            class: 'fleet-live-indicator live-indicator',
+                            style: () => ({
+                                padding: '2px 8px',
+                                borderRadius: '10px',
+                                fontSize: '11px',
+                                background: app.live() ? 'rgba(56, 139, 253, 0.15)' : 'var(--surface)',
+                                color: app.live() ? 'var(--accent)' : 'var(--ink-dim)',
+                                border: '1px solid var(--edge)',
+                            }),
                         },
-                        intents: { activate: { action: command('fleet.refresh') } },
-                        children: [text('Refresh')],
+                        children: [text(() => (app.live() ? '● live' : '○ not following'))],
                     }),
                     element('Button', {
                         props: {
@@ -308,6 +314,7 @@ export function renderFleetView(vx: ViewContext<Record<string, never>, FleetApi>
                             loadingMessage: 'Reading the fleet...',
                             errorMessage: () => app.nodesError() ?? 'Unknown fleet error',
                             emptyMessage: 'No machines have announced themselves yet.',
+                            idleMessage: 'Sign in to view fleet machines.',
                             count: () => app.fleet().length,
                         },
                         children: [
