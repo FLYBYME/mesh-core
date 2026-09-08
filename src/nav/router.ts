@@ -36,25 +36,27 @@ export function parseRoute(hash: string): Route | null {
     return { owner, view };
 }
 
-export function formatRoute(owner: string, view: string): string {
-    return `#/${owner}/${view}`;
+export function formatRoute(view: string): string {
+    return `#/${view}`;
 }
 
 export function findMatchingWindow<T extends ChromeWindowLike>(
     windows: readonly T[],
     route: Route,
 ): T | undefined {
-    if (route.owner !== undefined) {
-        const exact = windows.find((w) => w.owner === route.owner && w.view === route.view);
-        if (exact !== undefined) return exact;
-    }
+    // 1. Direct view match (works for both #/beta and #/panel/beta)
     const byView = windows.find((w) => w.view === route.view);
     if (byView !== undefined) return byView;
 
+    // 2. Owner match if route specifies owner
     if (route.owner !== undefined) {
-        const byOwner = windows.find((w) => w.owner === route.owner);
+        const byOwner = windows.find((w) => w.owner === route.owner && w.view === route.view);
         if (byOwner !== undefined) return byOwner;
     }
+
+    // 3. Fallback: match by title
+    const byTitle = windows.find((w) => w.title.toLowerCase() === route.view.toLowerCase());
+    if (byTitle !== undefined) return byTitle;
 
     return undefined;
 }
@@ -76,8 +78,8 @@ export class HashRouter {
         return parseRoute(this.currentHash);
     }
 
-    push(owner: string, view: string): void {
-        const formatted = formatRoute(owner, view);
+    push(view: string): void {
+        const formatted = formatRoute(view);
         if (this._current === formatted) return;
         this._current = formatted;
         if (this._win !== undefined && this._win.location.hash !== formatted) {
@@ -85,8 +87,8 @@ export class HashRouter {
         }
     }
 
-    replace(owner: string, view: string): void {
-        const formatted = formatRoute(owner, view);
+    replace(view: string): void {
+        const formatted = formatRoute(view);
         this._current = formatted;
         if (this._win !== undefined && this._win.location.hash !== formatted) {
             this._win.history.replaceState(null, '', formatted);

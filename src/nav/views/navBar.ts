@@ -88,7 +88,8 @@ export function renderNavBar(props: NavBarProps): Described {
                                 class: () => (chrome.focused() === w().id
                                     ? 'nav-item nav-item-active'
                                     : 'nav-item'),
-                                'data-nav-item': () => `${w().owner}/${w().view}`,
+                                'data-nav-item': () => w().view,
+                                'data-view': () => w().view,
                                 title: () => w().title,
                                 style: () => ({
                                     display: 'flex',

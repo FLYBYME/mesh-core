@@ -93,7 +93,6 @@ export default class NavExtension implements Extension<typeof NEEDS, typeof CONS
         }
 
         const chrome = cx.chrome;
-        // The nav chrome always presents views one at a time filling the host surface
         chrome.setMode('single');
 
         const email = cx.state.signal('');
@@ -122,6 +121,9 @@ export default class NavExtension implements Extension<typeof NEEDS, typeof CONS
         let initialRouted = false;
         const stopSync = effect(() => {
             const windows = chrome.windows();
+            if (chrome.mode() !== 'single') {
+                chrome.setMode('single');
+            }
             if (windows.length === 0) return;
 
             if (!initialRouted) {
@@ -139,7 +141,7 @@ export default class NavExtension implements Extension<typeof NEEDS, typeof CONS
                 const focusedId = chrome.focused();
                 const active = windows.find((w) => w.id === focusedId) ?? windows[0];
                 if (active !== undefined) {
-                    router.replace(active.owner, active.view);
+                    router.replace(active.view);
                     initialRouted = true;
                 }
             }
@@ -151,7 +153,7 @@ export default class NavExtension implements Extension<typeof NEEDS, typeof CONS
             chrome.focus(targetId);
             const target = chrome.windows().find((w) => w.id === targetId);
             if (target !== undefined) {
-                router.push(target.owner, target.view);
+                router.push(target.view);
             }
         });
 
@@ -162,7 +164,7 @@ export default class NavExtension implements Extension<typeof NEEDS, typeof CONS
             const target = findMatchingWindow(chrome.windows(), parsed);
             if (target !== undefined) {
                 chrome.focus(target.id);
-                router.push(target.owner, target.view);
+                router.push(target.view);
             }
         });
 
