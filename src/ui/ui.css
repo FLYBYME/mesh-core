@@ -1,0 +1,463 @@
+/**
+ * Neutral styling for the ui components and composites.
+ *
+ * Adheres to neutral CSS custom properties (--ink, --edge, --surface, --accent, --error).
+ * Tokens (roadmap U1) is a separate PR.
+ */
+
+@layer ui.components {
+    /* ------------------------------------------------------------------------- ui.EntityList */
+    .ui-entity-list {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .ui-entity-list-header {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--edge);
+    }
+
+    .ui-entity-list-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+        color: var(--ink);
+    }
+
+    .ui-entity-list-count {
+        font-size: 12px;
+        color: var(--ink-dim);
+    }
+
+    .ui-entity-list-items {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 4px;
+        overflow-y: auto;
+    }
+
+    .ui-entity-list-loading,
+    .ui-entity-list-empty,
+    .ui-entity-list-error {
+        padding: 16px;
+        font-size: 13px;
+        text-align: center;
+    }
+
+    .ui-entity-list-loading {
+        color: var(--ink-dim);
+    }
+
+    .ui-entity-list-empty {
+        color: var(--ink-dim);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ui-entity-list-error {
+        color: var(--error);
+        background: rgba(248, 81, 73, 0.1);
+        border: 1px solid var(--error);
+        border-radius: 6px;
+        margin: 8px;
+    }
+
+    /* ------------------------------------------------------------------------- ui.EntityItem */
+    .ui-entity-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+        text-align: left;
+        font-family: inherit;
+        font-size: 13px;
+        transition: background 0.1s ease, border-color 0.1s ease;
+    }
+
+    .ui-entity-item:hover {
+        background: var(--surface-hover, rgba(255, 255, 255, 0.05));
+    }
+
+    .ui-entity-item.selected,
+    .ui-entity-item[data-selected="true"] {
+        background: var(--surface-selected, rgba(88, 166, 255, 0.15));
+        border-color: var(--accent);
+    }
+
+    .ui-entity-item-title {
+        font-weight: 500;
+        color: var(--ink);
+    }
+
+    .ui-entity-item-description {
+        font-size: 12px;
+        color: var(--ink-dim);
+    }
+
+    /* ------------------------------------------------------------------------- ui.DetailSurface */
+    .ui-detail-surface {
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        height: 100%;
+        overflow-y: auto;
+        box-sizing: border-box;
+    }
+
+    .ui-detail-surface-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .ui-detail-surface-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+        color: var(--ink);
+    }
+
+    .ui-detail-surface-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        min-height: 200px;
+        color: var(--ink-dim);
+        text-align: center;
+        gap: 8px;
+    }
+
+    .ui-detail-placeholder-title {
+        font-size: 16px;
+        font-weight: 500;
+        margin: 0;
+        color: var(--ink);
+    }
+
+    .ui-detail-placeholder-message {
+        font-size: 13px;
+        color: var(--ink-dim);
+    }
+
+    /* ------------------------------------------------------------------------- ui.PropertyGrid */
+    .ui-property-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 13px;
+    }
+
+    .ui-property-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 4px 0;
+        border-bottom: 1px solid var(--edge-dim, rgba(255, 255, 255, 0.05));
+    }
+
+    .ui-property-label {
+        font-weight: 500;
+        color: var(--ink-dim);
+    }
+
+    .ui-property-value {
+        font-weight: 400;
+        color: var(--ink);
+    }
+
+    /* ------------------------------------------------------------------------- ui.Table */
+    .ui-table {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        border: 1px solid var(--edge);
+        border-radius: 6px;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .ui-table-header {
+        display: flex;
+        align-items: center;
+        background: var(--surface-dim, rgba(255, 255, 255, 0.03));
+        border-bottom: 1px solid var(--edge);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink-dim);
+    }
+
+    .ui-table-header-cell {
+        flex: 1;
+        padding: 8px 12px;
+    }
+
+    .ui-table-rows {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ui-table-row {
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid var(--edge-dim, rgba(255, 255, 255, 0.05));
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .ui-table-row:last-child {
+        border-bottom: none;
+    }
+
+    .ui-table-row.selected {
+        background: var(--surface-selected, rgba(88, 166, 255, 0.15));
+    }
+
+    .ui-table-loading,
+    .ui-table-empty,
+    .ui-table-error {
+        padding: 16px;
+        text-align: center;
+        font-size: 13px;
+    }
+
+    /* ------------------------------------------------------------------------- ui.Field & ui.Label */
+    .ui-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .ui-label {
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink);
+    }
+
+    .ui-label-required {
+        color: var(--error);
+        margin-left: 2px;
+    }
+
+    .ui-field-control {
+        width: 100%;
+    }
+
+    .ui-field-hint {
+        font-size: 12px;
+        color: var(--ink-dim);
+    }
+
+    .ui-field-error {
+        font-size: 12px;
+        color: var(--error);
+    }
+
+    /* ------------------------------------------------------------------------- ui.Select */
+    .ui-select {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .ui-select-option {
+        padding: 4px 10px;
+        border-radius: 4px;
+        border: 1px solid var(--edge);
+        background: var(--surface);
+        color: var(--ink);
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .ui-select-option.selected {
+        background: var(--accent);
+        color: var(--on-accent, #fff);
+        border-color: var(--accent);
+    }
+
+    /* ------------------------------------------------------------------------- ui.ButtonRow */
+    .ui-button-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ui-button-row-end {
+        justify-content: flex-end;
+    }
+
+    .ui-button-row-start {
+        justify-content: flex-start;
+    }
+
+    .ui-button-row-center {
+        justify-content: center;
+    }
+
+    .ui-button-row-between {
+        justify-content: space-between;
+    }
+
+    /* ------------------------------------------------------------------------- ui.Dialog */
+    .ui-dialog {
+        border: 1px solid var(--edge);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--ink);
+        padding: 0;
+        max-width: 500px;
+        width: 100%;
+    }
+
+    .ui-dialog-content {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ui-dialog-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    /* ------------------------------------------------------------------------- ui.Form */
+    .ui-form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .ui-input,
+    .ui-textarea {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid var(--edge);
+        border-radius: 4px;
+        background: var(--surface);
+        color: var(--ink);
+        font-family: inherit;
+        font-size: 13px;
+        box-sizing: border-box;
+    }
+
+    .ui-input:focus,
+    .ui-textarea:focus {
+        border-color: var(--accent);
+        outline: none;
+    }
+
+    /* ------------------------------------------------------------------------- ui.ActionButton */
+    .ui-action-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid var(--edge);
+        background: var(--surface);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.1s ease, border-color 0.1s ease;
+    }
+
+    .ui-action-button:hover:not(:disabled) {
+        background: var(--surface-hover, rgba(255, 255, 255, 0.08));
+    }
+
+    .ui-action-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .ui-action-button.refused {
+        border-style: dashed;
+        color: var(--ink-dim);
+    }
+
+    /* ------------------------------------------------------------------------- ui.ActionCard */
+    .ui-action-card {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+        border: 1px solid var(--edge);
+        border-radius: 8px;
+        background: var(--surface);
+        box-sizing: border-box;
+    }
+
+    .ui-action-card-header {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .ui-action-card-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--ink);
+    }
+
+    .ui-action-card-consequence {
+        font-size: 13px;
+        color: var(--ink-dim);
+    }
+
+    .ui-action-card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ui-action-card-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .ui-action-card-result {
+        padding: 8px 12px;
+        background: rgba(46, 160, 67, 0.1);
+        border: 1px solid #2ea043;
+        border-radius: 6px;
+        color: #2ea043;
+        font-size: 13px;
+    }
+
+    .ui-action-card-error {
+        padding: 8px 12px;
+        background: rgba(248, 81, 73, 0.1);
+        border: 1px solid var(--error);
+        border-radius: 6px;
+        color: var(--error);
+        font-size: 13px;
+    }
+}

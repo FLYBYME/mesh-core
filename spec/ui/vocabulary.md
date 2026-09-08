@@ -39,7 +39,7 @@ is bundled into the kernel artifact and is not this.
 | `ui.ButtonRow` | component | the actions of a form or a detail | one primary action — that belongs to the header |
 | `ui.Dialog` | component | confirmation, and editing that must not lose the background | anything a view can show in place |
 
-**Ten components, one composite.** That ratio is the point: state is rare, and the components that
+**Eleven components, one composite** (plus `ui.ActionButton` and `ui.ActionCard`, making fourteen total: eleven components, three composites). That ratio is the point: state is rare, and the components that
 have none are the ones three unrelated views can share.
 
 `ui.Dialog` is a component because *whether it is open* belongs to whoever opened it, and

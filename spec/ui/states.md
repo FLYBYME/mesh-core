@@ -100,21 +100,13 @@ absence. If the response says refused, render §4, not §5.
 
 ## Where this lives in code
 
-`EntityListStatus` today is:
+`EntityListStatus` is:
 
 ```ts
-type EntityListStatus = 'idle' | 'loading' | 'error' | 'ready' | 'empty';
+type EntityListStatus = 'loading' | 'ready' | 'empty' | 'error';
 ```
 
-Five values, and **two of the five states cannot be expressed**: there is no `unauthenticated` and
-no `refused`. That is not a naming quibble — it is the mechanical reason every app invents its own
-handling for exactly the two states that are hardest to get right, and why they all differ.
-
-`idle` is also not a state a person can be in. Nothing is idle; it has either started loading or it
-is waiting for a session, and those are different.
-
-The vocabulary must carry all five, with the refusal reason as data, so a view that forgets one
-fails to compile rather than looking fine. Recorded as **U2** in [roadmap.md](../roadmap.md).
+Four values. `refused` and `unauthenticated` are **not list states** — they are answers to *may I*, which is `Availability`, and a list that cannot be read is a list whose read command is unavailable. Modelling them as list statuses is what made every app hand-roll them differently. `idle` is gone: it was `unauthenticated` wearing a costume. Resolved as **U2** in [roadmap.md](../roadmap.md).
 
 ## Conformance
 
