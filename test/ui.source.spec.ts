@@ -4,6 +4,11 @@
  * Separate from `ui.test.ts` because that file runs in a real browser, where `node:fs` is
  * externalised and the source cannot be read. This one runs under node.
  *
+ * **`.spec.ts`, and that is not a style choice.** The browser config collects every `.test.ts` file
+ * under `test/`, so a node-only file named `.test.ts` is picked up by *both* runners and fails in
+ * the browser one — which is exactly how it failed the first merge attempt. The extension is what
+ * keeps them apart.
+ *
  * Asserted over the text rather than by behaviour, because that is the only way it stays true. A
  * single `document.createElement` reintroduces the thing the rewrite deleted — `entityList.ts` was
  * 211 lines of imperative DOM, a `WeakMap<Element, HTMLElement>`, manual `header.remove()` and

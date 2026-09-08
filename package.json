@@ -8,7 +8,7 @@
         "generate": "mesh-serve client",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "test:browser": "vitest run --config vitest.browser.config.ts --no-file-parallelism",
-        "test:source": "vitest run --environment node test/ui.source.test.ts",
+        "test:source": "vitest run --environment node test/ui.source.spec.ts",
         "test": "npm run typecheck && npm run test:source && npm run test:browser",
         "dev": "mesh-serve dev"
     },
