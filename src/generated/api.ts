@@ -1,8 +1,8 @@
 // GENERATED FILE — do not edit.
 //
 // Emitted from chrome's mesh.json by `mesh-serve client`.
-// Exposure: sha256:15ee479083475af99f36e998e5d95f84
-// ShapeHash: sha256:b0b863724d925002afc3191f3839a121
+// Exposure: sha256:e688c519d8e27d34f03e8a63d28860b3
+// ShapeHash: sha256:74578259eb19faa63889693595c5a98f
 //
 // Regenerate rather than editing. The exposure and shape hashes above are checked at run time
 // against what the API reports, so a hand-edited client is a client that lies about a surface
@@ -998,10 +998,46 @@ export interface SiteGetOutput {
     readonly updatedAt: string;
 }
 
+export interface TelemIngestInputEvent {
+    readonly id?: string;
+    readonly timestamp?: number | string;
+    readonly type: "log" | "call" | "boot" | "error" | "request";
+    readonly level?: "debug" | "info" | "warn" | "error";
+    readonly message?: string;
+    readonly logger?: string;
+    readonly data?: Readonly<Record<string, unknown>>;
+    readonly key?: string;
+    readonly durationMs?: number;
+    readonly outcome?: "ok" | "error";
+    readonly errorKind?: string;
+    readonly status?: number;
+    readonly partId?: string;
+    readonly order?: number;
+    readonly bootStatus?: "mounted" | "failed" | "skipped";
+    readonly stack?: string;
+    readonly filename?: string;
+    readonly lineno?: number;
+    readonly colno?: number;
+    readonly method?: string;
+    readonly host?: string;
+    readonly path?: string;
+}
+
+export interface TelemIngestInput {
+    readonly sessionId: string;
+    readonly host?: string;
+    readonly events: readonly TelemIngestInputEvent[];
+}
+
+export interface TelemIngestOutput {
+    readonly accepted: number;
+    readonly dropped: number;
+}
+
 export const chromeApi = defineApi({
     id: "chrome",
-    exposure: "sha256:15ee479083475af99f36e998e5d95f84",
-    shapeHash: "sha256:b0b863724d925002afc3191f3839a121",
+    exposure: "sha256:e688c519d8e27d34f03e8a63d28860b3",
+    shapeHash: "sha256:74578259eb19faa63889693595c5a98f",
     base: "/api",
     calls: {
         /**
@@ -1214,5 +1250,11 @@ export const chromeApi = defineApi({
          * GET /sites/:id — auth: public
          */
         "site.get": call<SiteGetInput, SiteGetOutput, never>("GET", "/sites/:id", { kind: 'auth', level: 'public' }),
+        /**
+         * Ingest a batch of telemetry events from a browser session.
+         *
+         * POST /telem/ingest — auth: public
+         */
+        "telem.ingest": call<TelemIngestInput, TelemIngestOutput, never>("POST", "/telem/ingest", { kind: 'auth', level: 'public' }),
     },
 });

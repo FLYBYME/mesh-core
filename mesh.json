@@ -220,6 +220,30 @@
             ],
             "license": "UNLICENSED",
             "homepage": "https://github.com/FLYBYME/mesh-core"
+        },
+        {
+            "kind": "extension",
+            "id": "telem",
+            "version": "0.1.0",
+            "entry": "src/telem/index.ts",
+            "kernel": "^0.15",
+            "mesh": [
+                {
+                    "package": "@flybyme/mesh-serve",
+                    "version": "^0.1",
+                    "contracts": [
+                        "telem.ingest"
+                    ]
+                }
+            ],
+            "description": "The telem Extension: ship the browser's logs, calls and boot to the server.",
+            "keywords": [
+                "telem",
+                "telemetry",
+                "core"
+            ],
+            "license": "UNLICENSED",
+            "homepage": "https://github.com/FLYBYME/mesh-core"
         }
     ]
 }
