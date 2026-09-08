@@ -97,7 +97,7 @@ export function isBranchRef(ref: string): boolean {
 
 export interface OperatorApi {
     // Session & Auth
-    readonly auth?: AuthApi;
+    readonly auth?: AuthApi | undefined;
     readonly isSignedIn: ReadonlySignal<boolean>;
 
     // Shared Selection

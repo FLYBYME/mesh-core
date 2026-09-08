@@ -1,35 +1,64 @@
 import {
+    AUTH,
     computed,
+    type AuthApi,
     type Context,
     type Json,
+    type ReadonlySignal,
     type Signal,
 } from '@flybyme/mesh-web';
 
-import { chromeApi, type NodeStatusOutput } from '../generated/api.js';
+import {
+    chromeApi,
+    type GroupFindOutputItem,
+    type NodeFindOutputItem,
+    type NodeStatusOutput,
+    type PartFindOutputItem,
+    type PartVersionFindOutputItem,
+    type ReleaseFindOutputItem,
+    type SiteFindOutputItem,
+} from '../generated/api.js';
 import {
     CONSUMES,
-    CORE_SERVICES,
     NEEDS,
     type FleetNode,
 } from './contract.js';
+import { computeFleet, computeKnownServices } from './fleetModel.js';
 import { formatRoute, parseRoute } from '../nav/router.js';
 
 export interface OperatorStateBundle {
     readonly cx: Context<typeof NEEDS, typeof CONSUMES, typeof chromeApi>;
+    readonly auth?: AuthApi | undefined;
+    readonly isSignedIn: ReadonlySignal<boolean>;
     readonly selectedPartName: Signal<string | null>;
     readonly selectedVersionNumber: Signal<string | null>;
     readonly selectedReleaseHash: Signal<string | null>;
     readonly selectedHost: Signal<string | null>;
     readonly selectedHostname: Signal<string | null>;
     readonly selectedGroupName: Signal<string | null>;
+    readonly selectedNodeId: () => string | null;
     readonly activeView: Signal<'parts' | 'releases' | 'sites' | 'fleet'>;
     readonly nodeStatus: Signal<NodeStatusOutput | null>;
     readonly nodeStatusError: Signal<string | null>;
     readonly fleet: () => readonly FleetNode[];
     readonly knownServices: () => readonly string[];
+    readonly parts: () => readonly PartFindOutputItem[];
+    readonly versions: () => readonly PartVersionFindOutputItem[];
+    readonly releases: () => readonly ReleaseFindOutputItem[];
+    readonly sites: () => readonly SiteFindOutputItem[];
+    readonly nodes: () => readonly NodeFindOutputItem[];
+    readonly groups: () => readonly GroupFindOutputItem[];
+    readonly selectedPart: () => PartFindOutputItem | null;
+    readonly selectedVersion: () => PartVersionFindOutputItem | null;
+    readonly selectedRelease: () => ReleaseFindOutputItem | null;
+    readonly selectedSite: () => SiteFindOutputItem | null;
+    readonly selectedNode: () => FleetNode | null;
+    readonly selectedGroup: () => GroupFindOutputItem | null;
     readonly live: () => boolean;
     readonly status: () => 'idle' | 'loading' | 'ready' | 'error';
     readonly error: () => string | null;
+    readonly errorMessage: () => string | null;
+    readonly effectiveState: () => 'loading' | 'empty' | 'unauthenticated' | 'error' | 'ready';
     refresh(): Promise<void>;
     updateRoute(view: 'parts' | 'releases' | 'sites' | 'fleet', params?: Record<string, Json>): void;
 }
@@ -37,6 +66,17 @@ export interface OperatorStateBundle {
 export function createOperatorState(
     cx: Context<typeof NEEDS, typeof CONSUMES, typeof chromeApi>,
 ): OperatorStateBundle {
+    let auth: AuthApi | undefined;
+    try {
+        auth = cx.use(AUTH);
+    } catch {
+        auth = undefined;
+    }
+
+    const isSignedIn = computed<boolean>(() => {
+        if (auth !== undefined) return auth.session() !== null;
+        return true;
+    });
     const parts = cx.models('part');
     const selectedPartName = cx.state.signal<string | null>(null);
 
@@ -85,39 +125,8 @@ export function createOperatorState(
         return nodeStatusError();
     });
 
-    const fleet = (): readonly FleetNode[] => {
-        const observed = new Map((nodeStatus()?.nodes ?? []).map((n) => [n.hostname, n]));
-        return nodes.rows().map((row) => {
-            const seen = observed.get(row.hostname);
-            const srvs = row.services ?? [];
-            const running = seen?.runningServices ?? [];
-            const provisioned = seen?.provisionedServices
-                ?? (nodeStatus()?.hostname === row.hostname ? (nodeStatus()?.provisionedServices ?? []) : []);
-            return {
-                hostname: row.hostname,
-                services: srvs,
-                groups: row.groups ?? [],
-                connected: seen?.connected ?? false,
-                running,
-                provisioned,
-                missing: srvs.filter((s) => !running.includes(s)),
-                extra: running.filter((s) => !srvs.includes(s)),
-            };
-        });
-    };
-
-    const knownServices = (): readonly string[] => {
-        const all = new Set<string>();
-        for (const n of nodes.rows()) for (const s of n.services ?? []) all.add(s);
-        for (const g of groups.rows()) for (const s of g.services ?? []) all.add(s);
-        for (const n of nodeStatus()?.nodes ?? []) {
-            for (const s of n.runningServices ?? []) all.add(s);
-            for (const s of n.provisionedServices ?? []) all.add(s);
-        }
-        for (const s of nodeStatus()?.provisionedServices ?? []) all.add(s);
-        for (const core of CORE_SERVICES) all.delete(core);
-        return [...all].sort();
-    };
+    const fleet = (): readonly FleetNode[] => computeFleet(nodes.rows(), nodeStatus());
+    const knownServices = (): readonly string[] => computeKnownServices(nodes.rows(), groups.rows(), nodeStatus());
 
     const refresh = async (): Promise<void> => {
         const promises: Promise<unknown>[] = [];
@@ -219,22 +228,52 @@ export function createOperatorState(
         });
     }
 
+    const effectiveState = (): 'loading' | 'empty' | 'unauthenticated' | 'error' | 'ready' => {
+        if (!isSignedIn()) return 'unauthenticated';
+        const s = status();
+        if (s === 'loading') return 'loading';
+        if (s === 'error') return 'error';
+        const v = activeView();
+        if (v === 'parts' && parts.rows().length === 0) return 'empty';
+        if (v === 'releases' && releases.rows().length === 0) return 'empty';
+        if (v === 'sites' && sites.rows().length === 0) return 'empty';
+        if (v === 'fleet' && nodes.rows().length === 0) return 'empty';
+        return 'ready';
+    };
+
     return {
         cx,
+        auth,
+        isSignedIn,
         selectedPartName,
         selectedVersionNumber,
         selectedReleaseHash,
         selectedHost,
         selectedHostname,
         selectedGroupName,
+        selectedNodeId: () => selectedHostname(),
         activeView,
         nodeStatus,
         nodeStatusError,
         fleet,
         knownServices,
+        parts: () => parts.rows(),
+        versions: () => versions.rows(),
+        releases: () => releases.rows(),
+        sites: () => sites.rows(),
+        nodes: () => nodes.rows(),
+        groups: () => groups.rows(),
+        selectedPart: () => parts.rows().find((p) => p.name === selectedPartName()) ?? null,
+        selectedVersion: () => versions.rows().find((v) => v.version === selectedVersionNumber()) ?? null,
+        selectedRelease: () => releases.rows().find((r) => r.hash === selectedReleaseHash()) ?? null,
+        selectedSite: () => sites.rows().find((s) => s.host === selectedHost()) ?? null,
+        selectedNode: () => fleet().find((n) => n.hostname === selectedHostname()) ?? null,
+        selectedGroup: () => groups.rows().find((g) => g.name === selectedGroupName()) ?? null,
         live,
         status,
         error,
+        errorMessage: () => error(),
+        effectiveState,
         refresh,
         updateRoute,
     };
