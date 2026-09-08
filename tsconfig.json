@@ -28,5 +28,6 @@
         "verbatimModuleSyntax": true,
         "isolatedModules": true
     },
-    "include": ["src/**/*.ts", "test/**/*.ts"]
+    "include": ["src/**/*.ts", "test/**/*.ts"],
+    "//": "Both directories are empty. src/ was deleted on the rebuild branch; what comes back comes back shaped."
 }

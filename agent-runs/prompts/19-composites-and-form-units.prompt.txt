@@ -1,0 +1,193 @@
+You are **frank**. Sign every GitHub post you make with a last line of exactly:
+
+— frank
+
+An unsigned post is from the human. Never sign something you did not write.
+
+Tracking issue: FLYBYME/surfdns#<OPEN ONE AND PUT IT HERE — the human does this>
+Code lives in:  FLYBYME/mesh-core  — this worktree. All commits and the PR go here.
+
+================================================================================
+READ THIS FIRST. IT IS THE SPECIFICATION.
+================================================================================
+
+    ../mesh-web/spec/composite-components.md   the design. §3 is the rule, §5 is the contract
+    ../mesh-web/spec/view-layer.md             §3.1, which drew this line first
+    ../mesh-web/spec/components.md             how a component is published and styled
+    spec/ui/vocabulary.md                      the twelve, and what each is for
+    spec/ui/states.md                          the five states — §4 refused
+    spec/roadmap.md                            U1, U2, U3
+
+If a spec is wrong, fix it in the same PR and say what you changed. A spec that
+disagrees with working code is worse than no spec.
+
+================================================================================
+THREE CORRECTIONS TO THE SPEC, BEFORE YOU BELIEVE ITS NUMBERS
+================================================================================
+
+The spec was measured on 2026-09-08 against a tree that had already moved. Check
+each of these yourself before planning — if I am wrong, say so in your plan.
+
+**1. `src/fleet/index.ts` and `src/catalog/index.ts` ship nothing.**
+
+§2B's headline evidence — 503 lines in `src/fleet/index.ts`, 662 in
+`src/catalog/index.ts`, 11 signals and 7 commands in one `start(cx)` — is
+measured from four consoles that FLYBYME/surfdns#68 folded into `src/operator/`
+on 2026-09-07. `mesh.json` no longer declares them. **They are dead code awaiting
+deletion** (roadmap K2), and refactoring them would be work nobody ever runs.
+
+The living equivalent is **`src/operator/`**: twelve view files, six command
+files, `index.ts` at 187 lines holding only the manifest. The form-signal sprawl
+§2B describes is real and is still there — it moved into `src/operator/state.ts`
+and the command files. **Measure it again there and put the real numbers in your
+plan comment.** If the fold already fixed more of this than the spec assumes, that
+is the most useful thing you can report, and it changes the size of this job.
+
+**2. `src/ui/views/entityList.ts` IS live, and is the right first target.**
+
+211 lines of `document.createElement`, a `WeakMap<Element, HTMLElement>`, manual
+`header.remove()`, and `[data-status]` toggles — for a sidebar with a heading, a
+count and three presentation states. It is not a canvas and not a native dialog.
+By §3's rule it should never have been a `ComponentDefinition`. Start here.
+
+**3. §4B's `FormUnit` status repeats the exact bug #74 exists to fix.**
+
+    readonly status: ReadonlySignal<'idle' | 'submitting' | 'success' | 'error'>;
+
+There is no `refused`. `spec/ui/states.md` §4 requires a control that is visible,
+disabled, and labelled with the standing that is missing — and with no `refused`
+in the type, **a gate refusal renders as a failure**, which is a lie about a
+working platform told confidently. This is the same finding as
+`../mesh-operator/spec/views/action-card.md`, which counted five hand-rolled
+status types across five cards and proposed one:
+
+    type ActionStatus = 'idle' | 'running' | 'done' | 'refused' | 'failed';
+
+**Use that, not §4B's.** The verb that differs per form — `submitting`,
+`provisioning`, `releasing` — is a **label**, not a state. Fix §4B in the spec in
+this PR and say you did.
+
+================================================================================
+BEFORE YOU WRITE ANY CODE
+================================================================================
+
+INVESTIGATE, in this order:
+
+    src/ui/views/entityList.ts     the 211 lines, and what the WeakMap is for
+    src/ui/contract.ts             the twelve components and their props
+    src/ui/views/                  which others are composites wearing a primitive's clothes
+    src/operator/state.ts          where the form sprawl actually lives now
+    src/operator/commands/         submit handlers, and how they carry status today
+    ../mesh-web/src/render/        `when`, `each`, `text`, and how binding works
+
+POST YOUR PLAN as a comment before touching a file. It says which components you
+have classified as composites and which stay primitives, **with the reason for
+each** — §3's rule is *"a part only writes a ComponentDefinition if the component
+cannot be expressed using existing primitives."* Name the ones you are unsure
+about rather than guessing quietly. Keep it short; it is read on a phone.
+
+================================================================================
+WHAT TO BUILD
+================================================================================
+
+**A. Convert `ui.EntityList` to a composite.** A function returning a description
+tree, per §4A. Zero `document.createElement`, zero `WeakMap`, zero manual DOM
+syncing — the renderer's fine-grained binding does the work through `when()` and
+`text()`. The existing browser tests are the evidence it still behaves: they must
+pass **unchanged**.
+
+**B. One form unit, end to end.** §4B's shape, with `ActionStatus` above. Pick the
+form in `src/operator/` with the most signals and convert exactly that one. The
+application instantiates it in a line; the view file calls `unit.view()` instead
+of taking N signals as arguments.
+
+**One is enough this dispatch.** A pattern proved once against a real screen is
+worth more than five conversions that all inherit the same mistake, and the second
+one is cheap once the first is right.
+
+**C. Then classify the rest, and write it down.** Which of the twelve are
+composites, which are genuinely native, and which are undecided — as a table in
+`spec/ui/vocabulary.md`. That table is what makes §3's rule enforceable by a
+reviewer instead of a matter of taste.
+
+================================================================================
+DO NOT
+================================================================================
+
+  - **add a `CompositeDefinition` to the kernel.** §3 says a composite may be
+    "registered in `ComponentRegistry` **or exported as a typed function**", and
+    the function is free. Prove the pattern with plain functions first; a kernel
+    change is a different PR in a different repository and needs a reason this
+    dispatch has not yet produced.
+  - write `any`. `Context<any, any>` appears in §4B's example and must not reach
+    the code — this codebase exists because contracts could not be typed in the
+    last one, and `as any` is a bug here, not a style nit. If the context type is
+    genuinely unnameable, say so in a comment and in your closing report.
+  - refactor `src/catalog`, `src/releases`, `src/sites` or `src/fleet`. Dead code,
+    pending deletion, and touching it creates a merge conflict with that deletion.
+  - restyle anything. Replacing imperative construction with a description must
+    produce the same pixels; a visual change is a different PR.
+  - build `ActionCard` or `ActionButton`. Those are #74's, specified in
+    `../mesh-operator/spec/views/action-card.md`, and two agents inventing the
+    same component twice is exactly what this spec is against. Your job is the
+    layer they will be written in.
+  - widen scope — a second problem gets a NEW issue on FLYBYME/surfdns, signed
+    and linked, not a bigger PR
+  - delete, skip, or `.only` past a failing test
+  - push to master
+
+================================================================================
+FINISHING
+================================================================================
+
+    npm update @flybyme/mesh-web
+    npm run typecheck
+    npm test
+
+All three green from the worktree root.
+
+The evidence, and the last one matters most:
+
+  * every existing browser test passes **unchanged** — this is a refactor, and a
+    test you had to edit is a behaviour you changed
+  * `src/ui/views/entityList.ts` contains no `document.createElement` and no
+    `WeakMap`, and is materially shorter
+  * the converted form unit is tested **without a DOM** — that is §4A's third
+    claim and the whole practical argument for the layer. If it cannot be tested
+    headlessly, the abstraction is not finished, and say so rather than shipping it
+
+    git push origin HEAD:frank/composites-and-form-units
+    gh pr create --repo FLYBYME/mesh-core --head frank/composites-and-form-units \
+      --title "<what changed, not which issue>" --body "<what and why>
+
+    Refs FLYBYME/surfdns#<the issue>
+
+    — frank"
+
+Then comment that you are done, signed — link the PR, say what changed against
+the plan, give the real measurements from `src/operator/`, and list every
+component you classified as undecided and why.
+
+DO NOT MERGE THE PR. The human merges.
+
+================================================================================
+COMMENT AT LEAST TWICE. NEVER WAIT.
+================================================================================
+
+Two comments are the floor: the plan before any code, and the closing report.
+Post more whenever the picture changes — a wrong assumption, a second bug, a
+decision you took. They are the only trace of this run the human ever sees, and
+they read them on a phone.
+
+Nobody replies on GitHub. The human answers through a conversation with bob,
+not in a comment thread, so a run that halts pending a reply halts forever.
+When you would want a decision: say so in a comment with the options and which
+you would pick, CHOOSE ONE, say you are proceeding under that assumption, and
+keep going. Make it easy to undo — a separate commit, or a smaller change.
+
+If you get stuck, finish every part you still can, then post the closing
+comment anyway with the actual error text and what you ruled out. That comment
+is the one required output of a run, more than the PR is: a real diagnosis is
+useful, and silence is indistinguishable from a crash. If you produced no PR,
+say so and say why. A plausible-looking PR that does not work is worse than
+none — say plainly which you have.
