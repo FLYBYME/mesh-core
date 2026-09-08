@@ -19,7 +19,10 @@ export const Dialog: Component<DialogProps> = defineComponent<DialogProps>(
     (props) => dialog({
         open: props.open,
         props: {
-            title: props.title,
+            // Spread rather than assigned: under `exactOptionalPropertyTypes` an absent title and a
+            // title that is `undefined` are different things, and only the first is what "this
+            // dialog has no title" means.
+            ...(props.title === undefined ? {} : { title: props.title }),
             class: () => {
                 const extra = read(props.class);
                 return `ui-dialog${extra ? ` ${extra}` : ''}`;

@@ -69,7 +69,7 @@ export const Select: Component<SelectProps> = defineComponent<SelectProps>(
                 },
                 role: 'group',
                 'data-value': currentValue,
-                'data-name': () => read(props.name),
+                'data-name': () => read(props.name) ?? null,
             },
             ...(props.intents ? { intents: props.intents } : {}),
             children: optionNodes,

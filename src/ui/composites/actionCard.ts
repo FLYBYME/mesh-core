@@ -42,12 +42,12 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
         schema: jsonSchema,
         initialValues: props.initialValues,
         overrides: props.overrides,
-        disabled: () => running.get(),
+        disabled: () => running(),
     });
 
     const submit = async (): Promise<O | undefined> => {
         // Rule §3: cannot be fired twice while running
-        if (running.get()) {
+        if (running()) {
             return undefined;
         }
 
@@ -79,7 +79,7 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
         error.set(null);
 
         try {
-            const formValues = form.values.get();
+            const formValues = form.values();
             const res = await command.run(formValues);
             result.set(res);
             props.onResult?.(res);
@@ -101,7 +101,7 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
         const getPrimaryLabel = (): string => {
             const avail = command.available();
             const base = read(props.primaryLabel) ?? humanizeLabel(command.action);
-            if (running.get()) {
+            if (running()) {
                 return `${base}…`;
             }
             if (!avail.can) {
@@ -113,7 +113,7 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
 
         const isPrimaryDisabled = (): boolean => {
             const avail = command.available();
-            return !avail.can || running.get();
+            return !avail.can || running();
         };
 
         const primaryControlNode = element('Row', {
@@ -123,7 +123,7 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
                     props: {
                         class: () => {
                             const avail = command.available();
-                            const isRun = running.get();
+                            const isRun = running();
                             return `ui-button ui-button-primary ui-action-card-submit${isRun ? ' running' : ''}${!avail.can ? ' refused' : ''}`;
                         },
                         type: 'button',
@@ -159,7 +159,7 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
             children: [
                 element('Text', {
                     props: { class: 'ui-action-card-error-text' },
-                    children: [text(() => error.get() ?? 'Action failed.')],
+                    children: [text(() => error() ?? 'Action failed.')],
                 }),
             ],
         });
@@ -168,8 +168,8 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
             props: {
                 class: () => {
                     const extra = read(props.class);
-                    const isRun = running.get();
-                    const hasErr = Boolean(error.get());
+                    const isRun = running();
+                    const hasErr = Boolean(error());
                     return `ui-action-card${isRun ? ' running' : ''}${hasErr ? ' has-error' : ''}${extra ? ` ${extra}` : ''}`;
                 },
                 'data-action': command.action,
@@ -195,8 +195,8 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
                         primaryControlNode,
                     ],
                 }),
-                when(() => result.get() !== undefined, resultNode),
-                when(() => Boolean(error.get()), errorNode),
+                when(() => result() !== undefined, resultNode),
+                when(() => Boolean(error()), errorNode),
             ],
         });
     };

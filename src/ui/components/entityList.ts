@@ -96,7 +96,10 @@ export const EntityList: Component<EntityListProps> = defineComponent<EntityList
                 'aria-label': () => read(props.title) ?? 'Entity list',
                 width: () => {
                     const w = read(props.width);
-                    return w !== undefined ? String(w) : undefined;
+                    // `null`, not `undefined`: the renderer removes an attribute on null, and
+                    // `Reactive<Json>` has no undefined in it. Meaning the same thing two ways is
+                    // how a prop ends up rendering the string "undefined".
+                    return w !== undefined ? String(w) : null;
                 },
             },
             children: [

@@ -29,7 +29,7 @@ export const Label: Component<LabelProps> = defineComponent<LabelProps>(
                 },
                 'data-for': () => {
                     const f = read(props.for);
-                    return f !== undefined ? f : undefined;
+                    return f !== undefined ? f : null;
                 },
             },
             children: [
@@ -89,7 +89,7 @@ export const Field: Component<FieldProps> = defineComponent<FieldProps>(
                 },
                 'data-invalid': () => String(hasError()),
                 'data-required': () => String(Boolean(read(props.required))),
-                'data-field-name': () => read(props.name),
+                'data-field-name': () => read(props.name) ?? null,
             },
             children: [
                 when(hasLabel, labelNode),

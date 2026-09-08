@@ -29,7 +29,7 @@ export function createActionButton<I = void, O = void>(
 
     const run = async (): Promise<O | undefined> => {
         // Rule §3: cannot be fired twice while running
-        if (running.get()) {
+        if (running()) {
             return undefined;
         }
 
@@ -77,7 +77,7 @@ export function createActionButton<I = void, O = void>(
         const getLabel = (): string => {
             const avail = command.available();
             const base = read(props.label) ?? humanizeLabel(command.action);
-            if (running.get()) {
+            if (running()) {
                 return read(props.runningLabel) ?? `${base}…`;
             }
             if (!avail.can) {
@@ -89,14 +89,14 @@ export function createActionButton<I = void, O = void>(
 
         const isDisabled = (): boolean => {
             const avail = command.available();
-            return !avail.can || running.get();
+            return !avail.can || running();
         };
 
         return element('Button', {
             props: {
                 class: () => {
                     const avail = command.available();
-                    const isRun = running.get();
+                    const isRun = running();
                     const extra = read(props.class);
                     return `ui-action-button${isRun ? ' running' : ''}${!avail.can ? ' refused' : ''}${extra ? ` ${extra}` : ''}`;
                 },
@@ -104,7 +104,7 @@ export function createActionButton<I = void, O = void>(
                 disabled: isDisabled,
                 'aria-disabled': () => String(isDisabled()),
                 'data-action': command.action,
-                'data-running': () => String(running.get()),
+                'data-running': () => String(running()),
                 'data-refused': () => String(!command.available().can),
                 title: () => {
                     const avail = command.available();

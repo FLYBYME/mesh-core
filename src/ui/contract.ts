@@ -11,8 +11,8 @@
  */
 
 import type {
-    Availability, BoundCommand, CommandContract, ComponentContract, CompositeContract,
-    Confirmation, Intents, Json, Node, Reactive, Schema, Signal,
+    Availability, BoundCommand, ComponentContract, CompositeContract,
+    Confirmation, Intents, Json, Node, Reactive, ReadonlySignal, Schema, Signal,
 } from '@flybyme/mesh-web';
 import { schema } from '@flybyme/mesh-web';
 import type { JsonSchema, JsonSchemaProperty } from './schema.js';
@@ -71,18 +71,33 @@ export interface Composite<P, S> extends CompositeContract<P, S> {
     (props: P): S & { view(): Node };
 }
 
+/**
+ * **`name` is defined, not assigned.**
+ *
+ * Every function already has an own `name` property, and it is non-writable — so `Object.assign`
+ * throws `Cannot assign to read only property 'name'` in strict mode, which every ES module is.
+ * `defineProperty` overwrites it because it is configurable, which is the whole difference.
+ *
+ * It cost nothing to find and would have cost a lot to find later: the throw happens at module load,
+ * so the file that imports a component fails before any test in it runs, and the error names the
+ * arrow function rather than the component.
+ */
+const named = <T extends object>(fn: T, name: string): T => {
+    Object.defineProperty(fn, 'name', { value: name, configurable: true });
+    return fn;
+};
+
 export function defineComponent<P>(
     name: string,
     description: string,
     render: (props: P) => Node,
 ): Component<P> {
     const fn = (props: P): Node => render(props);
-    return Object.assign(fn, {
-        name,
+    return named(Object.assign(fn, {
         description,
         props: schema<P>(),
         render,
-    });
+    }), name) as Component<P>;
 }
 
 export function defineComposite<P, S>(
@@ -91,12 +106,11 @@ export function defineComposite<P, S>(
     create: (props: P) => S & { view(): Node },
 ): Composite<P, S> {
     const fn = (props: P): S & { view(): Node } => create(props);
-    return Object.assign(fn, {
-        name,
+    return named(Object.assign(fn, {
         description,
         props: schema<P>(),
         create,
-    });
+    }), name) as Composite<P, S>;
 }
 
 // ---------------------------------------------------------------------------- props: EntityList & EntityItem
@@ -310,8 +324,13 @@ export interface FormProps<T = Record<string, Json | undefined>> {
 export interface FormState<T = Record<string, Json | undefined>> {
     readonly values: Signal<T>;
     readonly errors: Signal<Record<string, string | undefined>>;
-    readonly dirty: Signal<boolean>;
-    readonly valid: Signal<boolean>;
+    /**
+     * Derived, therefore `ReadonlySignal`. Both are computed from `values` and `errors`, and a
+     * setter on either would let a caller assert a form is valid without making it so — which is
+     * the same shape of mistake as a writable signal on a published API.
+     */
+    readonly dirty: ReadonlySignal<boolean>;
+    readonly valid: ReadonlySignal<boolean>;
     readonly busy: Signal<boolean>;
     setField(name: keyof T, value: Json | undefined): void;
     validate(): boolean;

@@ -13,7 +13,7 @@ import {
     computed, element, read, signal, text, when,
 } from '@flybyme/mesh-web';
 import type {
-    HandlerId, Json, Node, Schema, Signal,
+    HandlerId, Json, Node, Schema,
 } from '@flybyme/mesh-web';
 import { ButtonRow } from '../components/buttonRow.js';
 import { Field } from '../components/field.js';
@@ -24,7 +24,7 @@ import {
 } from '../contract.js';
 import {
     getProperties, humanizeLabel, isPropertyRequired, parseDefaultValue,
-    type JsonSchema, type JsonSchemaProperty,
+    type JsonSchema,
 } from '../schema.js';
 
 function extractJsonSchema<T>(schemaOrWrapper: JsonSchema | Schema<T> | undefined): JsonSchema | undefined {
@@ -57,7 +57,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
 
     // Track dirty state
     const dirty = computed<boolean>(() => {
-        const current = values.get();
+        const current = values();
         for (const [k, v] of Object.entries(current)) {
             const initVal = initialRecord[k];
             if (v !== initVal) return true;
@@ -67,12 +67,12 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
 
     // Track validity
     const valid = computed<boolean>(() => {
-        const currentErrors = errors.get();
+        const currentErrors = errors();
         for (const err of Object.values(currentErrors)) {
             if (err) return false;
         }
         if (!rawSchema) return true;
-        const currentValues = values.get();
+        const currentValues = values();
         for (const name of Object.keys(properties)) {
             if (isPropertyRequired(rawSchema, name)) {
                 const v = currentValues[name];
@@ -83,11 +83,11 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
     });
 
     const setField = (name: keyof T, val: Json | undefined): void => {
-        const next = { ...values.get(), [name]: val };
+        const next = { ...values(), [name]: val };
         values.set(next);
 
         // Clear error on edit
-        const currentErrors = { ...errors.get() };
+        const currentErrors = { ...errors() };
         if (currentErrors[name as string]) {
             delete currentErrors[name as string];
             errors.set(currentErrors);
@@ -97,7 +97,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
     const validate = (): boolean => {
         const newErrors: Record<string, string | undefined> = {};
         if (rawSchema) {
-            const currentValues = values.get();
+            const currentValues = values();
             for (const [name, prop] of Object.entries(properties)) {
                 const req = isPropertyRequired(rawSchema, name);
                 const v = currentValues[name];
@@ -114,7 +114,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
         if (!validate()) return;
         busy.set(true);
         try {
-            await props.onSubmit?.(values.get());
+            await props.onSubmit?.(values());
         } finally {
             busy.set(false);
         }
@@ -156,14 +156,14 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                 : prop.description;
 
             const isDisabled = (): boolean => {
-                if (busy.get()) return true;
+                if (busy()) return true;
                 if (read(props.disabled)) return true;
                 if (override?.disabled !== undefined) return Boolean(read(override.disabled));
                 return false;
             };
 
-            const fieldValue = (): Json | undefined => (values.get() as Record<string, Json | undefined>)[name];
-            const fieldError = (): string | undefined => errors.get()[name];
+            const fieldValue = (): Json | undefined => (values() as Record<string, Json | undefined>)[name];
+            const fieldError = (): string | undefined => errors()[name];
 
             const ctx: FieldRenderContext<Json> = {
                 name,
@@ -188,7 +188,12 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
 
                         return Select({
                             name,
-                            value: fieldValue,
+                            // A `Select` shows a string or a number; a field with no value yet is
+                            // an empty selection, not the string "undefined".
+                            value: (): string | number | undefined => {
+                                const v = fieldValue();
+                                return typeof v === 'string' || typeof v === 'number' ? v : undefined;
+                            },
                             options: opts,
                             disabled: isDisabled,
                             placeholder,
@@ -338,7 +343,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                         props: {
                             class: 'ui-button ui-button-cancel',
                             type: 'button',
-                            disabled: () => busy.get() || Boolean(read(props.disabled)),
+                            disabled: () => busy() || Boolean(read(props.disabled)),
                         },
                         intents: {
                             activate: {
@@ -353,7 +358,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                         props: {
                             class: 'ui-button ui-button-primary ui-button-submit',
                             type: 'submit',
-                            disabled: () => busy.get() || Boolean(read(props.disabled)),
+                            disabled: () => busy() || Boolean(read(props.disabled)),
                         },
                         intents: {
                             activate: {
@@ -362,7 +367,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                         },
                         children: [
                             text(() => {
-                                if (busy.get()) return 'Saving…';
+                                if (busy()) return 'Saving…';
                                 return read(props.submitLabel) ?? 'Save';
                             }),
                         ],
@@ -379,7 +384,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
             props: {
                 class: () => {
                     const extra = read(props.class);
-                    const b = busy.get();
+                    const b = busy();
                     return `ui-form${b ? ' ui-form-busy' : ''}${extra ? ` ${extra}` : ''}`;
                 },
             },

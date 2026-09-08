@@ -64,11 +64,11 @@ export const PropertyGrid: Component<PropertyGridProps> = defineComponent<Proper
                 },
                 columns: () => {
                     const cols = read(props.columns);
-                    return cols !== undefined ? String(cols) : undefined;
+                    return cols !== undefined ? String(cols) : null;
                 },
                 gap: () => {
                     const g = read(props.gap);
-                    return g !== undefined ? g : undefined;
+                    return g !== undefined ? g : null;
                 },
             },
             children: [
