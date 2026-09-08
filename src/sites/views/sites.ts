@@ -16,6 +16,7 @@ import {
 import { renderForm } from '../../ui/views/schemaForm.js';
 import { SITE_FORM_SCHEMA, type SitesApi } from '../contract.js';
 import type { SiteFindOutputItem } from '../../generated/api.js';
+import { renderMeshExposureEditor } from './meshExposureEditor.js';
 
 const row = (children: readonly Described[], gap = '8px'): Described =>
     element('Row', {
@@ -183,9 +184,9 @@ function renderSiteDetail(app: SitesApi): Described {
                                                 placeholder: '{}',
                                             },
                                             mesh: {
-                                                label: 'Mesh Exposure (JSON)',
-                                                hint: 'List of exposed package contracts and events.',
-                                                placeholder: '[]',
+                                                label: 'Mesh Exposure',
+                                                hint: 'Exposed API contracts and events granted to this site. Compared against deployed release requirements.',
+                                                renderControl: () => renderMeshExposureEditor(app),
                                             },
                                         },
                                         renderActions: (defaultActions: () => Described): Described => element('Stack', {

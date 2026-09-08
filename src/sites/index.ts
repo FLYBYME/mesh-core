@@ -6,7 +6,12 @@ import {
     type ViewDecl,
 } from '@flybyme/mesh-web';
 
-import { chromeApi, type SiteFindOutputItem } from '../generated/api.js';
+import {
+    chromeApi,
+    type ReleaseFindOutputItem,
+    type SiteFindOutputItem,
+    type SiteFindOutputItemMeshItem,
+} from '../generated/api.js';
 import {
     CONSUMES,
     NEEDS,
@@ -42,6 +47,11 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
         { id: 'sites.reset', title: 'Sites: Reset Form' },
         { id: 'sites.setDeployReleaseInput', title: 'Sites: Set Deploy Release Input' },
         { id: 'sites.deploySelected', title: 'Sites: Deploy Release to Selected Site' },
+        { id: 'sites.toggleGrant', title: 'Sites: Toggle Contract Grant' },
+        { id: 'sites.setGrantGate', title: 'Sites: Set Contract Gate' },
+        { id: 'sites.setMeshFilter', title: 'Sites: Set Mesh Filter' },
+        { id: 'sites.setMeshSearch', title: 'Sites: Set Mesh Search' },
+        { id: 'sites.toggleRawMesh', title: 'Sites: Toggle Raw Mesh JSON' },
     ];
 
     readonly views: readonly ViewDecl<Record<string, never>, SitesApi>[] = [
@@ -57,6 +67,7 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
 
     async start(cx: Context<typeof NEEDS, typeof CONSUMES, typeof chromeApi>): Promise<SitesApi> {
         const sites = cx.models('site');
+        const releases = cx.models('release');
 
         const selectedHost = cx.state.signal<string | null>(null);
         const formTitle = cx.state.signal<string>('');
@@ -66,6 +77,10 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
         const formPolicy = cx.state.signal<string>('{}');
         const formMesh = cx.state.signal<string>('[]');
         const deployReleaseInput = cx.state.signal<string>('');
+
+        const meshFilter = cx.state.signal<'all' | 'granted' | 'required' | 'unused'>('all');
+        const meshSearch = cx.state.signal<string>('');
+        const showRawMesh = cx.state.signal<boolean>(false);
 
         const busy = cx.state.signal<boolean>(false);
         const lastAction = cx.state.signal<string | null>(null);
@@ -98,6 +113,12 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             return sites.rows().find((s) => s.host === host) ?? null;
         };
 
+        const activeRelease = (): ReleaseFindOutputItem | null => {
+            const s = selectedSite();
+            if (s === null || !s.releaseHash) return null;
+            return releases.rows().find((r) => r.hash === s.releaseHash) ?? null;
+        };
+
         const populateForm = (s: SiteFindOutputItem | null): void => {
             if (s === null) {
                 formTitle.set('');
@@ -115,6 +136,9 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
                 formMesh.set(JSON.stringify(s.mesh ?? [], null, 2));
             }
             deployReleaseInput.set('');
+            meshFilter.set('all');
+            meshSearch.set('');
+            showRawMesh.set(false);
         };
 
         const isDirty = (): boolean => {
@@ -312,6 +336,84 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             }
         };
 
+        const toggleGrant = (key: string): void => {
+            let list: SiteFindOutputItemMeshItem[] = [];
+            try {
+                const parsed = JSON.parse(formMesh() || '[]');
+                if (Array.isArray(parsed)) list = JSON.parse(JSON.stringify(parsed));
+            } catch {
+                list = [];
+            }
+
+            let found = false;
+            for (let i = 0; i < list.length; i++) {
+                const pkgItem = list[i];
+                if (!pkgItem) continue;
+                const contracts = (pkgItem.contracts ?? []).filter((c) => {
+                    if (c.key === key) {
+                        found = true;
+                        return false;
+                    }
+                    return true;
+                });
+                list[i] = { ...pkgItem, contracts };
+            }
+            list = list.filter((p) => (p.contracts && p.contracts.length > 0) || (p.events && p.events.length > 0));
+
+            if (!found) {
+                const callDecl = (chromeApi.calls as Record<string, { gate?: { level?: string } }>)[key];
+                const rawLevel = callDecl?.gate?.level;
+                const gateLevel: 'public' | 'user' | 'admin' | 'operator' =
+                    (rawLevel === 'user' || rawLevel === 'admin' || rawLevel === 'operator') ? rawLevel : 'public';
+                const pkgName = key.split('.')[0] || 'mesh-core';
+                let targetPkg = list.find((p) => p.package === pkgName);
+                if (!targetPkg) {
+                    targetPkg = { package: pkgName, version: '*', contracts: [] };
+                    list.push(targetPkg);
+                }
+                const updatedContracts = [...(targetPkg.contracts ?? []), { key, auth: gateLevel }];
+                const idx = list.indexOf(targetPkg);
+                list[idx] = { ...targetPkg, contracts: updatedContracts };
+            }
+
+            formMesh.set(JSON.stringify(list, null, 2));
+        };
+
+        const setGrantGate = (key: string, gate: 'public' | 'user' | 'admin' | 'operator'): void => {
+            let list: SiteFindOutputItemMeshItem[] = [];
+            try {
+                const parsed = JSON.parse(formMesh() || '[]');
+                if (Array.isArray(parsed)) list = JSON.parse(JSON.stringify(parsed));
+            } catch {
+                list = [];
+            }
+            let found = false;
+            for (let i = 0; i < list.length; i++) {
+                const pkgItem = list[i];
+                if (!pkgItem) continue;
+                const contracts = (pkgItem.contracts ?? []).map((c) => {
+                    if (c.key === key) {
+                        found = true;
+                        return { ...c, auth: gate };
+                    }
+                    return c;
+                });
+                list[i] = { ...pkgItem, contracts };
+            }
+            if (!found) {
+                const pkgName = key.split('.')[0] || 'mesh-core';
+                let targetPkg = list.find((p) => p.package === pkgName);
+                if (!targetPkg) {
+                    targetPkg = { package: pkgName, version: '*', contracts: [] };
+                    list.push(targetPkg);
+                }
+                const updatedContracts = [...(targetPkg.contracts ?? []), { key, auth: gate }];
+                const idx = list.indexOf(targetPkg);
+                list[idx] = { ...targetPkg, contracts: updatedContracts };
+            }
+            formMesh.set(JSON.stringify(list, null, 2));
+        };
+
         cx.commands.implement('sites.select', async (hostVal?: Json) => {
             if (typeof hostVal === 'string') await select(hostVal);
         });
@@ -337,12 +439,45 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
                 await deploy(host, rel);
             }
         });
+        cx.commands.implement('sites.toggleGrant', (keyVal?: Json) => {
+            if (typeof keyVal === 'string') toggleGrant(keyVal);
+        });
+        cx.commands.implement('sites.setGrantGate', (keyVal?: Json, gateVal?: Json) => {
+            if (typeof keyVal === 'string' && (gateVal === 'public' || gateVal === 'user' || gateVal === 'admin' || gateVal === 'operator')) {
+                setGrantGate(keyVal, gateVal);
+            }
+        });
+        cx.commands.implement('sites.setMeshFilter', (filterVal?: Json) => {
+            if (filterVal === 'all' || filterVal === 'granted' || filterVal === 'required' || filterVal === 'unused') {
+                meshFilter.set(filterVal);
+            }
+        });
+        cx.commands.implement('sites.setMeshSearch', (searchVal?: Json) => {
+            if (typeof searchVal === 'string') {
+                meshSearch.set(searchVal);
+            } else if (typeof document !== 'undefined') {
+                const el = document.querySelector('.input-mesh-search');
+                if (el instanceof HTMLInputElement) {
+                    meshSearch.set(el.value);
+                }
+            }
+        });
+        cx.commands.implement('sites.toggleRawMesh', () => {
+            showRawMesh.set(!showRawMesh());
+        });
 
         if (sites.status() !== 'idle') {
             try {
                 await sites.refetch();
             } catch {
                 // Error captured in sites.error()
+            }
+        }
+        if (releases.status() !== 'idle') {
+            try {
+                await releases.refetch();
+            } catch {
+                // Error captured in releases.error()
             }
         }
 
@@ -358,6 +493,8 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             sitesStatus: sites.status,
             sitesError,
             live: sites.live,
+            releases: releases.rows,
+            activeRelease,
             selectedHost,
             selectedSite,
             formTitle,
@@ -367,6 +504,9 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             formPolicy,
             formMesh,
             deployReleaseInput,
+            meshFilter,
+            meshSearch,
+            showRawMesh,
             isDirty,
             writeSupported,
             busy,
@@ -378,6 +518,8 @@ export default class SitesApp implements Application<typeof NEEDS, typeof CONSUM
             save,
             reset,
             deploy,
+            toggleGrant,
+            setGrantGate,
         };
     }
 }
