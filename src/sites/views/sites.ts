@@ -16,6 +16,7 @@ import {
 import { renderForm } from '../../ui/views/schemaForm.js';
 import { SITE_FORM_SCHEMA, type SitesApi } from '../contract.js';
 import type { SiteFindOutputItem } from '../../generated/api.js';
+import { renderMeshExposureEditor } from './meshExposureEditor.js';
 
 const row = (children: readonly Described[], gap = '8px'): Described =>
     element('Row', {
@@ -154,7 +155,7 @@ function renderSiteDetail(app: SitesApi): Described {
                                     }),
                                     onFieldChange: 'sites.setField',
                                     onSubmit: 'sites.save',
-                                    submitLabel: 'Save Site Changes',
+                                    submitLabel: () => (app.busy() ? 'Saving...' : 'Save Site Changes'),
                                     disabled: () => !app.writeSupported() || app.busy(),
                                     overrides: {
                                         fields: {
@@ -183,9 +184,9 @@ function renderSiteDetail(app: SitesApi): Described {
                                                 placeholder: '{}',
                                             },
                                             mesh: {
-                                                label: 'Mesh Exposure (JSON)',
-                                                hint: 'List of exposed package contracts and events.',
-                                                placeholder: '[]',
+                                                label: 'Mesh Exposure',
+                                                hint: 'Exposed API contracts and events granted to this site. Compared against deployed release requirements.',
+                                                renderControl: () => renderMeshExposureEditor(app),
                                             },
                                         },
                                         renderActions: (defaultActions: () => Described): Described => element('Stack', {
@@ -286,16 +287,17 @@ function renderSiteDetail(app: SitesApi): Described {
                                         element('Button', {
                                             props: {
                                                 class: 'btn-deploy-release',
-                                                style: {
+                                                style: () => ({
                                                     padding: '6px 14px',
                                                     fontSize: '12px',
                                                     fontWeight: '600',
-                                                    cursor: 'pointer',
-                                                },
+                                                    cursor: app.busy() ? 'not-allowed' : 'pointer',
+                                                    opacity: app.busy() ? 0.7 : 1,
+                                                }),
                                                 disabled: () => app.busy(),
                                             },
                                             intents: { activate: { action: command('sites.deploySelected') } },
-                                            children: [text('Deploy Release')],
+                                            children: [text(() => (app.busy() ? 'Deploying...' : 'Deploy Release'))],
                                         }),
                                     ],
                                 }),

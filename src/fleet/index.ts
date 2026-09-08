@@ -307,10 +307,12 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
                         const msg = `This repository is not permitted: "${repository}" is not in the allowlist (MESH_PROVISION_ALLOWED_REPOSITORIES).`;
                         provisionError.set(msg);
                         lastAction.set(msg);
+                        cx.notifications.error(msg);
                     } else {
                         const msg = `Provisioning failed (${err.kind}): ${detail || err.kind}`;
                         provisionError.set(msg);
                         lastAction.set(msg);
+                        cx.notifications.error(msg);
                     }
                 }
             } catch (e) {
@@ -318,6 +320,7 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
                 const msg = `Provisioning error: ${e instanceof Error ? e.message : String(e)}`;
                 provisionError.set(msg);
                 lastAction.set(msg);
+                cx.notifications.error(msg);
             } finally {
                 busy.set(false);
                 await refresh();
@@ -353,7 +356,9 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
                         ? `${what}: started ${started.length}, stopped ${stopped.length}.`
                         : `${what}: saved. ${hostname} is not connected, so it will take effect when it returns.`);
                 } else {
-                    lastAction.set(`${what} failed: ${result.error.kind}`);
+                    const msg = `${what} failed: ${result.error.kind}`;
+                    lastAction.set(msg);
+                    cx.notifications.error(msg);
                 }
             } finally {
                 busy.set(false);
@@ -428,7 +433,9 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
                         : `Reconciled ${String(applied.length)}; ${String(failed.length)} failed: `
                           + failed.map((r) => `${r.hostname} (${r.error ?? "unknown"})`).join(", "));
                 } else {
-                    lastAction.set(`Reconcile failed: ${result.error.kind}`);
+                    const msg = `Reconcile failed: ${result.error.kind}`;
+                    lastAction.set(msg);
+                    cx.notifications.error(msg);
                 }
             } finally {
                 busy.set(false);

@@ -98,5 +98,5 @@ export interface CatalogApi {
 
 export const CATALOG: ProviderToken<CatalogApi> = provider<CatalogApi>('catalog');
 
-export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation');
+export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation', 'notifications');
 export const CONSUMES = consumes();

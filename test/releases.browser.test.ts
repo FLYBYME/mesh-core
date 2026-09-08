@@ -533,4 +533,33 @@ describe('ReleasesApp', () => {
         expect(problemItems[1]?.textContent).toContain('Part ui (^0.2.0) requires chrome');
         expect(problemItems[2]?.textContent).toContain('Unsatisfied peer dependency: auth');
     });
+
+    it('renders independent scroll regions for sites and releases in the left pane', async () => {
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'releases', contribution: ReleasesApp },
+            ],
+        });
+        site = s;
+
+        const sidebar = document.querySelector('.releases-sidebar');
+        expect(sidebar).not.toBeNull();
+
+        const sitesScroll = document.querySelector('.releases-sidebar-sites');
+        expect(sitesScroll).not.toBeNull();
+        expect(sitesScroll?.getAttribute('data-mesh-scrollview')).toBeDefined();
+
+        const releasesScroll = document.querySelector('.releases-sidebar-releases');
+        expect(releasesScroll).not.toBeNull();
+        expect(releasesScroll?.getAttribute('data-mesh-scrollview')).toBeDefined();
+
+        // Sites are inside the sites scroll region
+        const siteItems = sitesScroll?.querySelectorAll('.site-item');
+        expect(siteItems?.length).toBe(MOCK_SITES.length);
+
+        // Releases are inside the releases scroll region
+        const releaseItems = releasesScroll?.querySelectorAll('.release-item');
+        expect(releaseItems?.length).toBe(MOCK_RELEASES.length);
+    });
 });

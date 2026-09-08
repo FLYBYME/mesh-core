@@ -419,7 +419,9 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
                 const detail = 'detail' in res.error && typeof res.error.detail === 'string'
                     ? res.error.detail
                     : res.error.kind;
-                composeError.set(`Composition failed (${res.error.kind}): ${detail}`);
+                const msg = `Composition failed (${res.error.kind}): ${detail}`;
+                composeError.set(msg);
+                cx.notifications.error(msg);
             }
         };
 
@@ -447,7 +449,9 @@ export default class ReleasesApp implements Application<typeof NEEDS, readonly [
                 const detail = 'detail' in res.error && typeof res.error.detail === 'string'
                     ? res.error.detail
                     : res.error.kind;
-                deployError.set(`Deploy failed (${res.error.kind}): ${detail}`);
+                const msg = `Deploy failed (${res.error.kind}): ${detail}`;
+                deployError.set(msg);
+                cx.notifications.error(msg);
             }
         };
 

@@ -9,7 +9,7 @@ import {
     type Signal,
 } from '@flybyme/mesh-web';
 
-import type { SiteFindOutputItem } from '../generated/api.js';
+import type { ReleaseFindOutputItem, SiteFindOutputItem } from '../generated/api.js';
 import type { JsonSchema } from '../ui/contract.js';
 
 /**
@@ -66,6 +66,9 @@ export interface SitesApi {
     readonly selectedHost: Signal<string | null>;
     readonly selectedSite: () => SiteFindOutputItem | null;
 
+    readonly releases: ReadonlySignal<readonly ReleaseFindOutputItem[]>;
+    readonly activeRelease: () => ReleaseFindOutputItem | null;
+
     /** Editable form field signals */
     readonly formTitle: Signal<string>;
     readonly formDescription: Signal<string>;
@@ -74,6 +77,10 @@ export interface SitesApi {
     readonly formPolicy: Signal<string>;
     readonly formMesh: Signal<string>;
     readonly deployReleaseInput: Signal<string>;
+
+    readonly meshFilter: Signal<'all' | 'granted' | 'required' | 'unused'>;
+    readonly meshSearch: Signal<string>;
+    readonly showRawMesh: Signal<boolean>;
 
     /** Whether the form has unsaved modifications compared to selectedSite */
     readonly isDirty: () => boolean;
@@ -94,9 +101,11 @@ export interface SitesApi {
     save(): Promise<void>;
     reset(): Promise<void>;
     deploy(host: string, releaseHash: string): Promise<void>;
+    toggleGrant(contractKey: string): void;
+    setGrantGate(contractKey: string, gate: 'public' | 'user' | 'admin' | 'operator'): void;
 }
 
 export const SITES: ProviderToken<SitesApi> = provider<SitesApi>('sites');
 
-export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation');
+export const NEEDS = needs('models', 'mesh', 'state', 'commands', 'windows', 'log', 'confirmation', 'notifications');
 export const CONSUMES = consumes();

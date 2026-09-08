@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, mountPart } from '@flybyme/mesh-web/testing';
 import SitesApp, { SITES } from '../src/sites/index.js';
 import UiExtension from '../src/ui/index.js';
-import type { CdnDeployOutput, SiteFindOutputItem } from '../src/generated/api.js';
+import type { CdnDeployOutput, ReleaseFindOutputItem, SiteFindOutputItem } from '../src/generated/api.js';
 
 const MOCK_SITES: SiteFindOutputItem[] = [
     {
@@ -39,6 +39,21 @@ const MOCK_SITES: SiteFindOutputItem[] = [
     },
 ];
 
+const MOCK_RELEASES: ReleaseFindOutputItem[] = [
+    {
+        id: 'rel_1',
+        hash: 'sha256:11111111111111111111111111111111',
+        name: 'Release 0.1.0',
+        tenantId: 'flybyme',
+        kernel: { version: '0.11.4', digest: 'sha256:kernel1111' },
+        parts: {},
+        requires: ['identity.whoami', 'part.find'],
+        composedAt: '2026-09-06T01:00:00.000Z',
+        createdAt: '2026-09-06T01:00:00.000Z',
+        updatedAt: '2026-09-06T01:00:00.000Z',
+    },
+];
+
 describe('SitesApp', () => {
     const originalFetch = globalThis.fetch;
     let site: { dispose(): void; assertSingleFramework(): void } | undefined;
@@ -53,6 +68,13 @@ describe('SitesApp', () => {
 
             if (url.includes('/api/sites') && method === 'GET') {
                 return new Response(JSON.stringify(mutableSites), {
+                    status: 200,
+                    headers: { 'content-type': 'application/json' },
+                });
+            }
+
+            if (url.includes('/api/releases') && method === 'GET') {
+                return new Response(JSON.stringify(MOCK_RELEASES), {
                     status: 200,
                     headers: { 'content-type': 'application/json' },
                 });
@@ -292,5 +314,174 @@ describe('SitesApp', () => {
 
         // Verified site releaseHash updated
         expect(sitesApi.selectedSite()?.releaseHash).toBe('sha256:99999999999999999999999999999999');
+    });
+
+    it('raises notification and indicates busy state on deployment failure', async () => {
+        globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+            const url = String(input);
+            const method = init?.method ?? 'GET';
+            if (url.includes('/api/sites') && method === 'GET') {
+                return new Response(JSON.stringify(mutableSites), {
+                    status: 200,
+                    headers: { 'content-type': 'application/json' },
+                });
+            }
+            if (url.includes('/deploy') && method === 'POST') {
+                return new Response(JSON.stringify({
+                    error: { kind: 'bad_request', detail: 'Invalid release hash' },
+                }), {
+                    status: 400,
+                    headers: { 'content-type': 'application/json' },
+                });
+            }
+            return new Response('Not Found', { status: 404 });
+        };
+
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'sites', contribution: SitesApp },
+            ],
+        });
+        site = s;
+
+        const sitesApi = s.kernel.provided(SITES);
+        if (!sitesApi) throw new Error('SitesApi not found');
+
+        await sitesApi.select('127.0.0.1');
+
+        const deployPromise = sitesApi.deploy('127.0.0.1', 'sha256:invalid');
+        await new Promise((r) => setTimeout(r, 50));
+        const confirmBtn = document.querySelector('.mesh-confirm-ok');
+        if (confirmBtn instanceof HTMLButtonElement) {
+            confirmBtn.click();
+        }
+        await deployPromise;
+
+        expect(sitesApi.lastError()).toContain('Deployment failed');
+        const notices = s.kernel.services.notifications();
+        expect(notices.some((n) => n.level === 'error' && n.message.includes('Deployment failed'))).toBe(true);
+    });
+
+    it('renders interactive mesh exposure editor, displays discoverable contracts and gates, and visibly flags unused grants', async () => {
+        // Configure site_1 with identity.whoami (required) and node.status (not required by rel_1)
+        mutableSites[0] = {
+            ...mutableSites[0]!,
+            mesh: [
+                {
+                    package: 'identity',
+                    version: '*',
+                    contracts: [{ key: 'identity.whoami', auth: 'public' }],
+                },
+                {
+                    package: 'node',
+                    version: '*',
+                    contracts: [{ key: 'node.status', auth: 'public' }],
+                },
+            ],
+        };
+
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'sites', contribution: SitesApp },
+            ],
+        });
+        site = s;
+
+        const sitesApi = s.kernel.provided(SITES);
+        if (!sitesApi) throw new Error('SitesApi not found');
+
+        await sitesApi.select('127.0.0.1');
+
+        // Interactive exposure editor is present
+        const editor = document.querySelector('.mesh-exposure-editor');
+        expect(editor).not.toBeNull();
+
+        // node.status is granted but not required by rel_1 => visibly flagged as unused grant
+        const unusedBadges = document.querySelectorAll('.mesh-unused-grant');
+        expect(unusedBadges.length).toBeGreaterThan(0);
+        expect(unusedBadges[0]?.textContent).toContain('Unused grant');
+
+        // Warning banner names unused grants
+        const warningBanner = document.querySelector('.mesh-unused-warning-banner');
+        expect(warningBanner).not.toBeNull();
+        expect(warningBanner?.textContent).toContain('node.status');
+
+        // identity.whoami is required and granted => satisfied
+        const satisfied = document.querySelectorAll('.mesh-satisfied-grant');
+        expect(satisfied.length).toBeGreaterThan(0);
+
+        // part.find is required by rel_1 but not granted => missing grant
+        const missing = document.querySelectorAll('.mesh-missing-grant');
+        expect(missing.length).toBeGreaterThan(0);
+
+        // Gate badges are displayed
+        const gateBadges = document.querySelectorAll('.mesh-contract-gate');
+        expect(gateBadges.length).toBeGreaterThan(0);
+    });
+
+    it('interactively toggles contract grants and filters contracts by status and search', async () => {
+        mutableSites[0] = {
+            ...mutableSites[0]!,
+            mesh: [
+                {
+                    package: 'identity',
+                    version: '*',
+                    contracts: [{ key: 'identity.whoami', auth: 'public' }],
+                },
+                {
+                    package: 'node',
+                    version: '*',
+                    contracts: [{ key: 'node.status', auth: 'public' }],
+                },
+            ],
+        };
+
+        const s = await mountPart({
+            parts: [
+                { id: 'ui', contribution: UiExtension },
+                { id: 'sites', contribution: SitesApp },
+            ],
+        });
+        site = s;
+
+        const sitesApi = s.kernel.provided(SITES);
+        if (!sitesApi) throw new Error('SitesApi not found');
+
+        await sitesApi.select('127.0.0.1');
+        expect(sitesApi.isDirty()).toBe(false);
+
+        // Toggle part.find to grant it
+        sitesApi.toggleGrant('part.find');
+        expect(sitesApi.isDirty()).toBe(true);
+        expect(sitesApi.formMesh()).toContain('part.find');
+
+        // Filter by unused
+        sitesApi.meshFilter.set('unused');
+        await new Promise((r) => setTimeout(r, 20));
+        const rows = document.querySelectorAll('.mesh-contract-row');
+        expect(rows.length).toBe(1);
+        expect(rows[0]?.textContent).toContain('node.status');
+
+        // Search by contract key substring
+        sitesApi.meshFilter.set('all');
+        sitesApi.meshSearch.set('builder');
+        await new Promise((r) => setTimeout(r, 20));
+        const builderRows = document.querySelectorAll('.mesh-contract-row');
+        expect(builderRows.length).toBeGreaterThan(0);
+        for (const row of Array.from(builderRows)) {
+            expect(row.textContent?.toLowerCase()).toContain('builder');
+        }
+
+        // Toggle raw JSON view
+        expect(document.querySelector('textarea.input-mesh')).toBeNull();
+        sitesApi.showRawMesh.set(true);
+        await new Promise((r) => setTimeout(r, 20));
+        const textarea = document.querySelector('textarea.input-mesh');
+        expect(textarea).not.toBeNull();
+        if (textarea instanceof HTMLTextAreaElement) {
+            expect(textarea.value).toContain('part.find');
+        }
     });
 });

@@ -7,7 +7,7 @@ import {
     type PageChrome,
 } from '@flybyme/mesh-web';
 
-export const NEEDS = needs('chrome', 'log', 'commands', 'state');
+export const NEEDS = needs('chrome', 'log', 'commands', 'state', 'notifications');
 export const CONSUMES = consumes(AUTH);
 export const EMPTY_CONSUMES = consumes();
 

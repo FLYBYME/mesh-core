@@ -150,16 +150,18 @@ export function renderRangeResolverCard(app: CatalogApi): Described {
                     element('Button', {
                         props: {
                             class: 'btn-run-resolve',
-                            style: {
+                            disabled: () => app.resolveStatus() === 'resolving',
+                            style: () => ({
                                 padding: '5px 14px',
                                 borderRadius: '4px',
                                 background: 'var(--accent, #58a6ff)',
                                 border: 'none',
                                 color: 'var(--on-accent, #0d1117)',
                                 fontWeight: '600',
-                                cursor: 'pointer',
+                                cursor: app.resolveStatus() === 'resolving' ? 'not-allowed' : 'pointer',
+                                opacity: app.resolveStatus() === 'resolving' ? 0.7 : 1,
                                 fontSize: '12px',
-                            },
+                            }),
                         },
                         intents: { activate: { action: command('catalog.runResolve') } },
                         children: [text(() => (app.resolveStatus() === 'resolving' ? 'Resolving...' : 'Resolve Range'))],

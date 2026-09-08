@@ -68,23 +68,57 @@ function renderReleasesHeader(app: ReleasesApi): Described {
 }
 
 function renderLeftPane(app: ReleasesApi): Described {
-    return element('ScrollView', {
+    return element('Stack', {
         props: {
-            orientation: 'vertical',
             class: 'releases-sidebar',
             style: {
+                display: 'flex',
+                flexDirection: 'column',
                 flex: '0 0 340px',
                 borderRight: '1px solid var(--edge, #30363d)',
                 background: 'var(--surface, #161b22)',
-                padding: '12px',
                 boxSizing: 'border-box',
                 height: '100%',
+                overflow: 'hidden',
             },
         },
         children: [
-            renderSitesSection(app),
-            element('Divider', { props: { orientation: 'horizontal', style: { marginBottom: '16px' } } }),
-            renderReleasesSection(app),
+            element('ScrollView', {
+                props: {
+                    orientation: 'vertical',
+                    class: 'releases-sidebar-sites',
+                    style: {
+                        flex: '1 1 50%',
+                        minHeight: '0',
+                        padding: '12px',
+                        boxSizing: 'border-box',
+                    },
+                },
+                children: [
+                    renderSitesSection(app),
+                ],
+            }),
+            element('Divider', {
+                props: {
+                    orientation: 'horizontal',
+                    style: { flex: '0 0 auto', margin: '0' },
+                },
+            }),
+            element('ScrollView', {
+                props: {
+                    orientation: 'vertical',
+                    class: 'releases-sidebar-releases',
+                    style: {
+                        flex: '1 1 50%',
+                        minHeight: '0',
+                        padding: '12px',
+                        boxSizing: 'border-box',
+                    },
+                },
+                children: [
+                    renderReleasesSection(app),
+                ],
+            }),
         ],
     });
 }

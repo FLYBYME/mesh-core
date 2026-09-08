@@ -254,7 +254,9 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
                 const detail = 'detail' in res.error && typeof res.error.detail === 'string'
                     ? res.error.detail
                     : res.error.kind;
-                resolveError.set(`Resolution failed (${res.error.kind}): ${detail}`);
+                const msg = `Resolution failed (${res.error.kind}): ${detail}`;
+                resolveError.set(msg);
+                cx.notifications.error(msg);
             }
         };
 
@@ -306,7 +308,9 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
                 const detail = 'detail' in res.error && typeof res.error.detail === 'string'
                     ? res.error.detail
                     : res.error.kind;
-                importError.set(`Import failed (${res.error.kind}): ${detail}`);
+                const msg = `Import failed (${res.error.kind}): ${detail}`;
+                importError.set(msg);
+                cx.notifications.error(msg);
             }
         };
 
@@ -381,7 +385,9 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
                 const detail = 'detail' in res.error && typeof res.error.detail === 'string'
                     ? res.error.detail
                     : res.error.kind;
-                declarationError.set(`Failed to save declaration (${res.error.kind}): ${detail}`);
+                const msg = `Failed to save declaration (${res.error.kind}): ${detail}`;
+                declarationError.set(msg);
+                cx.notifications.error(msg);
             }
         };
 
@@ -419,7 +425,9 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
                 const detail = 'detail' in res.error && typeof res.error.detail === 'string'
                     ? res.error.detail
                     : res.error.kind;
-                partReleaseError.set(`Release failed (${res.error.kind}): ${detail}`);
+                const msg = `Release failed (${res.error.kind}): ${detail}`;
+                partReleaseError.set(msg);
+                cx.notifications.error(msg);
             }
         };
 
@@ -433,7 +441,9 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
             const repo = p?.repository ?? importRepoUrl().trim();
             if (!repo) {
                 repoReleaseStatus.set('error');
-                repoReleaseError.set('No repository specified. Select a part or enter a repository URL.');
+                const msg = 'No repository specified. Select a part or enter a repository URL.';
+                repoReleaseError.set(msg);
+                cx.notifications.error(msg);
                 return;
             }
 
@@ -462,7 +472,9 @@ export default class CatalogApp implements Application<typeof NEEDS, readonly []
                 const detail = 'detail' in res.error && typeof res.error.detail === 'string'
                     ? res.error.detail
                     : res.error.kind;
-                repoReleaseError.set(`Repository release failed (${res.error.kind}): ${detail}`);
+                const msg = `Repository release failed (${res.error.kind}): ${detail}`;
+                repoReleaseError.set(msg);
+                cx.notifications.error(msg);
             }
         };
 
