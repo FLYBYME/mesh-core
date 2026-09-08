@@ -81,7 +81,7 @@ export interface TelemOptions {
     readonly maxBatchSize?: number | undefined;
     readonly maxBufferSize?: number | undefined;
     readonly flushIntervalMs?: number | undefined;
-    readonly sendBeacon?: ((url: string, data: BodyInit) => boolean) | undefined;
+    readonly sendBeacon?: (((url: string, data: BodyInit) => boolean) | null) | undefined;
     readonly fetch?: ((url: string, init?: RequestInit) => Promise<Response>) | undefined;
     readonly now?: (() => number) | undefined;
     readonly generateId?: (() => string) | undefined;

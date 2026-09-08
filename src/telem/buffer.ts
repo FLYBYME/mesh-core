@@ -113,6 +113,7 @@ export interface EventBuffer {
     drain(maxCount?: number): readonly TelemEventInput[];
     size(): number;
     droppedCount(): number;
+    recordDropped(count: number): void;
     clear(): void;
 }
 
@@ -145,6 +146,12 @@ export function createEventBuffer(maxCapacity = 500): EventBuffer {
 
         droppedCount(): number {
             return dropped;
+        },
+
+        recordDropped(count: number): void {
+            if (count > 0) {
+                dropped += count;
+            }
         },
 
         clear(): void {

@@ -116,14 +116,16 @@ export class TelemExtension implements Extension<typeof NEEDS, typeof CONSUMES, 
                     events,
                 };
 
-                await sendTelemetryBatch(payload, {
+                const ok = await sendTelemetryBatch(payload, {
                     endpoint,
                     isClosing,
                     sendBeacon: this.#options.sendBeacon,
                     fetch: this.#options.fetch,
                 });
-                // If sendTelemetryBatch fails, events are already drained and dropped:
-                // a failing endpoint degrades to dropping events, not to retrying forever.
+                if (!ok) {
+                    // Failing endpoint degrades to dropping events, not to retrying forever
+                    buffer.recordDropped(events.length);
+                }
             } catch {
                 // Never rethrow
             } finally {

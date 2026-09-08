@@ -3,7 +3,7 @@ import type { TelemIngestInput } from './contract.js';
 export interface TransportOptions {
     readonly endpoint: string;
     readonly isClosing?: boolean | undefined;
-    readonly sendBeacon?: ((url: string, data: BodyInit) => boolean) | undefined;
+    readonly sendBeacon?: (((url: string, data: BodyInit) => boolean) | null) | undefined;
     readonly fetch?: ((url: string, init?: RequestInit) => Promise<Response>) | undefined;
 }
 
@@ -16,8 +16,9 @@ export async function sendTelemetryBatch(
 
     if (options.isClosing) {
         // Tab closing / unload path: prioritize sendBeacon to survive tab destruction
-        const beaconFn = options.sendBeacon
-            ?? (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function'
+        const beaconFn = options.sendBeacon !== undefined
+            ? (options.sendBeacon ?? undefined)
+            : (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function'
                 ? navigator.sendBeacon.bind(navigator)
                 : undefined);
 
