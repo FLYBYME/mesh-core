@@ -9,6 +9,10 @@ and **K** for the chromes, so a reference like U2 is unambiguous across reposito
 
 ## Track U — the UI design
 
+**U1, U2 and U3 are one issue — FLYBYME/surfdns#74** — because they are one shape: *a rule every
+screen must follow, with nothing in the vocabulary to follow it with.* All three have already been
+broken in exactly the way the gap predicts. U4 is separate and is a decision, not a component.
+
 ### U1 — There are no design tokens
 
 Colour, type scale and spacing exist only as literal values in `src/ui/ui.css`. Nothing is named,
@@ -69,18 +73,29 @@ Decided.
 
 ## Track K — the chromes
 
-### K1 — The app-spec format lives here and should not
+### K1 — The app-spec format lives here and should not · **unblocked 2026-09-07**
 
 `spec/apps/README.md` defines what an app spec contains. mesh-operator writes specs to it too, and
 neither repository owns it. It belongs in `mesh-web/spec/` beside `application.md`, which already
 defines what an Application *is*.
 
-Not moved while a dispatch is reading it at this path. Also recorded as O1 in mesh-operator.
+~~Not moved while a dispatch is reading it at this path.~~ **The dispatch merged (#68). Nothing is
+reading it at this path any more, so the stated reason not to move it is gone.** Move it, leave a
+pointer behind, and update the four specs that cite it. Also recorded as O1 in mesh-operator.
 
-### K2 — The operator app moves to mesh-operator once it is one unit
+### K2 — The operator app moves to mesh-operator · **unblocked 2026-09-07**
 
-Four intertwined applications now; a directory rename once the fold lands. mesh-core keeps the
-shell, the chromes and the design system; mesh-operator keeps the management apps.
+~~Four intertwined applications now; a directory rename once the fold lands.~~ **The fold landed.**
+`src/operator/` is one application: `index.ts` at 187 lines holding only the manifest, twelve view
+files and six command files, every one under 300, with `test/operator.spec.test.ts` checking the app
+against its own spec. `mesh.json` no longer declares catalog, releases, sites or fleet.
+
+So this is now the directory rename it was always going to become, with one thing standing in front
+of it: **`src/catalog`, `src/releases`, `src/sites` and `src/fleet` are still on disk.** They ship
+nothing, but their 32 browser tests are the only browser coverage of that behaviour and were never
+ported onto the folded app — which has conformance coverage and no browser coverage. **Port the
+tests, then delete the four, then rename.** Deleting first trades a merge for a hole in the suite.
 
 The split that follows: **mesh-core is the design system and the two chromes. mesh-operator is
-everything a platform is operated with.** `spec/apps/operator.md` moves with the code.
+everything a platform is operated with.** `spec/apps/operator.md` has already moved ahead of the
+code, which is the right order.
