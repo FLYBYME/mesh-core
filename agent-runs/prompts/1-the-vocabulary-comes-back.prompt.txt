@@ -1,0 +1,167 @@
+You are **frank**. Sign every GitHub post you make with a last line of exactly:
+
+— frank
+
+An unsigned post is from the human. Never sign something you did not write.
+
+Code lives in:  FLYBYME/mesh-core  — this worktree, branched from `rebuild`.
+
+================================================================================
+THIS REPOSITORY IS EMPTY ON PURPOSE
+================================================================================
+
+`src/` was deleted on 2026-09-08 — 17,096 lines. Everything is in the history
+and none of it is coming back as it was. You are writing the first code of the
+rebuild, and what you write is the pattern everything after it copies.
+
+    git log --oneline -3
+
+should show the deletion and the cleanup. `spec/` survived, and it is the brief.
+
+================================================================================
+READ THIS FIRST. IT IS THE SPECIFICATION.
+================================================================================
+
+    spec/ui/vocabulary.md    ★ THE TARGET. What to build and how it is sorted
+    spec/ui/states.md        the states a view answers
+    spec/ui/rules.md         the nine rules. §3 busy, §4 refused, §6 no JSON textarea, §7 confirm
+    spec/ui/anatomy.md       HEADER / INDEX / DETAIL / FOOTER
+    spec/ui/responsive.md    no `isMobile`; `cx.display.size()`; NARROW = 720
+    spec/ui/words.md         what things are called on screen
+
+    ../surfdns/log/2026-09-08/shapes.md    the approved design. §2.3 is yours
+    ../mesh-web/src/contribution/api.ts    ComponentContract, CompositeContract, Availability
+
+If a spec is wrong, fix it in the same PR and say what you changed. A spec that
+disagrees with working code is worse than no spec.
+
+================================================================================
+THE TASK
+================================================================================
+
+Build `src/ui` — the design system — as **components and composites**, never as
+`ComponentDefinition`s.
+
+    A component has no logic. Props in, description out.
+    A composite has state. Created per use, renders itself.
+
+`spec/ui/vocabulary.md` sorts all fourteen for you: **ten components, one
+composite (`ui.Form`), plus `ui.ActionButton` and `ui.ActionCard` which are new
+and are composites.** Build them in that document's language and do not
+re-litigate the sort — if one is wrong, say so in a comment and fix the spec
+with the code.
+
+**Nothing in `src/ui` may call `document.createElement`.** The old `entityList.ts`
+was 211 lines of imperative DOM, a `WeakMap<Element, HTMLElement>`, manual
+`header.remove()` and `[data-status]` toggles — for a sidebar with a heading, a
+count and three states. That is the thing being deleted. Assert it with a test
+over the source, because it is the only way it stays true.
+
+================================================================================
+THE TWO THAT ARE NEW, AND WHY THEY MATTER MOST
+================================================================================
+
+**`ui.ActionButton`** takes a **command** and nothing else. A command now carries
+`available(): Availability` and, when it needs one, `confirm`. So:
+
+  * refused → visible, disabled, labelled with `why` (states §4)
+  * running → says what it is doing, cannot be fired twice (rules §3)
+  * confirmable → asks first (rules §7)
+
+None of that is the caller's to remember. **Getting it wrong should take effort.**
+This one component closes what the roadmap called U2 and U3, and they were one
+gap wearing two names.
+
+**`ui.ActionCard`** is a command with inputs: title, the consequence in a
+sentence, the fields, one primary control, and the result or the error in place.
+
+**Generate the fields from the command's input schema.** `CommandContract.input`
+carries JSON Schema precisely so a form does not have to be written by hand —
+that is rules §6 (*never a bare `<textarea>` of JSON*) and it is why `PeopleApi`
+ended up carrying twelve loose form buffers. Where the schema genuinely
+under-describes an interaction, hand-write **one field**, not the whole form.
+
+================================================================================
+STATES
+================================================================================
+
+    type EntityListStatus = 'loading' | 'ready' | 'empty' | 'error';
+
+Four. Not the old five and not three. `refused` and `unauthenticated` are **not
+list states** — they are answers to *may I*, which is `Availability`, and a list
+you may not read is a list whose read command is unavailable. Modelling them as
+statuses is what made every app hand-roll them differently. `idle` is gone: it
+was `unauthenticated` wearing a costume.
+
+================================================================================
+DO NOT
+================================================================================
+
+  - write `ComponentDefinition`. That is for native primitives — canvas, an
+    editor, a native dialog — and none of these fourteen is one
+  - write `any`. This codebase exists because contracts could not be typed in
+    the last one
+  - build an app, a chrome, or auth. Those come after, and they are built out
+    of this
+  - restyle. There is no design to preserve, but there is also no brief for a
+    new one: neutral, and the tokens question (roadmap U1) is a separate PR
+  - push to master, or branch from master. Branch from `rebuild`
+
+================================================================================
+FINISHING
+================================================================================
+
+    npm install
+    npm run typecheck
+    npm test
+
+All three green from the worktree root. `@flybyme/mesh-web` is pinned to commit
+`6e00df9`, which is where `ComponentContract` and `Availability` live. If it
+resolves to anything else, stop and say so.
+
+The evidence:
+
+  * no file in `src/ui` contains `document.createElement` — asserted by a test
+    that reads the source
+  * a component renders with no DOM at all, in a unit test. If a component
+    cannot be tested headlessly it is a composite, or it is wrong
+  * an `ActionButton` given a refused command renders disabled **with the
+    reason** and does not dispatch
+  * a running command cannot be fired twice
+  * a form generated from a schema produces the right fields
+
+    git push origin HEAD:frank/ui-components-and-composites
+    gh pr create --repo FLYBYME/mesh-core --base rebuild --head frank/ui-components-and-composites \
+      --title "<what changed, not which issue>" --body "<what and why>
+
+    — frank"
+
+**Base the PR on `rebuild`, not master.**
+
+Then comment that you are done, signed — say which of the fourteen turned out to
+be sorted wrong, if any, and what the form generator could not derive from a
+schema.
+
+DO NOT MERGE THE PR. The human merges.
+
+================================================================================
+COMMENT AT LEAST TWICE. NEVER WAIT.
+================================================================================
+
+Two comments are the floor: the plan before any code, and the closing report.
+Post more whenever the picture changes — a wrong assumption, a second bug, a
+decision you took. They are the only trace of this run the human ever sees, and
+they read them on a phone.
+
+Nobody replies on GitHub. The human answers through a conversation with bob,
+not in a comment thread, so a run that halts pending a reply halts forever.
+When you would want a decision: say so in a comment with the options and which
+you would pick, CHOOSE ONE, say you are proceeding under that assumption, and
+keep going. Make it easy to undo — a separate commit, or a smaller change.
+
+If you get stuck, finish every part you still can, then post the closing
+comment anyway with the actual error text and what you ruled out. That comment
+is the one required output of a run, more than the PR is: a real diagnosis is
+useful, and silence is indistinguishable from a crash. If you produced no PR,
+say so and say why. A plausible-looking PR that does not work is worse than
+none — say plainly which you have.
