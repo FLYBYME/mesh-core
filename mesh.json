@@ -50,90 +50,6 @@
             "homepage": "https://github.com/FLYBYME/mesh-core"
         },
         {
-            "kind": "application",
-            "id": "catalog",
-            "version": "0.2.13",
-            "entry": "src/catalog/index.ts",
-            "kernel": "^0.15",
-            "requiredParts": [
-                {
-                    "id": "ui",
-                    "version": "^0.1"
-                }
-            ],
-            "mesh": [
-                {
-                    "package": "@flybyme/mesh-serve",
-                    "version": "^0.1",
-                    "contracts": [
-                        "part.find",
-                        "part.get",
-                        "part.count",
-                        "partVersion.find",
-                        "partVersion.get",
-                        "partVersion.count",
-                        "catalog.resolve",
-                        "catalog.declare",
-                        "builder.import_repo",
-                        "builder.release_part",
-                        "builder.release_repo"
-                    ]
-                }
-            ],
-            "description": "Browse the platform catalog: inspect parts, versions, provenance, authors, repositories, and resolve version requirements.",
-            "keywords": [
-                "catalog",
-                "parts",
-                "versions",
-                "packages",
-                "core",
-                "console"
-            ],
-            "license": "UNLICENSED",
-            "homepage": "https://github.com/FLYBYME/mesh-core"
-        },
-        {
-            "kind": "application",
-            "id": "releases",
-            "version": "0.2.12",
-            "entry": "src/releases/index.ts",
-            "kernel": "^0.15",
-            "requiredParts": [
-                {
-                    "id": "ui",
-                    "version": "^0.2"
-                }
-            ],
-            "mesh": [
-                {
-                    "package": "@flybyme/mesh-serve",
-                    "version": "^0.1",
-                    "contracts": [
-                        "release.find",
-                        "release.get",
-                        "release.count",
-                        "site.find",
-                        "site.get",
-                        "site.count",
-                        "cdn.compose",
-                        "cdn.deploy"
-                    ]
-                }
-            ],
-            "description": "Compose immutable releases from version ranges, dry-run dependency resolutions, deploy to hostnames, and roll back.",
-            "keywords": [
-                "releases",
-                "deploy",
-                "rollback",
-                "cdn",
-                "sites",
-                "core",
-                "console"
-            ],
-            "license": "UNLICENSED",
-            "homepage": "https://github.com/FLYBYME/mesh-core"
-        },
-        {
             "kind": "extension",
             "id": "auth",
             "version": "0.3.8",
@@ -161,9 +77,9 @@
         },
         {
             "kind": "application",
-            "id": "fleet",
-            "version": "0.2.4",
-            "entry": "src/fleet/index.ts",
+            "id": "operator",
+            "version": "0.1.0",
+            "entry": "src/operator/index.ts",
             "kernel": "^0.15",
             "requiredParts": [
                 {
@@ -176,6 +92,27 @@
                     "package": "@flybyme/mesh-serve",
                     "version": "^0.1",
                     "contracts": [
+                        "part.find",
+                        "part.get",
+                        "part.count",
+                        "partVersion.find",
+                        "partVersion.get",
+                        "partVersion.count",
+                        "catalog.resolve",
+                        "catalog.declare",
+                        "builder.import_repo",
+                        "builder.release_part",
+                        "builder.release_repo",
+                        "release.find",
+                        "release.get",
+                        "release.count",
+                        "site.find",
+                        "site.get",
+                        "site.count",
+                        "site.create",
+                        "cdn.compose",
+                        "cdn.deploy",
+                        "cdn.site_edit",
                         "node.find",
                         "node.get",
                         "node.count",
@@ -191,47 +128,13 @@
                     ]
                 }
             ],
-            "description": "The fleet: which machines exist, what each should be running, and what each actually is.",
+            "description": "Unified operator console for catalog parts, releases, sites, and fleet management.",
             "keywords": [
-                "fleet",
-                "nodes",
                 "operator",
-                "console",
-                "core"
-            ],
-            "license": "UNLICENSED",
-            "homepage": "https://github.com/FLYBYME/mesh-core"
-        },
-        {
-            "kind": "application",
-            "id": "sites",
-            "version": "0.1.6",
-            "entry": "src/sites/index.ts",
-            "kernel": "^0.15",
-            "requiredParts": [
-                {
-                    "id": "ui",
-                    "version": "^0.2"
-                }
-            ],
-            "mesh": [
-                {
-                    "package": "@flybyme/mesh-serve",
-                    "version": "^0.1",
-                    "contracts": [
-                        "site.find",
-                        "site.get",
-                        "site.count",
-                        "cdn.deploy",
-                        "site.create",
-                        "cdn.site_edit"
-                    ]
-                }
-            ],
-            "description": "The site editor: configure site metadata, themes, policies, and deployments.",
-            "keywords": [
+                "catalog",
+                "releases",
                 "sites",
-                "editor",
+                "fleet",
                 "console",
                 "core"
             ],

@@ -4,6 +4,8 @@
  * Imports no sibling and no kernel modules.
  */
 
+import type { Json } from '@flybyme/mesh-web';
+
 export interface ChromeWindowLike {
     readonly id: string;
     readonly owner: string;
@@ -14,6 +16,7 @@ export interface ChromeWindowLike {
 export interface Route {
     readonly owner?: string;
     readonly view: string;
+    readonly params?: Readonly<Record<string, Json>>;
 }
 
 export function parseRoute(hash: string): Route | null {
@@ -23,21 +26,90 @@ export function parseRoute(hash: string): Route | null {
     if (clean.startsWith('/')) clean = clean.slice(1);
     if (!clean) return null;
 
-    const segments = clean.split('/').filter((s) => s.length > 0);
+    const [pathPart = '', queryPart] = clean.split('?');
+    const segments = pathPart.split('/').filter((s) => s.length > 0);
     const first = segments[0];
     if (first === undefined) return null;
 
+    const params: Record<string, Json> = {};
+    if (queryPart !== undefined && queryPart.length > 0) {
+        const sp = new URLSearchParams(queryPart);
+        for (const [key, val] of sp.entries()) {
+            params[key] = val;
+        }
+    }
+
     if (segments.length === 1) {
-        return { view: first };
+        return { view: first, params };
     }
 
     const owner = first;
     const view = segments.slice(1).join('/');
-    return { owner, view };
+    return { owner, view, params };
 }
 
-export function formatRoute(view: string): string {
-    return `#/${view}`;
+export function formatRoute(
+    routeOrView: Route | string,
+    maybeParams?: Readonly<Record<string, Json>>,
+): string {
+    let owner: string | undefined;
+    let view: string;
+    let params: Readonly<Record<string, Json>> | undefined;
+
+    if (typeof routeOrView === 'string') {
+        if (routeOrView.includes('?')) {
+            const parsed = parseRoute(routeOrView);
+            if (parsed !== null) {
+                owner = parsed.owner;
+                view = parsed.view;
+                params = { ...parsed.params, ...maybeParams };
+            } else {
+                let clean = routeOrView;
+                if (clean.startsWith('#')) clean = clean.slice(1);
+                if (clean.startsWith('/')) clean = clean.slice(1);
+                const [pathPart = ''] = clean.split('?');
+                const segments = pathPart.split('/').filter((s) => s.length > 0);
+                if (segments.length > 1) {
+                    owner = segments[0];
+                    view = segments.slice(1).join('/');
+                } else {
+                    view = segments[0] ?? '';
+                }
+                params = maybeParams;
+            }
+        } else {
+            let clean = routeOrView;
+            if (clean.startsWith('#')) clean = clean.slice(1);
+            if (clean.startsWith('/')) clean = clean.slice(1);
+            const segments = clean.split('/').filter((s) => s.length > 0);
+            if (segments.length > 1) {
+                owner = segments[0];
+                view = segments.slice(1).join('/');
+            } else {
+                view = segments[0] ?? '';
+            }
+            params = maybeParams;
+        }
+    } else {
+        owner = routeOrView.owner;
+        view = routeOrView.view;
+        params = routeOrView.params ?? maybeParams;
+    }
+
+    const path = owner !== undefined ? `#/${owner}/${view}` : `#/${view}`;
+    if (params !== undefined && Object.keys(params).length > 0) {
+        const sp = new URLSearchParams();
+        for (const [k, v] of Object.entries(params)) {
+            if (v !== undefined && v !== null) {
+                sp.set(k, String(v));
+            }
+        }
+        const qs = sp.toString();
+        if (qs) {
+            return `${path}?${qs}`;
+        }
+    }
+    return path;
 }
 
 export function findMatchingWindow<T extends ChromeWindowLike>(
@@ -78,8 +150,8 @@ export class HashRouter {
         return parseRoute(this.currentHash);
     }
 
-    push(view: string): void {
-        const formatted = formatRoute(view);
+    push(routeOrView: Route | string, params?: Readonly<Record<string, Json>>): void {
+        const formatted = formatRoute(routeOrView, params);
         if (this._current === formatted) return;
         this._current = formatted;
         if (this._win !== undefined && this._win.location.hash !== formatted) {
@@ -87,8 +159,8 @@ export class HashRouter {
         }
     }
 
-    replace(view: string): void {
-        const formatted = formatRoute(view);
+    replace(routeOrView: Route | string, params?: Readonly<Record<string, Json>>): void {
+        const formatted = formatRoute(routeOrView, params);
         this._current = formatted;
         if (this._win !== undefined && this._win.location.hash !== formatted) {
             this._win.history.replaceState(null, '', formatted);
