@@ -65,8 +65,10 @@ export default class FleetApp implements Application<typeof NEEDS, typeof CONSUM
             id: "fleet",
             title: "Fleet",
             instances: "one",
-            defaultSize: { width: 980, height: 640 },
-            minSize: { width: 520, height: 380 },
+            window: {
+                defaultSize: { width: 980, height: 640 },
+                minSize: { width: 520, height: 380 },
+            },
             render: renderFleetView,
         },
     ];
