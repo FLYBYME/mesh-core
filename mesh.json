@@ -1,0 +1,44 @@
+{
+    "kernel": "^0.16",
+    "parts": [
+        {
+            "kind": "extension",
+            "id": "auth",
+            "version": "0.1.0",
+            "entry": "src/auth/index.ts",
+            "kernel": "^0.16",
+            "description": "The credential seam: holds the session, attaches the ticket, handles revocation. A site that has no accounts does not load it.",
+            "keywords": ["auth", "session", "identity"],
+            "license": "UNLICENSED",
+            "homepage": "https://github.com/FLYBYME/mesh-core"
+        },
+        {
+            "kind": "application",
+            "id": "identity",
+            "version": "0.1.0",
+            "entry": "src/identity/index.ts",
+            "kernel": "^0.16",
+            "requiredParts": [
+                { "id": "auth", "version": "^0.1" }
+            ],
+            "description": "Who may act, and where. Organizations, their members, and the roles those members hold.",
+            "keywords": ["identity", "organizations", "access"],
+            "license": "UNLICENSED",
+            "homepage": "https://github.com/FLYBYME/mesh-core",
+            "mesh": [
+                {
+                    "package": "@flybyme/mesh-serve",
+                    "consumes": [
+                        "organization.find",
+                        "organization.create",
+                        "membership.find",
+                        "membership.create",
+                        "membership.delete",
+                        "role.find",
+                        "identity.whoami"
+                    ]
+                }
+            ]
+        }
+    ]
+}

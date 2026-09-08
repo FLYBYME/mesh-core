@@ -14,7 +14,7 @@
     },
     "devDependencies": {
         "@flybyme/mesh-serve": "file:../mesh-serve",
-        "@flybyme/mesh-web": "github:FLYBYME/mesh-web#1109b1c",
+        "@flybyme/mesh-web": "github:FLYBYME/mesh-web#b1965d7",
         "@vitest/browser": "^2.1.9",
         "playwright": "^1.62.1",
         "typescript": "^5.9.3",
