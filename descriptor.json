@@ -1,8 +1,8 @@
 {
     "application": "chrome",
     "base": "/api",
-    "exposure": "sha256:15ee479083475af99f36e998e5d95f84",
-    "shapeHash": "sha256:b0b863724d925002afc3191f3839a121",
+    "exposure": "sha256:e688c519d8e27d34f03e8a63d28860b3",
+    "shapeHash": "sha256:74578259eb19faa63889693595c5a98f",
     "calls": [
         {
             "key": "builder.import_repo",
@@ -4740,6 +4740,184 @@
             "domain": "site",
             "action": "get",
             "description": "Get a specific site by ID.",
+            "gate": {
+                "kind": "auth",
+                "level": "public"
+            }
+        },
+        {
+            "key": "telem.ingest",
+            "method": "POST",
+            "path": "/telem/ingest",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                    },
+                    "host": {
+                        "type": "string",
+                        "maxLength": 256
+                    },
+                    "events": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "maxLength": 64
+                                },
+                                "timestamp": {
+                                    "anyOf": [
+                                        {
+                                            "type": "number"
+                                        },
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    ]
+                                },
+                                "type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "log",
+                                        "call",
+                                        "boot",
+                                        "error",
+                                        "request"
+                                    ]
+                                },
+                                "level": {
+                                    "type": "string",
+                                    "enum": [
+                                        "debug",
+                                        "info",
+                                        "warn",
+                                        "error"
+                                    ]
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "maxLength": 4096
+                                },
+                                "logger": {
+                                    "type": "string",
+                                    "maxLength": 256
+                                },
+                                "data": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                },
+                                "key": {
+                                    "type": "string",
+                                    "maxLength": 256
+                                },
+                                "durationMs": {
+                                    "type": "number",
+                                    "minimum": 0
+                                },
+                                "outcome": {
+                                    "type": "string",
+                                    "enum": [
+                                        "ok",
+                                        "error"
+                                    ]
+                                },
+                                "errorKind": {
+                                    "type": "string",
+                                    "maxLength": 256
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "partId": {
+                                    "type": "string",
+                                    "maxLength": 256
+                                },
+                                "order": {
+                                    "type": "integer"
+                                },
+                                "bootStatus": {
+                                    "type": "string",
+                                    "enum": [
+                                        "mounted",
+                                        "failed",
+                                        "skipped"
+                                    ]
+                                },
+                                "stack": {
+                                    "type": "string",
+                                    "maxLength": 8192
+                                },
+                                "filename": {
+                                    "type": "string",
+                                    "maxLength": 1024
+                                },
+                                "lineno": {
+                                    "type": "integer"
+                                },
+                                "colno": {
+                                    "type": "integer"
+                                },
+                                "method": {
+                                    "type": "string",
+                                    "maxLength": 16
+                                },
+                                "host": {
+                                    "type": "string",
+                                    "maxLength": 256
+                                },
+                                "path": {
+                                    "type": "string",
+                                    "maxLength": 2048
+                                }
+                            },
+                            "required": [
+                                "type"
+                            ],
+                            "additionalProperties": false
+                        },
+                        "minItems": 1,
+                        "maxItems": 100
+                    }
+                },
+                "required": [
+                    "sessionId",
+                    "events"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "output": {
+                "type": "object",
+                "properties": {
+                    "accepted": {
+                        "type": "integer"
+                    },
+                    "dropped": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "accepted",
+                    "dropped"
+                ],
+                "additionalProperties": false,
+                "$schema": "http://json-schema.org/draft-07/schema#"
+            },
+            "destructive": false,
+            "stream": false,
+            "errors": [],
+            "domain": "telem",
+            "action": "ingest",
+            "description": "Ingest a batch of telemetry events from a browser session.",
             "gate": {
                 "kind": "auth",
                 "level": "public"
