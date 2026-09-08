@@ -4,39 +4,55 @@ You are **frank**. Sign every GitHub post you make with a last line of exactly:
 
 An unsigned post is from the human. Never sign something you did not write.
 
-Tracking issue: FLYBYME/surfdns#68  (open it yourself — see below)
+Tracking issue: open it yourself — see below.
 Code lives in:  FLYBYME/mesh-core  — this worktree. All commits and the PR go here.
+
+================================================================================
+READ THIS FIRST. IT IS THE SPECIFICATION.
+================================================================================
+
+    spec/apps/operator.md        what you are building
+    spec/apps/README.md          the format, and why these exist at all
+
+The spec is not background. It is the acceptance criteria: its §4 coverage
+table, §6 states, §7 routes and §8 conformance test are the deliverable. If
+you finish and the spec is not satisfied, you have not finished.
+
+If you find the spec WRONG — and it may be, it was written from the contracts
+in one sitting — say so in a comment, fix `spec/apps/operator.md` in the same
+PR, and say in your closing comment what you changed and why. A spec that
+disagrees with working code is worse than no spec. Do not silently diverge.
 
 ================================================================================
 BEFORE YOU WRITE ANY CODE
 ================================================================================
 
-There is no issue for this yet. Open one first, on FLYBYME/surfdns, titled
+Open the tracking issue on FLYBYME/surfdns, titled
 
     Four consoles are one application shown as four windows
 
-with a body that states the premise below in your own words and what you
-intend to do. Then work against it exactly as you would an issue somebody
-else wrote: plan comment before code, closing comment after.
+with a body stating the premise below in your own words and what you intend to
+do. Reference `spec/apps/operator.md`. Then work against it as you would an
+issue somebody else wrote: plan comment before code, closing comment after.
 
     gh issue create --repo FLYBYME/surfdns --title "..." --body "...
 
     — frank"
 
-INVESTIGATE FIRST. Read these four files end to end before you plan:
+INVESTIGATE. Read these end to end before you plan:
 
     src/catalog/index.ts    662 lines
     src/releases/index.ts   585 lines
     src/sites/index.ts      527 lines
     src/fleet/index.ts      502 lines
 
-and read `src/nav/` — the routing chrome that landed yesterday — and
-`src/chrome/` — the windowed one. Both stay.
+and `src/nav/` — the routing chrome — and `src/chrome/` — the windowed one.
+Both stay, and neither may learn that this app exists.
 
 POST YOUR PLAN as a comment before touching a file. It says what you FOUND
 (how much of those 2276 lines is the same four things written four times —
 name them, with line numbers), what you will CHANGE in files, and anything
-that CONTRADICTS what follows. Keep it short; it is read on a phone.
+that CONTRADICTS the spec. Keep it short; it is read on a phone.
 
 ================================================================================
 THE PREMISE
@@ -44,70 +60,102 @@ THE PREMISE
 
 The human's words, and they are the whole point of this dispatch:
 
-  "the catalog viewer, site/release viewer and site editor are one app showing
+  "the catalog viewer, site/release veiwer and site editor are one app showing
    as 3 windows. and the problem is this file src/catalog/index.ts is now 600+
    lines and you going to 5x it to make them all apps? 99% of apps are not like
    gimp. even photoshop is not like gimp. but every 'app' we build is like
    gimp."
 
-Four applications means four shells, four sign-in states, four models layers,
-four command namespaces, four windows a person has to arrange by hand. Nobody
-operating a platform wants four windows. They want one thing with four views.
+and:
+
+  "i dont want apps looking all fucked up and not all things been added."
+
+Two failures, and the second is the one that has been ignored. Four
+applications means four shells, four sign-in states, four models layers — that
+is "fucked up". And every one of them implements a fraction of what the server
+offers, because each was written on a day when the server offered less and
+nobody went back — that is "not all things been added".
 
 ================================================================================
 THE TASK
 ================================================================================
 
-Make `src/operator/` — ONE application, FOUR views:
+Make `src/operator/` — ONE application, FOUR views, per the spec.
 
-    parts      what is in the catalog        (from src/catalog)
-    releases   what has been composed        (from src/releases)
-    sites      what is deployed, and how     (from src/sites)
-    fleet      what is running it            (from src/fleet)
+One `needs`, one `consumes`, one `provides`, one api, one command set, one
+shared selection. Delete the four old parts and their `mesh.json` entries;
+this replaces them, it does not sit beside them.
 
-One `needs`, one `consumes`, one `provides`, one api, one set of commands.
-Delete the four old parts and their entries in `mesh.json` — this replaces
-them, it does not sit beside them.
+--------------------------------------------------------------------------------
+1. COVERAGE — the part the previous version of this prompt left out
+--------------------------------------------------------------------------------
 
-THE RULE THAT MATTERS MORE THAN THE FOLD
+Every action the API exposes on a collection this app owns has a control.
+Not the reads it happens to have already: all of them, create/read/update/
+delete, plus every exposed tool. Spec §4 is the table; satisfy it.
 
-Do not trade four 600-line files for one 2400-line file. That is the same
-mistake with a smaller directory listing, and it is the thing the human
-objected to.
+Three of those cells are exposed on the server today and have NO UI AT ALL:
 
-    src/operator/index.ts        the MANIFEST ONLY — needs, consumes, provides,
-                                 commands, views. Under 250 lines. If it is
-                                 longer, something in it belongs in a file.
-    src/operator/views/*.ts      one file per view, and split further when a
-                                 view has sections
+    site.create      exposed for weeks. There is still no way to make a site
+                     in a browser. This is the single most embarrassing gap in
+                     the product.
+    group.create     exposed. Nothing creates a group.
+    group.update     exposed. Nothing edits one.
+
+Those three are not optional and are not "a follow-up". A person must be able
+to create a site in the operator app when you are done.
+
+Spec §4 also lists fourteen exposed tools and where each lives. Several already
+have UI; `builder.import_repo`, `builder.release_part`, `builder.release_repo`
+and `node.provision` do not, and they are how anything gets into the platform
+at all. Wire them.
+
+Where an action is INTERNAL on the server, the control is visible and DISABLED
+with the reason — not absent (RULES §4, spec §6 "refused"). An operator who
+cannot delete a release should see a disabled delete saying so, not an app that
+pretends deletion was never a thing anybody wanted. Issues #69 (nothing can be
+deleted) and #70 (artifact/build internal) are already open for those; link
+them from the disabled state if that is cheap.
+
+--------------------------------------------------------------------------------
+2. THE CONFORMANCE TEST — build this early, not last
+--------------------------------------------------------------------------------
+
+Spec §8. A test that reads the exposure descriptor, collects the app's
+`consumes`, and FAILS NAMING THE ACTION when the server exposes something on
+this app's collections that the app does not consume.
+
+Write it near the start, not at the end. It will fail immediately, and its
+failure list IS your work list for §1 — that is the point of it. It is also
+the only reason this app will not drift out of date again the moment somebody
+exposes a new action.
+
+--------------------------------------------------------------------------------
+3. STRUCTURE — do not trade four 600-line files for one 2400-line file
+--------------------------------------------------------------------------------
+
+That is the same mistake with a shorter directory listing.
+
+    src/operator/index.ts        MANIFEST ONLY — needs, consumes, provides,
+                                 commands, views. Under 250 lines.
+    src/operator/state.ts        the shared tri-state, session and selection
+                                 the four used to each keep their own copy of
+    src/operator/views/*.ts      one file per view, split further by section
     src/operator/commands/*.ts   command handlers as named functions
-    src/operator/state.ts        the shared state the four used to each keep
 
 Every file under 300 lines. If one will not fit, say so in a comment with the
 reason rather than letting it grow quietly.
 
-WHAT YOU WILL FIND, AND IT IS THE POINT
+You will find the four files each carry their own sign-in check, their own
+loading/stale/error tri-state, their own selection and their own form-dirty
+flag. They already differ. Name each duplication in your plan comment before
+collapsing it — if you collapse two things that only look alike, you break one.
 
-Those four files each carry their own copy of: a sign-in check, a "loading /
-stale / error" tri-state, a selection, and a form-dirty flag. Four copies means
-four behaviours, and they already differ. Folding them is not cosmetic — it is
-how they stop differing. Name each duplication in your plan comment before you
-collapse it, because if you collapse two things that only look alike you will
-break one of them.
+--------------------------------------------------------------------------------
+4. ROUTER PARAMS — part of the same change
+--------------------------------------------------------------------------------
 
-ROUTER PARAMS — DO THIS, IT IS PART OF THE SAME CHANGE
-
-`src/nav/router.ts` has:
-
-    export interface Route { readonly owner?: string; readonly view: string; }
-
-There are no params. `grep -c params src/nav/router.ts` returns 0. That is
-incomplete: the address of a window is `(app, view, params)`, and a URL is only
-its serialisation. Without params, "the sites view" is linkable and "site
-foo.example.com" is not — and with four views folded into one app, selection is
-exactly what a person wants to paste to a colleague.
-
-Add it:
+`src/nav/router.ts` has no params: `grep -c params src/nav/router.ts` is 0.
 
     export interface Route {
         readonly owner?: string;
@@ -115,24 +163,28 @@ Add it:
         readonly params?: Readonly<Record<string, Json>>;
     }
 
-`Json` is serialisable by construction, so a route is serialisable by
-construction. Choose the URL encoding, put it in `formatRoute`/`parseRoute`,
-and round-trip it in a test: `parseRoute(formatRoute(r))` deep-equals `r` for
-every shape you support, including empty params and a param containing `/`.
+Without params, "the sites view" is linkable and "site foo.example.com" is not.
+With four views folded into one app, the selection is exactly what a person
+wants to paste to a colleague.
 
-Then use it: selecting a part, a release, a site or a node puts the selection
-in the route, and landing on that URL restores the selection.
+Choose the encoding, put it in `formatRoute`/`parseRoute`, and round-trip it in
+a test for every shape in spec §7 — including empty params and a param
+containing `/`, because a part name can contain one.
 
-WHAT MUST STILL WORK WHEN YOU ARE DONE
+Then use it: selecting a part, release, site, group or node puts the selection
+in the route, and landing on that URL restores it.
 
-  * both chromes: the windowed one (`src/chrome/`) and the routing one
-    (`src/nav/`) mount the operator app and it works under each
-  * on a narrow display, one view at a time, and you can reach all four
+================================================================================
+WHAT MUST STILL WORK
+================================================================================
+
+  * both chromes mount the operator app and it works under each
+  * on a narrow display, one view at a time, all four reachable
   * the back button
   * a pasted URL lands on the same view AND the same selection
-  * nothing that worked in the four consoles stopped working — deploy, compose,
-    grant editing, node assignment. If you drop a capability, say which and why
-    in a comment; do not drop one silently.
+  * nothing the four consoles could do stopped working — deploy, compose, grant
+    editing, node assignment. If you drop one, say which and why; never
+    silently.
 
 DO NOT:
   - change `src/nav/index.ts` or `src/chrome/` beyond what mounting one app
@@ -152,26 +204,26 @@ FINISHING
     npm test
 
 All three, from the worktree root, green. `npm install` alone serves a cached
-git dependency and reports "up to date"; check the installed version actually
-moved.
+git dependency and reports "up to date"; check the installed version moved.
 
 The existing tests for the four consoles are the specification of what must not
 regress. Port them onto the folded app — do not delete them and write fewer.
-Say in your closing comment how many tests there were before and after, and
+State in your closing comment how many tests there were before and after, and
 account for the difference.
 
 Then:
 
-    git push origin HEAD:frank/68-one-operator-app
-    gh pr create --repo FLYBYME/mesh-core --head frank/68-one-operator-app \
+    git push origin HEAD:frank/one-operator-app
+    gh pr create --repo FLYBYME/mesh-core --head frank/one-operator-app \
       --title "<what changed, not which issue>" --body "<what and why>
 
-    Refs FLYBYME/surfdns#68
+    Refs FLYBYME/surfdns#<the issue you opened>
 
     — frank"
 
-Then comment that you are done, signed — link the PR and say what changed
-against the plan you posted, especially anything the plan did not anticipate.
+Then comment that you are done, signed — link the PR, say what changed against
+the plan, and say explicitly which cells of spec §4 are satisfied and which are
+not. That table is how the human will check your work.
 
 DO NOT MERGE THE PR. The human merges.
 
