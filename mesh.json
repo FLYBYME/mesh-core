@@ -10,7 +10,20 @@
             "description": "The credential seam: holds the session, attaches the ticket, handles revocation. A site that has no accounts does not load it.",
             "keywords": ["auth", "session", "identity"],
             "license": "UNLICENSED",
-            "homepage": "https://github.com/FLYBYME/mesh-core"
+            "homepage": "https://github.com/FLYBYME/mesh-core",
+            "//mesh": "The three calls the Extension makes by path, declared so a site actually grants them. Without this a site could load auth and expose no way to sign in -- the api would 404 /api/identity/ticket and the page would report a network failure for a route that exists and was simply not granted.",
+            "mesh": [
+                {
+                    "package": "@flybyme/mesh-serve",
+                    "version": "0.1.0",
+                    "contracts": [
+                        "identity.ticket_issue",
+                        "identity.ticket_revoke",
+                        "identity.whoami",
+                        "identity.set_password"
+                    ]
+                }
+            ]
         },
         {
             "kind": "application",
@@ -28,7 +41,8 @@
             "mesh": [
                 {
                     "package": "@flybyme/mesh-serve",
-                    "consumes": [
+                    "//contracts": "The key is `contracts`, not `consumes`. `requirementsOf` flat-maps `mesh[].contracts` and reads nothing else, so this list declared no requirement at all and a site built from it would grant identity nothing -- the same empty-descriptor failure flowboard had.",
+                    "contracts": [
                         "organization.find",
                         "organization.create",
                         "membership.find",
