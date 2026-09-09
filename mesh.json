@@ -41,6 +41,7 @@
             "mesh": [
                 {
                     "package": "@flybyme/mesh-serve",
+                    "version": "0.1.0",
                     "//contracts": "The key is `contracts`, not `consumes`. `requirementsOf` flat-maps `mesh[].contracts` and reads nothing else, so this list declared no requirement at all and a site built from it would grant identity nothing -- the same empty-descriptor failure flowboard had.",
                     "contracts": [
                         "organization.find",
