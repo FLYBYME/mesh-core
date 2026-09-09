@@ -3,6 +3,20 @@
     "parts": [
         {
             "kind": "extension",
+            "id": "ui",
+            "version": "0.1.0",
+            "entry": "src/ui/index.ts",
+            "kernel": "^0.16",
+            "//import": "The specifier other parts import this one as. A package subpath, so a consumer writes an ordinary import and TypeScript resolves it through this package's own `exports` -- no paths mapping, no generator, and `ui.Card({ wrong: 1 })` fails to compile. The builder marks it external and the site's import map points it at this artifact, exactly as it has always done for @flybyme/mesh-web.",
+            "import": "@flybyme/mesh-core/ui",
+            "//why": "Fourteen components and composites that nothing could render. A part is bundled with one specifier external and everything else inlined from its own clone, so no part outside this repository could import them -- which is why element('Label') threw on a page whose node_modules contained Label.",
+            "description": "The vocabulary: eleven components and three composites, themed from the thirteen tokens, with no DOM call anywhere in them.",
+            "keywords": ["ui", "components", "vocabulary", "design-system"],
+            "license": "UNLICENSED",
+            "homepage": "https://github.com/FLYBYME/mesh-core"
+        },
+        {
+            "kind": "extension",
             "id": "auth",
             "version": "0.1.0",
             "entry": "src/auth/index.ts",

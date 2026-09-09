@@ -7,6 +7,7 @@
     "//exports": "Source, not dist: mesh-core has no build step because a part's entry is a TypeScript path that the builder compiles. A consumer resolving to src/ gets the same file the builder does.",
     "exports": {
         ".": "./src/index.ts",
+        "./ui": "./src/ui/index.ts",
         "./package.json": "./package.json"
     },
     "scripts": {
