@@ -133,7 +133,20 @@ const NEEDS = needs('credentials', 'state', 'log');
 const DEFAULTS = {
     issue: '/api/identity/ticket',
     whoami: '/api/identity/whoami',
-    revoke: '/api/identity/ticket/revoke',
+    /**
+     * **`sign_out`, not `ticket_revoke`.**
+     *
+     * `identity.ticket_revoke` is `visibility: 'internal'` — it is an operator ending *somebody
+     * else's* session, and a site that tries to grant it is refused outright: `/_describe` answered
+     * 500 with *"marked internal by its own domain and cannot be exposed"*, which takes the whole
+     * site down, not just sign-out.
+     *
+     * `identity.sign_out` is the public one — *"End the calling session"*, `visibility: 'public'`,
+     * and its input is `{ token }`, exactly what `signOut` below already sends. It answers
+     * `signedOut: true` whether the ticket was live, expired or already revoked, because the
+     * difference is information about a credential the caller does not hold.
+     */
+    revoke: '/api/identity/sign_out',
 } as const;
 
 /**

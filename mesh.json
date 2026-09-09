@@ -18,7 +18,7 @@
                     "version": "0.1.0",
                     "contracts": [
                         "identity.ticket_issue",
-                        "identity.ticket_revoke",
+                        "identity.sign_out",
                         "identity.whoami",
                         "identity.set_password"
                     ]
