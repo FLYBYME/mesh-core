@@ -23,8 +23,8 @@
  */
 
 import {
-    needs, provider,
-    type Context, type Extension, type ProviderToken, type Session, type Signal,
+    AUTH, needs,
+    type AuthApi, type Context, type Credentialed, type Extension, type Session,
 } from '@flybyme/mesh-web';
 
 // ---------------------------------------------------------------------------- what it provides
@@ -40,25 +40,28 @@ import {
  */
 export type { Session };
 
-export interface Credentialed {
-    readonly email: string;
-    readonly password: string;
-}
-
 /**
- * What other contributions may do with the session.
+ * **`AUTH`, `AuthApi` and `Credentialed` moved to the kernel, and are re-exported here.**
  *
- * Note what is **not** here: the ticket. A consumer can ask who is signed in and can ask to sign
- * out; it cannot obtain the credential, because the moment it can, "the auth Extension attaches the
- * ticket" becomes advice rather than a property.
+ * They were declared in this file, which put the token for the credential seam inside the part that
+ * fills it — one step further out than `Session` had been, and with a louder consequence.
+ *
+ * The builder marks exactly one specifier external: `@flybyme/mesh-web`. Everything else is bundled
+ * from the part's own tree. So a part declaring `consumes(AUTH)` had to import `@flybyme/mesh-core`,
+ * and no part can: flowboard did, typechecked against a hand-made symlink, and the builder answered
+ * `Could not resolve "@flybyme/mesh-core"` three times while the release was recorded as
+ * published-with-no-artifact — surfacing two steps later as a composition error that named neither
+ * the import nor the file.
+ *
+ * The division is the one that was always intended and now actually holds: the kernel owns the
+ * *shape* of the hole, this file owns the *filling* of it — signing in, holding the ticket,
+ * refreshing it, storing it, handling revocation. That is 250 lines a site chooses to load or not,
+ * and it is imported by nobody.
+ *
+ * The token's id is unchanged (`mesh-web/auth`), because a token's identity is its id string.
  */
-export interface AuthApi {
-    readonly session: Signal<Session | null>;
-    signIn(credentials: Credentialed): Promise<Session>;
-    signOut(): Promise<void>;
-}
-
-export const AUTH: ProviderToken<AuthApi> = provider<AuthApi>('mesh-web/auth');
+export { AUTH };
+export type { AuthApi, Credentialed };
 
 // ---------------------------------------------------------------------------- what it needs
 

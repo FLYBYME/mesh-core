@@ -11,10 +11,8 @@
  */
 
 import type {
-    Availability, BoundCommand, ComponentContract, CompositeContract,
-    Confirmation, Intents, Json, Node, Reactive, ReadonlySignal, Schema, Signal,
+    BoundCommand, Confirmation, Intents, Json, Node, Reactive, ReadonlySignal, Schema, Signal,
 } from '@flybyme/mesh-web';
-import { schema } from '@flybyme/mesh-web';
 import type { JsonSchema, JsonSchemaProperty } from './schema.js';
 
 // ---------------------------------------------------------------------------- component identifiers
@@ -45,73 +43,27 @@ export const UI_ACTION_CARD = 'ui.ActionCard';
  */
 export type EntityListStatus = 'loading' | 'ready' | 'empty' | 'error';
 
-/** Format an Availability refusal into a human-readable reason string. */
-export function formatRefusal(a: Availability): string {
-    if (a.can) return '';
-    if (a.detail) return a.detail;
-    switch (a.why) {
-        case 'needs_operator':
-            return 'needs operator';
-        case 'needs_session':
-            return 'sign in required';
-        case 'not_exposed':
-            return 'not exposed by this server';
-        case 'not_ready':
-            return 'not ready';
-    }
-}
-
-// ---------------------------------------------------------------------------- component & composite interfaces
-
-export interface Component<P> extends ComponentContract<P> {
-    (props: P): Node;
-}
-
-export interface Composite<P, S> extends CompositeContract<P, S> {
-    (props: P): S & { view(): Node };
-}
-
 /**
- * **`name` is defined, not assigned.**
+ * **`Component`, `Composite`, `defineComponent`, `defineComposite` and `formatRefusal` moved to the
+ * kernel, and are re-exported here.**
  *
- * Every function already has an own `name` property, and it is non-writable — so `Object.assign`
- * throws `Cannot assign to read only property 'name'` in strict mode, which every ES module is.
- * `defineProperty` overwrites it because it is configurable, which is the whole difference.
+ * They were declared in this file and they build `ComponentContract` and `CompositeContract` —
+ * types the kernel declares — so the helper for constructing one of mesh-web's own shapes lived in
+ * a package mesh-web does not depend on. Worse: in a package **no part can import**. The builder
+ * marks exactly one specifier external (`@flybyme/mesh-web`) and bundles everything else from the
+ * part's own tree.
  *
- * It cost nothing to find and would have cost a lot to find later: the throw happens at module load,
- * so the file that imports a component fails before any test in it runs, and the error names the
- * arrow function rather than the component.
+ * Publishing a component is one of the three slots every part has, so a part doing the ordinary
+ * thing had to either import mesh-core, which does not resolve, or copy the `Object.assign` below.
+ *
+ * What stays here is the **vocabulary** — `ui.EntityList`, `ui.Table`, `ui.ActionButton` and the
+ * rest, with their props. That is a design system: a real thing to adopt or not, used by *name*
+ * through the component registry rather than by import.
  */
-const named = <T extends object>(fn: T, name: string): T => {
-    Object.defineProperty(fn, 'name', { value: name, configurable: true });
-    return fn;
-};
-
-export function defineComponent<P>(
-    name: string,
-    description: string,
-    render: (props: P) => Node,
-): Component<P> {
-    const fn = (props: P): Node => render(props);
-    return named(Object.assign(fn, {
-        description,
-        props: schema<P>(),
-        render,
-    }), name) as Component<P>;
-}
-
-export function defineComposite<P, S>(
-    name: string,
-    description: string,
-    create: (props: P) => S & { view(): Node },
-): Composite<P, S> {
-    const fn = (props: P): S & { view(): Node } => create(props);
-    return named(Object.assign(fn, {
-        description,
-        props: schema<P>(),
-        create,
-    }), name) as Composite<P, S>;
-}
+export {
+    defineComponent, defineComposite, formatRefusal,
+    type Component, type Composite,
+} from '@flybyme/mesh-web';
 
 // ---------------------------------------------------------------------------- props: EntityList & EntityItem
 
