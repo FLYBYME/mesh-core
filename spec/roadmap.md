@@ -171,18 +171,13 @@ defines what an Application *is*.
 reading it at this path any more, so the stated reason not to move it is gone.** Move it, leave a
 pointer behind, and update the four specs that cite it. Also recorded as O1 in mesh-operator.
 
-### K2 — The operator app moves to mesh-operator · **unblocked 2026-09-07**
 
-~~Four intertwined applications now; a directory rename once the fold lands.~~ **The fold landed.**
-`src/operator/` is one application: `index.ts` at 187 lines holding only the manifest, twelve view
-files and six command files, every one under 300, with `test/operator.spec.test.ts` checking the app
-against its own spec. `mesh.json` no longer declares catalog, releases, sites or fleet.
+### K2 — The 32 browser tests for catalog, releases, sites, and fleet were never ported · **open**
 
-So this is now the directory rename it was always going to become, with one thing standing in front
-of it: **`src/catalog`, `src/releases`, `src/sites` and `src/fleet` are still on disk.** They ship
-nothing, but their 32 browser tests are the only browser coverage of that behaviour and were never
-ported onto the folded app — which has conformance coverage and no browser coverage. **Port the
-tests, then delete the four, then rename.** Deleting first trades a merge for a hole in the suite.
+**Status update 2026-09-10:**
+The audit confirmed that the 32 browser tests were deleted in commit `ead7cf2` without being ported. The `mesh-operator` repository contains a replacement app (tested in `console.browser.test.ts` with ~20 tests), but it does not port the comprehensive tests for `catalog`, `releases`, `sites`, and `fleet` behaviors (such as importing a repo, resolving versions, or provisioning fleets). 
+
+**32 browser tests were lost.** The behaviour of the platform operator features is now largely uncovered by browser tests. The `mesh-operator` repository owns the port and should rebuild this coverage.
 
 The split that follows: **mesh-core is the design system and the two chromes. mesh-operator is
 everything a platform is operated with.** `spec/apps/operator.md` has already moved ahead of the
