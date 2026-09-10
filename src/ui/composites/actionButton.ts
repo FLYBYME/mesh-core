@@ -11,7 +11,7 @@
  */
 
 import { element, read, signal, text } from '@flybyme/mesh-web';
-import type { HandlerId, Node } from '@flybyme/mesh-web';
+import type { Action, Node } from '@flybyme/mesh-web';
 import {
     defineComposite, formatRefusal, UI_ACTION_BUTTON,
     type ActionButtonProps, type ActionButtonState, type Composite,
@@ -73,6 +73,18 @@ export function createActionButton<I = void, O = void>(
         }
     };
 
+    /**
+     * **Registered once, here, and not in `view()`.**
+     *
+     * `view()` runs again whenever a `when` branch above this composite flips, and a handler table
+     * has no eviction — registering inside it would add an entry per repaint for the life of the
+     * screen. `run` never changes, so one registration is all there is to make.
+     *
+     * The press is deliberately not awaited. An intent is *this happened*, not *this finished*; what
+     * the run produces is already on `running`, `error` and `result` for the view to read.
+     */
+    const pressed: Action = props.on(() => void run());
+
     const view = (): Node => {
         const getLabel = (): string => {
             const avail = command.available();
@@ -112,14 +124,7 @@ export function createActionButton<I = void, O = void>(
                     return command.description;
                 },
             },
-            intents: {
-                activate: {
-                    action: {
-                        kind: 'handler',
-                        id: `ui.ActionButton:${command.action}` as HandlerId,
-                    },
-                },
-            },
+            intents: { activate: { action: pressed } },
             children: [text(getLabel)],
         });
     };

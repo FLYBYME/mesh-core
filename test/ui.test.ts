@@ -15,7 +15,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { AVAILABLE, schema, type Availability, type BoundCommand } from '@flybyme/mesh-web';
+import {
+    AVAILABLE, createHandlerTable, schema,
+    type Action, type Availability, type BoundCommand, type Node,
+} from '@flybyme/mesh-web';
 
 import { createActionButton } from '../src/ui/composites/actionButton.js';
 import { EntityList } from '../src/ui/components/entityList.js';
@@ -35,6 +38,33 @@ const commandThat = (
     available,
     run,
 });
+
+/**
+ * **The real handler table, not a stub.**
+ *
+ * A composite now takes `on` — the right to register a handler — and these tests hand it the same
+ * implementation a mounted view gets. A stub returning a made-up id would agree with exactly the bug
+ * this replaces: `ActionButton` used to write `id: \`ui.ActionButton:${command.action}\`` and nothing
+ * anywhere registered it, so the button was inert while every test here passed.
+ *
+ * One table for the file. Handlers accumulate and are never disposed, which is what a table is for
+ * in a test: `press` below can invoke any id any of these views produced.
+ */
+const wiring = createHandlerTable('ui.test');
+
+/**
+ * Press a description, rather than call the thing behind it.
+ *
+ * Reads the `activate` action off the node and invokes it through the table — the same two steps the
+ * renderer's dispatcher takes when a person clicks. `invoke` answers false for an id nobody
+ * registered, so an inert control fails here instead of being reported as a passing test.
+ */
+const press = (node: Node): boolean => {
+    const intents = (node as { intents?: { activate?: { action: Action } } }).intents;
+    const action = intents?.activate?.action;
+    if (action === undefined || action.kind !== 'handler') return false;
+    return wiring.invoke(action.id);
+};
 
 // The source-scanning half of the evidence — no `document.createElement`, no element-keyed WeakMap
 // — is in `ui.source.test.ts`, which runs under node. It cannot live here: these tests run in a
@@ -109,6 +139,7 @@ describe('a refused command is visible, disabled, and says why', () => {
     it('does not dispatch', async () => {
         let ran = 0;
         const button = createActionButton({
+            on: wiring.on,
             command: commandThat(() => refused, async () => { ran += 1; }),
         });
 
@@ -120,7 +151,10 @@ describe('a refused command is visible, disabled, and says why', () => {
     });
 
     it('renders the reason in the label rather than hiding the control', () => {
-        const button = createActionButton({ command: commandThat(() => refused) });
+        const button = createActionButton({
+            on: wiring.on,
+            command: commandThat(() => refused),
+        });
         const view = button.view();
 
         // states §4: the control stays on screen, disabled, and says what is missing. A control that
@@ -131,7 +165,10 @@ describe('a refused command is visible, disabled, and says why', () => {
     });
 
     it('reports itself disabled while refused', () => {
-        const button = createActionButton({ command: commandThat(() => refused) });
+        const button = createActionButton({
+            on: wiring.on,
+            command: commandThat(() => refused),
+        });
         const props = (button.view() as { props: Record<string, unknown> }).props;
 
         const disabled = props['disabled'];
@@ -141,6 +178,7 @@ describe('a refused command is visible, disabled, and says why', () => {
     it('runs when the command is available', async () => {
         let ran = 0;
         const button = createActionButton({
+            on: wiring.on,
             command: commandThat(() => AVAILABLE, async () => { ran += 1; }),
         });
 
@@ -158,6 +196,7 @@ describe('a running command cannot be fired twice', () => {
         const held = new Promise<void>((resolve) => { release = resolve; });
 
         const button = createActionButton({
+            on: wiring.on,
             command: commandThat(() => AVAILABLE, async () => {
                 ran += 1;
                 await held;
@@ -177,6 +216,7 @@ describe('a running command cannot be fired twice', () => {
     it('is runnable again once the first has finished', async () => {
         let ran = 0;
         const button = createActionButton({
+            on: wiring.on,
             command: commandThat(() => AVAILABLE, async () => { ran += 1; }),
         });
 
@@ -188,6 +228,7 @@ describe('a running command cannot be fired twice', () => {
 
     it('reports the error and stops running when the command throws', async () => {
         const button = createActionButton({
+            on: wiring.on,
             command: commandThat(() => AVAILABLE, async () => { throw new Error('the server said no'); }),
         });
 
@@ -196,5 +237,73 @@ describe('a running command cannot be fired twice', () => {
         expect(button.error()).toBe('the server said no');
         // The failure must clear `running`, or the control is dead for the rest of the session.
         expect(button.running()).toBe(false);
+    });
+});
+
+// ---------------------------------------------------------------------------- 5. pressed
+
+/**
+ * **The claim every test above assumed and none of them made: pressing it runs the command.**
+ *
+ * Each test in this file calls `button.run()`. That is the composite's own method, and it worked
+ * perfectly for weeks while the control on screen did nothing at all, because the description's
+ * `activate` named a handler id that nothing had registered. A test that calls a piece never presses
+ * it, and the gap between the two is where A8.10 lived.
+ *
+ * These go through the action instead: read what the description declares, invoke it on the table
+ * the button registered against. Nothing here knows `run` exists.
+ */
+describe('pressing the button is what runs the command', () => {
+    it('dispatches through the handler the composite registered', async () => {
+        let ran = 0;
+        const button = createActionButton({
+            on: wiring.on,
+            command: commandThat(() => AVAILABLE, async () => { ran += 1; }),
+        });
+
+        // The id is resolvable. Before this change it was `ui.ActionButton:thing.rename`, which no
+        // table has ever contained, and `invoke` answered false — silently, because an unresolved
+        // handler is a stale event rather than a crash.
+        expect(press(button.view())).toBe(true);
+
+        // The press does not await the run — an intent is *this happened*, not *this finished* — so
+        // the assertion has to let the microtask queue drain first.
+        await Promise.resolve();
+        expect(ran).toBe(1);
+    });
+
+    it('registers once however many times the view is drawn', () => {
+        const button = createActionButton({
+            on: wiring.on,
+            command: commandThat(() => AVAILABLE),
+        });
+
+        const first = button.view();
+        const second = button.view();
+
+        // A handler table has no eviction before the view is disposed, so registering inside
+        // `view()` would leak an entry per repaint — and a `when` above a composite repaints it
+        // every time the condition flips. Registration belongs at construction.
+        const idOf = (n: Node): string => {
+            const action = (n as { intents: { activate: { action: Action } } }).intents.activate.action;
+            return action.kind === 'handler' ? action.id : '';
+        };
+        expect(idOf(first)).toBe(idOf(second));
+    });
+
+    it('a refused command does not dispatch when pressed either', async () => {
+        let ran = 0;
+        const button = createActionButton({
+            on: wiring.on,
+            command: commandThat(() => ({ can: false, why: 'needs_operator' }), async () => { ran += 1; }),
+        });
+
+        // The handler resolves — the button is wired — and the run path refuses. Both halves matter:
+        // a control that is inert and a control that is refused look identical from outside and are
+        // completely different bugs.
+        expect(press(button.view())).toBe(true);
+
+        await Promise.resolve();
+        expect(ran).toBe(0);
     });
 });

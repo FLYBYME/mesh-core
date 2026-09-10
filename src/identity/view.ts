@@ -11,7 +11,10 @@
  * caller. The app this replaces did exactly that, and ended with a password buffer on a public API.
  */
 
-import { element, text, when, each, type Node, type PartApi, type ViewContext } from '@flybyme/mesh-web';
+import {
+    element, text, when, each,
+    type Node, type PartApi, type Registrar, type ViewContext,
+} from '@flybyme/mesh-web';
 
 import { DetailSurface, EntityItem, EntityList, PropertyGrid, Table, TableRow, ActionButton, ActionCard } from '../ui/index.js';
 import type { IdentityInternal, Membership, Organization } from './contract.js';
@@ -24,10 +27,10 @@ export function renderIdentity(
     return element('Stack', {
         props: { class: 'identity', style: { display: 'flex', flexDirection: 'column', height: '100%' } },
         children: [
-            header(app),
+            header(app, vx.on),
             element('Row', {
                 props: { class: 'identity-body', style: { display: 'flex', flex: '1', minHeight: '0' } },
-                children: [index(app), detail(app)],
+                children: [index(app, vx.on), detail(app, vx.on)],
             }),
         ],
     });
@@ -47,7 +50,7 @@ export function renderIdentity(
  * to the header"*. A primary action in the empty state is an action that disappears exactly when
  * something has gone wrong.
  */
-const header = (app: IdentityInternal): Node =>
+const header = (app: IdentityInternal, on: Registrar): Node =>
     element('Row', {
         props: { class: 'identity-header' },
         children: [
@@ -66,6 +69,7 @@ const header = (app: IdentityInternal): Node =>
             }),
             // Always present, refused when it cannot run, and saying which standing is missing.
             ActionButton({
+                on,
                 command: app.commands.createOrganization,
                 input: { name: '', slug: '' },
                 label: 'New organization',
@@ -84,7 +88,7 @@ const header = (app: IdentityInternal): Node =>
  * may not read is a list whose read command is unavailable. Modelling them as statuses is what made
  * every app hand-roll the two hardest ones differently.
  */
-const index = (app: IdentityInternal): Node =>
+const index = (app: IdentityInternal, on: Registrar): Node =>
     EntityList({
         title: 'Organizations',
         status: () => app.status(),
@@ -92,7 +96,7 @@ const index = (app: IdentityInternal): Node =>
         errorMessage: () => app.error(),
         loadingMessage: 'Loading organizations…',
         emptyMessage: 'No organizations yet.',
-        emptyAction: () => createCard(app),
+        emptyAction: () => createCard(app, on),
         width: 280,
         children: [
             each(
@@ -102,8 +106,18 @@ const index = (app: IdentityInternal): Node =>
                     title: () => o().name,
                     description: () => o().slug,
                     selected: () => app.selected() === o().id,
-                    // An intent, not a handler: the same verb a key binding or an agent would reach.
-                    intents: { activate: { action: { kind: 'handler', id: `identity.select:${o().id}` } } },
+                    /**
+                     * **Selecting a row is incidental, so it is a handler and now a real one.**
+                     *
+                     * The comment here used to claim the opposite — *"an intent, not a handler"* —
+                     * over an `id` this file invented and nothing registered, so clicking an
+                     * organization did nothing. Which row is highlighted is not a verb anyone binds
+                     * a key to or calls from a tool; minting a palette command per row is how a
+                     * command list becomes noise. `vx.on` is exactly the tool for this, and the
+                     * closure reads the row through its accessor so a reordered list still selects
+                     * the row that was clicked.
+                     */
+                    intents: { activate: { action: on(() => app.select(o().id)) } },
                 }),
             ),
         ],
@@ -117,7 +131,7 @@ const index = (app: IdentityInternal): Node =>
  * `DetailSurface` carries its own no-selection placeholder, which is why there is no `when` around
  * this whole region — an empty detail is a state of the region, not an absence of one.
  */
-const detail = (app: IdentityInternal): Node =>
+const detail = (app: IdentityInternal, on: Registrar): Node =>
     DetailSurface({
         selected: () => app.selectedOrganization() !== null,
         placeholderTitle: 'Select an organization',
@@ -129,8 +143,8 @@ const detail = (app: IdentityInternal): Node =>
                 props: { style: { display: 'flex', flexDirection: 'column', gap: '20px' } },
                 children: [
                     facts(app),
-                    membersTable(app),
-                    ActionCard({ command: app.commands.addMember, title: 'Add a member' }).view(),
+                    membersTable(app, on),
+                    ActionCard({ on, command: app.commands.addMember, title: 'Add a member' }).view(),
                 ],
             }),
         ],
@@ -157,7 +171,7 @@ const facts = (app: IdentityInternal): Node =>
  * A `Table` and not an `EntityList`, by the vocabulary's own test: somebody reads across these rows
  * comparing who holds which role. A list is for picking one and looking at it.
  */
-const membersTable = (app: IdentityInternal): Node =>
+const membersTable = (app: IdentityInternal, on: Registrar): Node =>
     element('Stack', {
         props: { class: 'identity-members' },
         children: [
@@ -179,7 +193,7 @@ const membersTable = (app: IdentityInternal): Node =>
                                     // The account id, for the same reason as the owner above.
                                     element('Text', { children: [text(() => m().userId)] }),
                                     element('Text', { children: [text(() => m().roleKey)] }),
-                                    removeButton(app, m()),
+                                    removeButton(app, m(), on),
                                 ],
                             }),
                         ),
@@ -197,8 +211,9 @@ const membersTable = (app: IdentityInternal): Node =>
  * the command's own `available()` and `confirm`, so none of it is this file's to remember — which is
  * the entire argument for `ui.ActionButton` existing.
  */
-const removeButton = (app: IdentityInternal, member: Membership): Node =>
+const removeButton = (app: IdentityInternal, member: Membership, on: Registrar): Node =>
     ActionButton({
+        on,
         command: app.commands.removeMember,
         input: { id: member.id },
         label: 'Remove',
@@ -209,5 +224,5 @@ const removeButton = (app: IdentityInternal, member: Membership): Node =>
     // which is props in and description out with nothing to own.
     }).view();
 
-const createCard = (app: IdentityInternal): Node =>
-    ActionCard({ command: app.commands.createOrganization, title: 'New organization' }).view();
+const createCard = (app: IdentityInternal, on: Registrar): Node =>
+    ActionCard({ on, command: app.commands.createOrganization, title: 'New organization' }).view();

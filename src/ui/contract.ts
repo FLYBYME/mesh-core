@@ -11,7 +11,8 @@
  */
 
 import type {
-    BoundCommand, Confirmation, Intents, Json, Node, Reactive, ReadonlySignal, Schema, Signal,
+    BoundCommand, Confirmation, Intents, Json, Node, Reactive, ReadonlySignal, Registrar, Schema,
+    Signal,
 } from '@flybyme/mesh-web';
 import type { JsonSchema, JsonSchemaProperty } from './schema.js';
 
@@ -42,6 +43,35 @@ export const UI_ACTION_CARD = 'ui.ActionCard';
  * is unavailable. `idle` is removed.
  */
 export type EntityListStatus = 'loading' | 'ready' | 'empty' | 'error';
+
+// ---------------------------------------------------------------------------- the registrar
+
+/**
+ * **Anything with a control in it takes `on`, and it is not optional.**
+ *
+ * A composite is constructed by `create(props)`. It has no view, no window and no handler table, so
+ * for as long as there was no way to hand it one, the three composites did the only thing available
+ * and **made an id up**:
+ *
+ * ```ts
+ * intents: { activate: { action: { kind: 'handler', id: `ui.ActionButton:${command.action}` } } }
+ * ```
+ *
+ * Nothing registers that id. An unresolved handler is *a stale event, not a crash*, so `ActionButton`
+ * rendered, enabled, correct in every detail, and did nothing at all when pressed — and every test
+ * passed, because each one called `run()` rather than pressing the button. `ui.Select` was inert for
+ * a second reason on top of that one: its `change` intent was on the wrapper `Row`, which is not a
+ * control and never fires, while the option buttons that a person actually clicks carried no intents.
+ *
+ * `Registrar` is `vx.on` as a value (mesh-web `description/types.ts`). Passing it as a prop — rather
+ * than reaching for a global table — keeps **who owns this handler** visible at the call site, and
+ * keeps the handler dying with the view that registered it.
+ *
+ * **Required rather than optional**, because an optional registrar reintroduces the whole bug: the
+ * caller who forgets it gets a control that looks finished and is inert, discovered by a person
+ * clicking. Now it does not compile.
+ */
+export type { Registrar } from '@flybyme/mesh-web';
 
 /**
  * **`Component`, `Composite`, `defineComponent`, `defineComposite` and `formatRefusal` moved to the
@@ -171,14 +201,19 @@ export interface SelectOption {
 }
 
 export interface SelectProps {
+    /** See `Registrar`. Each option is a button, and a button needs somewhere to send its press. */
+    readonly on: Registrar;
     readonly value?: Reactive<string | number | undefined> | undefined;
     readonly options: Reactive<readonly (string | SelectOption)[]>;
     readonly disabled?: Reactive<boolean> | undefined;
     readonly placeholder?: Reactive<string> | undefined;
     readonly name?: Reactive<string> | undefined;
     readonly class?: Reactive<string> | undefined;
+    /**
+     * What a press means. The only way in: an intent on the wrapper cannot express it, which is
+     * what `intents` was doing here until it was removed.
+     */
     readonly onSelect?: ((value: string) => void) | undefined;
-    readonly intents?: Intents | undefined;
 }
 
 // ---------------------------------------------------------------------------- props: ButtonRow
@@ -203,6 +238,8 @@ export interface DialogProps {
 // ---------------------------------------------------------------------------- props: ActionButton
 
 export interface ActionButtonProps<I = void, O = void> {
+    /** See `Registrar`. Without it the button is a button that cannot be pressed. */
+    readonly on: Registrar;
     readonly command: BoundCommand<I, O>;
     readonly input?: I | (() => I) | undefined;
     readonly label?: Reactive<string> | undefined;
@@ -261,6 +298,8 @@ export interface FormOverrides {
 }
 
 export interface FormProps<T = Record<string, Json | undefined>> {
+    /** See `Registrar`. Every generated field binds a change handler, and so do Save and Cancel. */
+    readonly on: Registrar;
     readonly schema?: JsonSchema | Schema<T> | undefined;
     readonly initialValues?: Partial<T> | undefined;
     readonly onSubmit?: ((values: T) => Promise<void> | void) | undefined;
@@ -294,6 +333,8 @@ export interface FormState<T = Record<string, Json | undefined>> {
 // ---------------------------------------------------------------------------- props: ActionCard
 
 export interface ActionCardProps<I = Record<string, Json | undefined>, O = unknown> {
+    /** See `Registrar`. Passed straight through to the form it owns, as well as its own control. */
+    readonly on: Registrar;
     readonly command: BoundCommand<I, O>;
     readonly title?: Reactive<string> | undefined;
     readonly consequence?: Reactive<string> | undefined;

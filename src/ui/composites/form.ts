@@ -13,7 +13,7 @@ import {
     computed, element, read, signal, text, when,
 } from '@flybyme/mesh-web';
 import type {
-    HandlerId, Json, Node, Schema,
+    Action, IntentValue, Json, Node, Schema,
 } from '@flybyme/mesh-web';
 import { ButtonRow } from '../components/buttonRow.js';
 import { Field } from '../components/field.js';
@@ -125,6 +125,32 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
         errors.set({});
     };
 
+    /**
+     * **One registration per key, however many times the form is drawn.**
+     *
+     * A form builds its fields inside `view()`, and `view()` runs again every time a `when` above it
+     * flips — a dialog opening, a section expanding. A handler table has no eviction before the view
+     * is disposed, so registering inside the loop would add an entry per field per repaint and grow
+     * for as long as the screen is open. Keying by field name makes the second call free.
+     *
+     * The value is whatever the intent carried, and the renderer has already turned it into the
+     * right shape: a boolean from a checkbox, a number from a number field, the text from anything
+     * else, `undefined` from an empty number field. So one handler per field covers all five
+     * widgets, where the ids this replaces needed five (`ui.Form:select:`, `:check:`, `:num:`,
+     * `:text:`, `:input:`) and registered none of them.
+     */
+    const bound = new Map<string, Action>();
+    const bind = (key: string, fn: (value?: IntentValue) => void): Action => {
+        const existing = bound.get(key);
+        if (existing !== undefined) return existing;
+        const made = props.on(fn);
+        bound.set(key, made);
+        return made;
+    };
+
+    const bindField = (name: string): Action =>
+        bind(`field:${name}`, (v) => setField(name as keyof T, v as Json | undefined));
+
     const view = (): Node => {
         const overrides = props.overrides ?? {};
         const fieldOverrides = overrides.fields ?? {};
@@ -188,6 +214,10 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
 
                         return Select({
                             name,
+                            // A Select is a row of buttons, so it registers one handler per option
+                            // rather than binding `change` — see `ui.Select`.
+                            on: props.on,
+                            onSelect: (v) => setField(name as keyof T, v),
                             // A `Select` shows a string or a number; a field with no value yet is
                             // an empty selection, not the string "undefined".
                             value: (): string | number | undefined => {
@@ -197,14 +227,6 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                             options: opts,
                             disabled: isDisabled,
                             placeholder,
-                            intents: {
-                                change: {
-                                    action: {
-                                        kind: 'handler',
-                                        id: `ui.Form:select:${name}` as HandlerId,
-                                    },
-                                },
-                            },
                         });
                     }
 
@@ -218,14 +240,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                                 checked: () => Boolean(fieldValue()),
                                 disabled: isDisabled,
                             },
-                            intents: {
-                                change: {
-                                    action: {
-                                        kind: 'handler',
-                                        id: `ui.Form:check:${name}` as HandlerId,
-                                    },
-                                },
-                            },
+                            intents: { change: { action: bindField(name) } },
                         });
                     }
 
@@ -243,14 +258,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                                 disabled: isDisabled,
                                 placeholder,
                             },
-                            intents: {
-                                change: {
-                                    action: {
-                                        kind: 'handler',
-                                        id: `ui.Form:num:${name}` as HandlerId,
-                                    },
-                                },
-                            },
+                            intents: { change: { action: bindField(name) } },
                         });
                     }
 
@@ -267,14 +275,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                                 disabled: isDisabled,
                                 placeholder,
                             },
-                            intents: {
-                                change: {
-                                    action: {
-                                        kind: 'handler',
-                                        id: `ui.Form:text:${name}` as HandlerId,
-                                    },
-                                },
-                            },
+                            intents: { change: { action: bindField(name) } },
                         });
                     }
 
@@ -291,14 +292,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                             disabled: isDisabled,
                             placeholder,
                         },
-                        intents: {
-                            change: {
-                                action: {
-                                    kind: 'handler',
-                                    id: `ui.Form:input:${name}` as HandlerId,
-                                },
-                            },
-                        },
+                        intents: { change: { action: bindField(name) } },
                     });
                 },
 
@@ -346,9 +340,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                             disabled: () => busy() || Boolean(read(props.disabled)),
                         },
                         intents: {
-                            activate: {
-                                action: { kind: 'handler', id: 'ui.Form:cancel' as HandlerId },
-                            },
+                            activate: { action: bind('cancel', () => props.onCancel?.()) },
                         },
                         children: [text(() => read(props.cancelLabel) ?? 'Cancel')],
                     }),
@@ -361,9 +353,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
                             disabled: () => busy() || Boolean(read(props.disabled)),
                         },
                         intents: {
-                            activate: {
-                                action: { kind: 'handler', id: 'ui.Form:submit' as HandlerId },
-                            },
+                            activate: { action: bind('submit', () => void submit()) },
                         },
                         children: [
                             text(() => {
@@ -390,8 +380,11 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
             },
             ...(props.onSubmit ? {
                 intents: {
+                    // Enter in a field, which submits the form without going near the button. The
+                    // same closure as `submit`, deliberately: two registrations would be two paths
+                    // that can disagree, and `submit()` already refuses when the form is invalid.
                     commit: {
-                        action: { kind: 'handler', id: 'ui.Form:commit' as HandlerId },
+                        action: bind('submit', () => void submit()),
                         preventDefault: true,
                     },
                 },

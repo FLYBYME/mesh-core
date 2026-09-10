@@ -12,7 +12,7 @@
  */
 
 import { element, read, signal, text, when } from '@flybyme/mesh-web';
-import type { HandlerId, Json, Node } from '@flybyme/mesh-web';
+import type { Action, Json, Node } from '@flybyme/mesh-web';
 import {
     defineComposite, formatRefusal, UI_ACTION_CARD,
     type ActionCardProps, type ActionCardState, type Composite,
@@ -38,7 +38,15 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
     const error = signal<string | null>(null);
     const result = signal<O | undefined>(undefined);
 
+    /**
+     * The card's own registrar, handed straight down.
+     *
+     * A card is one command with inputs, so its fields belong to the same screen its button does —
+     * there is nothing to gain from a second scope and one thing to lose, which is that the form's
+     * handlers would then outlive or predecease the card's by a different rule.
+     */
     const form = createForm<I>({
+        on: props.on,
         schema: jsonSchema,
         initialValues: props.initialValues,
         overrides: props.overrides,
@@ -94,6 +102,9 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
         }
     };
 
+    /** Registered once at construction rather than per repaint — see `ActionButton` for why. */
+    const pressed: Action = props.on(() => void submit());
+
     const view = (): Node => {
         const titleStr = (): string => read(props.title) ?? humanizeLabel(command.action);
         const consequenceStr = (): string => read(props.consequence) ?? command.description;
@@ -131,14 +142,7 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
                         'aria-disabled': () => String(isPrimaryDisabled()),
                         'data-action': command.action,
                     },
-                    intents: {
-                        activate: {
-                            action: {
-                                kind: 'handler',
-                                id: `ui.ActionCard:${command.action}` as HandlerId,
-                            },
-                        },
-                    },
+                    intents: { activate: { action: pressed } },
                     children: [text(getPrimaryLabel)],
                 }),
             ],

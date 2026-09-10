@@ -44,6 +44,16 @@ export const Select: Component<SelectProps> = defineComponent<SelectProps>(
 
             optionNodes.push(
                 element('Button', {
+                    /**
+                     * **The press is on the option, because the option is what a person clicks.**
+                     *
+                     * `props.intents` used to be spread onto the wrapping `Row` below and the
+                     * options carried none, so a Select was inert twice over: nothing dispatched
+                     * from a button, and the `change` the wrapper declared can never fire — `change`
+                     * is bound to the DOM `input` event and a `Row` is a `div`, which does not emit
+                     * one and has no value to read.
+                     */
+                    intents: { activate: { action: props.on(() => props.onSelect?.(opt.value)) } },
                     props: {
                         class: () => {
                             const sel = isSelected();
@@ -71,7 +81,6 @@ export const Select: Component<SelectProps> = defineComponent<SelectProps>(
                 'data-value': currentValue,
                 'data-name': () => read(props.name) ?? null,
             },
-            ...(props.intents ? { intents: props.intents } : {}),
             children: optionNodes,
         });
     },
