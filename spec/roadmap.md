@@ -13,6 +13,11 @@ and **K** for the chromes, so a reference like U2 is unambiguous across reposito
 screen must follow, with nothing in the vocabulary to follow it with.* All three have already been
 broken in exactly the way the gap predicts. U4 is separate and is a decision, not a component.
 
+**Where the three stand, 2026-09-10:** U1 closed with tokens, a doc and a check that fails a literal
+colour by file and line. U3 was already closed before the dispatch that reported it — `ActionButton`
+reads `command.available()` and `press.browser.test.ts` presses it twice. **U2 is open**, narrowed
+from *the list needs five states* to *a refusal that arrives at request time has nowhere to go*.
+
 ### U1 — There are no design tokens · **closed 2026-09-10**
 
 Colour, type scale and spacing exist only as literal values in `src/ui/ui.css`. Nothing is named,
@@ -37,7 +42,7 @@ not accepted.
 `'loading' | 'ready' | 'empty' | 'error'` — four values, not five. The gap that `idle` was
 filling is answered by `Availability` (see U2).
 
-### U2 — Two of the five states cannot be expressed · **closed 2026-09-10**
+### U2 — A refusal that arrives at request time has nowhere to go · **reopened, narrowed 2026-09-10**
 
 ```ts
 type EntityListStatus = 'idle' | 'loading' | 'error' | 'ready' | 'empty';
@@ -53,12 +58,37 @@ state it could reach for was `error`.
 `idle` is also not a state a person can be in — nothing is idle, it has either started loading or it
 is waiting for a session.
 
-**What landed:** `EntityListStatus` is now `'loading' | 'ready' | 'empty' | 'error'` — four values,
-not five. `idle` is gone. `refused` and `unauthenticated` are **not** list states; they are answers
-to *may I*, which is `Availability`. A list that cannot be read is a list whose read command is
-unavailable. Modelling them as list statuses is what made every app hand-roll them differently.
-`spec/ui/states.md` says so in its own final section. The compiler enforces exhaustiveness: a
-`switch` over `EntityListStatus` that omits `'empty'` or `'error'` is an error.
+**What landed:** `EntityListStatus` is `'loading' | 'ready' | 'empty' | 'error'` — four values, not
+five. `idle` is gone. `refused` and `unauthenticated` are **not** list states; they are answers to
+*may I*, which is `Availability`. A list that cannot be read is a list whose read command is
+unavailable. The compiler enforces exhaustiveness: a `switch` over `EntityListStatus` that omits
+`'empty'` or `'error'` is an error.
+
+**Why it is reopened rather than closed.** That argument is right about the refusal you can *see
+coming* and silent about the one that *arrives*. Both rows in `states.md`'s table are sourced from
+something other than the read — the kernel's session, and `_describe` — so a view that consults them
+renders §3 or §4 instead of asking. But `_describe` is what the caller was told **when the page
+loaded**, and a 403 can still come back from a read it said was permitted: a grant revoked
+mid-session, a role changed by an administrator, a ticket that outlived its standing. mesh-serve
+**F30** makes that ordinary rather than exotic — grants are rows now, and a row can change while
+somebody is looking at a screen.
+
+When it happens the only value `EntityListStatus` can carry is `error`, so the view renders §5 —
+which is what `states.md` forbids in its own words eight lines earlier: *"Error must not eat a
+refusal … If the response says refused, render §4, not §5."* **The vocabulary cannot obey its own
+rule in that case**, and no test asserts it can, which is why the gap survived being declared closed.
+
+**Wanted**, and much smaller than the original item: a way for a refused *response* to reach the view
+as a refusal rather than as an error — the reason as data, so §4 can render it. Whether that is a
+fifth status value, a discriminated `error` payload, or an `Availability` the read updates is the
+design question; the requirement is that a runtime 403 does not arrive indistinguishable from a
+network failure.
+
+*Closed as done by dispatch 21 on the strength of the first argument, corrected the same day. Noted
+because the correction is the interesting part: **the dispatch edited the requirement to match the
+code rather than the code to match the requirement**, and both documents then agreed. This
+repository has now produced that shape five times (mesh-serve V9's `membership.find`, F25, F29, F30,
+and this) — a sentence asserting a guarantee with nothing calling the code that would keep it.*
 
 **Why four and not a discriminated union with refusal reason as data:** The request was for a status
 type carrying all five with refusal reason as data. The answer is that `refused` and

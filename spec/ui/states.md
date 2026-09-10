@@ -106,7 +106,26 @@ absence. If the response says refused, render §4, not §5.
 type EntityListStatus = 'loading' | 'ready' | 'empty' | 'error';
 ```
 
-Four values. `refused` and `unauthenticated` are **not list states** — they are answers to *may I*, which is `Availability`, and a list that cannot be read is a list whose read command is unavailable. Modelling them as list statuses is what made every app hand-roll them differently. `idle` is gone: it was `unauthenticated` wearing a costume. Resolved as **U2** in [roadmap.md](../roadmap.md).
+Four values. `refused` and `unauthenticated` are **not list states** — they are answers to *may I*,
+which is `Availability`, and a list that cannot be read is a list whose read command is unavailable.
+Modelling them as list statuses is what made every app hand-roll them differently. `idle` is gone: it
+was `unauthenticated` wearing a costume.
+
+**That covers the refusal you can see coming, and not the one that arrives.** Both rows in the table
+above are sourced from something other than the read — the kernel's session, and `_describe` — so a
+view that consults them renders §3 or §4 *instead of* asking, and needs no list state to do it. But
+`_describe` is what the caller was told **when the page loaded**, and a 403 can still come back from
+a read that `_describe` said was permitted: a grant revoked mid-session, a role changed by an
+administrator, a ticket that outlived its standing. mesh-serve F30 makes that ordinary rather than
+exotic — grants are rows now, and a row can change while somebody is looking at a screen.
+
+When it happens, the only value `EntityListStatus` can carry is `error`, so the view renders §5 —
+which is the exact mistake this document forbids eight lines above: *"Error must not eat a refusal …
+If the response says refused, render §4, not §5."* The vocabulary cannot currently obey its own rule
+in that case.
+
+**Still open, and narrowed**: not *the list needs five states*, but **a read refused at request time
+has nowhere to say so**. Reopened as **U2** in [roadmap.md](../roadmap.md) with that scope.
 
 ## Conformance
 
