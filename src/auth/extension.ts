@@ -101,24 +101,30 @@ export interface TicketStore {
 }
 
 /**
- * `sessionStorage`, scoped to the tab.
+ * **There is deliberately no implementation of `TicketStore` in this file.**
  *
- * Offered rather than assumed. `localStorage` is deliberately not the default: it outlives the tab
- * and is readable by every script on the origin, which is a longer life than a ticket wants.
+ * There was one, `sessionTicketStore`, and it read `globalThis.sessionStorage` directly. Deleted
+ * 2026-09-10. It was wrong twice over and the second reason is the one that matters:
+ *
+ * 1. **Nothing could ever use it.** The kernel constructs a composed part with `new Exported()` and
+ *    no arguments (`contribution/contract.ts:489`), so `AuthOptions` never arrives on a real page.
+ *    It was dead from the day it was written — mesh-web roadmap **A8.15**.
+ * 2. **It reached around the kernel for a global.** This Extension declares
+ *    `needs('credentials', 'state', 'log')`, and the whole point of that declaration is that the
+ *    kernel hands a part exactly what it asked for. `storage` is a first-class capability —
+ *    scoped to the contributor, bound to a hive, `broker.ts:467` — and this asked for none of it,
+ *    then took `sessionStorage` anyway. It was the only place in any part in any repository that
+ *    touched a global, against a rule `ui/index.ts` states outright: *zero DOM calls*.
+ *
+ * A part that genuinely needs a browser API is asking for a **capability**, and if the capability
+ * does not exist yet then that is the work — not a `globalThis` and a `try/catch`.
+ *
+ * **Where persistence should actually live**, when somebody wants *remember me*: not here. A ticket
+ * in any storage a script can read is a ticket every script on the origin can read. The durable
+ * credential belongs in an `HttpOnly` cookie the browser attaches and JavaScript cannot see, which
+ * is a decision for the api and identity rather than for a part. The seam below stays because it is
+ * how a **test** injects one, and that is a caller that does construct by hand.
  */
-export function sessionTicketStore(key = 'mesh-web/ticket'): TicketStore {
-    return {
-        read: () => {
-            try { return globalThis.sessionStorage?.getItem(key) ?? undefined; } catch { return undefined; }
-        },
-        write: (token) => {
-            try { globalThis.sessionStorage?.setItem(key, token); } catch { /* a private window; not fatal */ }
-        },
-        clear: () => {
-            try { globalThis.sessionStorage?.removeItem(key); } catch { /* as above */ }
-        },
-    };
-}
 
 /**
  * Deliberately without `mesh`.
