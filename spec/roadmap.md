@@ -42,7 +42,7 @@ not accepted.
 `'loading' | 'ready' | 'empty' | 'error'` — four values, not five. The gap that `idle` was
 filling is answered by `Availability` (see U2).
 
-### U2 — A refusal that arrives at request time has nowhere to go · **reopened, narrowed 2026-09-10**
+### U2 — A refusal that arrives at request time has nowhere to go · **closed 2026-09-10**
 
 ```ts
 type EntityListStatus = 'idle' | 'loading' | 'error' | 'ready' | 'empty';
@@ -64,25 +64,7 @@ five. `idle` is gone. `refused` and `unauthenticated` are **not** list states; t
 unavailable. The compiler enforces exhaustiveness: a `switch` over `EntityListStatus` that omits
 `'empty'` or `'error'` is an error.
 
-**Why it is reopened rather than closed.** That argument is right about the refusal you can *see
-coming* and silent about the one that *arrives*. Both rows in `states.md`'s table are sourced from
-something other than the read — the kernel's session, and `_describe` — so a view that consults them
-renders §3 or §4 instead of asking. But `_describe` is what the caller was told **when the page
-loaded**, and a 403 can still come back from a read it said was permitted: a grant revoked
-mid-session, a role changed by an administrator, a ticket that outlived its standing. mesh-serve
-**F30** makes that ordinary rather than exotic — grants are rows now, and a row can change while
-somebody is looking at a screen.
-
-When it happens the only value `EntityListStatus` can carry is `error`, so the view renders §5 —
-which is what `states.md` forbids in its own words eight lines earlier: *"Error must not eat a
-refusal … If the response says refused, render §4, not §5."* **The vocabulary cannot obey its own
-rule in that case**, and no test asserts it can, which is why the gap survived being declared closed.
-
-**Wanted**, and much smaller than the original item: a way for a refused *response* to reach the view
-as a refusal rather than as an error — the reason as data, so §4 can render it. Whether that is a
-fifth status value, a discriminated `error` payload, or an `Availability` the read updates is the
-design question; the requirement is that a runtime 403 does not arrive indistinguishable from a
-network failure.
+**How a refusal arrives mid-flight:** The `error` prop on `ui.EntityList` and `ui.Table` was updated to accept `string | { refused: string }`. When a read fails with a 403 `forbidden` or 401 `unauthorized`, the collection yields a failure. The app's `error` computed maps this to `{ refused: describe(failure) }` and passes it to the view. `EntityList` and `Table` check for this shape and render states §4 (a refusal message) rather than states §5 (a generic network error).
 
 *Closed as done by dispatch 21 on the strength of the first argument, corrected the same day. Noted
 because the correction is the interesting part: **the dispatch edited the requirement to match the
@@ -189,18 +171,13 @@ defines what an Application *is*.
 reading it at this path any more, so the stated reason not to move it is gone.** Move it, leave a
 pointer behind, and update the four specs that cite it. Also recorded as O1 in mesh-operator.
 
-### K2 — The operator app moves to mesh-operator · **unblocked 2026-09-07**
 
-~~Four intertwined applications now; a directory rename once the fold lands.~~ **The fold landed.**
-`src/operator/` is one application: `index.ts` at 187 lines holding only the manifest, twelve view
-files and six command files, every one under 300, with `test/operator.spec.test.ts` checking the app
-against its own spec. `mesh.json` no longer declares catalog, releases, sites or fleet.
+### K2 — The 32 browser tests for catalog, releases, sites, and fleet were never ported · **open**
 
-So this is now the directory rename it was always going to become, with one thing standing in front
-of it: **`src/catalog`, `src/releases`, `src/sites` and `src/fleet` are still on disk.** They ship
-nothing, but their 32 browser tests are the only browser coverage of that behaviour and were never
-ported onto the folded app — which has conformance coverage and no browser coverage. **Port the
-tests, then delete the four, then rename.** Deleting first trades a merge for a hole in the suite.
+**Status update 2026-09-10:**
+The audit confirmed that the 32 browser tests were deleted in commit `ead7cf2` without being ported. The `mesh-operator` repository contains a replacement app (tested in `console.browser.test.ts` with ~20 tests), but it does not port the comprehensive tests for `catalog`, `releases`, `sites`, and `fleet` behaviors (such as importing a repo, resolving versions, or provisioning fleets). 
+
+**32 browser tests were lost.** The behaviour of the platform operator features is now largely uncovered by browser tests. The `mesh-operator` repository owns the port and should rebuild this coverage.
 
 The split that follows: **mesh-core is the design system and the two chromes. mesh-operator is
 everything a platform is operated with.** `spec/apps/operator.md` has already moved ahead of the

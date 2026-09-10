@@ -112,7 +112,7 @@ export interface IdentityInternal {
     readonly memberships: ReadonlySignal<readonly Membership[]>;
     readonly roles: ReadonlySignal<readonly Role[]>;
     readonly status: ReadonlySignal<'loading' | 'ready' | 'empty' | 'error'>;
-    readonly error: ReadonlySignal<string | null>;
+    readonly error: ReadonlySignal<string | { refused: string } | null>;
 
     /** Which organization the DETAIL region is showing. Internal: selection is this app's business. */
     readonly selected: Signal<string | null>;
