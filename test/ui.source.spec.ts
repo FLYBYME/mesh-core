@@ -49,6 +49,21 @@ describe('no component reaches for an element', () => {
         expect(offendersMatching(/document\s*\.\s*(?:querySelector|getElementById)\s*\(/)).toEqual([]);
     });
 
+    /**
+     * **No browser global either, not just no element.**
+     *
+     * `src/auth` had a function reading `globalThis.sessionStorage` until it was deleted for exactly
+     * this. A part reaches the browser through what the kernel hands it; a component reaches it
+     * through a description. Comments are stripped first because `index.ts` names the rule.
+     */
+    it('reads no browser global under src/ui', () => {
+        const code = (path: string): string => readFileSync(path, 'utf8')
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/\/\/.*$/gm, '');
+        const global = /(?<![\w$.])(?:globalThis|window|document|localStorage|sessionStorage)\s*[.[]/;
+        expect(sourceFiles('src/ui').filter((path) => global.test(code(path)))).toEqual([]);
+    });
+
     it('has something to check, so an empty directory cannot pass', () => {
         // Without this the three tests above pass trivially the day somebody moves the folder.
         expect(sourceFiles('src/ui').length).toBeGreaterThan(10);

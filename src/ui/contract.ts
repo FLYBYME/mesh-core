@@ -1,18 +1,18 @@
 /**
  * The UI vocabulary contracts and types.
  *
- * spec/ui/vocabulary.md sorts all fourteen:
+ * spec/ui/vocabulary.md sorts all fifteen:
  *   - 11 components: EntityList, EntityItem, DetailSurface, PropertyGrid, Table,
  *     TableRow, Field, Label, Select, ButtonRow, Dialog.
- *   - 3 composites: Form, ActionButton, ActionCard.
+ *   - 4 composites: Form, ActionButton, ActionCard, SignIn.
  *
  * A component has no logic. Props in, description out.
  * A composite has state. Created per use, renders itself.
  */
 
 import type {
-    BoundCommand, Confirmation, Intents, Json, Node, Reactive, ReadonlySignal, Registrar, Schema,
-    Signal,
+    AuthApi, BoundCommand, Confirmation, Intents, Json, Node, Reactive, ReadonlySignal, Registrar,
+    Schema, Session, Signal,
 } from '@flybyme/mesh-web';
 import type { JsonSchema, JsonSchemaProperty } from './schema.js';
 
@@ -32,6 +32,7 @@ export const UI_DIALOG = 'ui.Dialog';
 export const UI_FORM = 'ui.Form';
 export const UI_ACTION_BUTTON = 'ui.ActionButton';
 export const UI_ACTION_CARD = 'ui.ActionCard';
+export const UI_SIGN_IN = 'ui.SignIn';
 
 // ---------------------------------------------------------------------------- states
 
@@ -353,5 +354,39 @@ export interface ActionCardState<I = Record<string, Json | undefined>, O = unkno
     readonly error: Signal<string | null>;
     readonly result: Signal<O | undefined>;
     submit(): Promise<O | undefined>;
+    view(): Node;
+}
+
+// ---------------------------------------------------------------------------- props: SignIn
+
+/** In place only; `signIn.ts` says why there is no modal variant yet. */
+export interface SignInProps {
+    /** See `Registrar`. Both fields bind a change handler, and the form binds its submit. */
+    readonly on: Registrar;
+    /**
+     * Whatever fills `AUTH` — pass `cx.use(AUTH)`. A prop and not a method on `AuthApi`, because
+     * that interface is mesh-web's and frozen. Only these two members are read.
+     */
+    readonly auth: Pick<AuthApi, 'session' | 'signIn'>;
+    /** Defaults to "Sign in". */
+    readonly title?: Reactive<string> | undefined;
+    /** One sentence under the title: what signing in here gets you. */
+    readonly note?: Reactive<string | undefined> | undefined;
+    /** Defaults to "Sign in". */
+    readonly submitLabel?: Reactive<string> | undefined;
+    /** Defaults to "Signing in…". */
+    readonly busyLabel?: Reactive<string> | undefined;
+    readonly initialEmail?: string | undefined;
+    readonly onSignedIn?: ((session: Session) => void) | undefined;
+    readonly onError?: ((error: Error) => void) | undefined;
+    readonly class?: Reactive<string> | undefined;
+}
+
+export interface SignInState {
+    /** Readonly: whether a sign-in is in flight is the composite's to say, not a caller's to set. */
+    readonly busy: ReadonlySignal<boolean>;
+    readonly error: ReadonlySignal<string | null>;
+    /** What pressing the control does. Resolves with the session, or `undefined` if it did not. */
+    submit(): Promise<Session | undefined>;
     view(): Node;
 }

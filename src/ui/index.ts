@@ -1,10 +1,10 @@
 /**
  * The UI vocabulary for mesh-core.
  *
- * Fourteen components and composites sorted per spec/ui/vocabulary.md:
+ * Fifteen components and composites sorted per spec/ui/vocabulary.md:
  *   - 11 components: EntityList, EntityItem, DetailSurface, PropertyGrid, Table,
  *     TableRow, Field, Label, Select, ButtonRow, Dialog.
- *   - 3 composites: Form, ActionButton, ActionCard.
+ *   - 4 composites: Form, ActionButton, ActionCard, SignIn.
  *
  * Zero DOM calls: no component calls document.createElement.
  */
@@ -21,6 +21,7 @@ import { Dialog } from './components/dialog.js';
 import { ActionButton, createActionButton } from './composites/actionButton.js';
 import { ActionCard, createActionCard } from './composites/actionCard.js';
 import { createForm, Form } from './composites/form.js';
+import { createSignIn, SignIn } from './composites/signIn.js';
 
 import './ui.css';
 
@@ -39,6 +40,7 @@ export const ui = {
     Dialog,
     ActionButton,
     ActionCard,
+    SignIn,
 } as const;
 
 export {
@@ -56,9 +58,11 @@ export {
     Dialog,
     ActionButton,
     ActionCard,
+    SignIn,
     createActionButton,
     createActionCard,
     createForm,
+    createSignIn,
 };
 
 export * from './contract.js';

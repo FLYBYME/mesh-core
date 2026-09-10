@@ -460,4 +460,59 @@
         color: var(--error);
         font-size: 13px;
     }
+
+    /* ------------------------------------------------------------------------- ui.SignIn */
+    .ui-sign-in {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+        border: 1px solid var(--edge);
+        border-radius: 8px;
+        background: var(--surface);
+        box-sizing: border-box;
+    }
+
+    .ui-sign-in-header {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .ui-sign-in-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--ink);
+    }
+
+    .ui-sign-in-note {
+        font-size: 13px;
+        color: var(--ink-dim);
+    }
+
+    .ui-sign-in-form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ui-sign-in-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .ui-sign-in-error {
+        padding: 8px 12px;
+        background: rgba(248, 81, 73, 0.1);
+        border: 1px solid var(--error);
+        border-radius: 6px;
+        color: var(--error);
+        font-size: 13px;
+    }
+
+    .ui-sign-in-done {
+        font-size: 13px;
+        color: var(--ink-dim);
+    }
 }

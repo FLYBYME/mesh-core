@@ -39,7 +39,7 @@ is bundled into the kernel artifact and is not this.
 | `ui.ButtonRow` | component | the actions of a form or a detail | one primary action — that belongs to the header |
 | `ui.Dialog` | component | confirmation, and editing that must not lose the background | anything a view can show in place |
 
-**Eleven components, one composite** (plus `ui.ActionButton` and `ui.ActionCard`, making fourteen total: eleven components, three composites). That ratio is the point: state is rare, and the components that
+**Eleven components, one composite** (plus `ui.ActionButton` and `ui.ActionCard`, making fourteen total: eleven components, three composites — fifteen with `ui.SignIn`, below). That ratio is the point: state is rare, and the components that
 have none are the ones three unrelated views can share.
 
 `ui.Dialog` is a component because *whether it is open* belongs to whoever opened it, and
@@ -55,6 +55,17 @@ by a type and needs none.
 | --- | --- | --- |
 | **`ui.ActionButton`** | composite | one command. Owns whether it is running; reads `available()` for the refusal |
 | **`ui.ActionCard`** | composite | one command with inputs: the title, the consequence, the fields, the control, and the result or the error in place |
+| **`ui.SignIn`** | composite | email and password over the auth API it is handed: idle, busy, the failure in place, and gone once `session()` is set. In place |
+
+`ui.SignIn` takes the auth API as a prop — `SignIn({ on: vx.on, auth: cx.use(AUTH) })` — rather
+than being a method on `AuthApi`, because that interface is mesh-web's and frozen. It replaces the
+`ActionCard` + `renderControl` override + forwarding command that every app with a sign-in wrote.
+Register is not part of it yet.
+
+**In place, not modal.** The kernel's `Dialog` primitive is a real modal when opened after mount, but
+opened *at* mount — which is when a signed-out page would open a sign-in — it falls back to a
+non-modal `<dialog>` positioned over the window, which is another layer over windows (mesh-web
+A8.16). The modal variant waits on that renderer fix; see `src/ui/composites/signIn.ts`.
 
 **`ui.ActionButton` closes the old gaps 2 and 3 together**, because they were one gap. A command now
 carries `available(): Availability` and, when it needs one, `confirm`. So the button takes the

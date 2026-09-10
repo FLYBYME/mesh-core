@@ -91,6 +91,23 @@ the regions down, on the argument that nothing it covers is needed to fill it in
 screen's judgement, made once, and it is the kind of thing the vocabulary should decide for
 everybody.
 
+### U6 — `ui.SignIn` is in place only, because a dialog open at mount is not modal
+
+*Found 2026-09-10, building `ui.SignIn`.*
+
+The kernel's `Dialog` primitive is a real modal — native `<dialog>`, `showModal()`, focus trap —
+**when it is opened after mount.** Opened *at* mount, which is exactly when a signed-out page would
+open a sign-in, it is not: the element is not connected yet, `showModal()` throws, mesh-web's
+`openModal` (`src/render/dom.ts`) falls back to the `open` attribute, and its microtask retry is
+gated on `!el.open`, which the fallback just made false. Measured with `ui.Dialog` alone: opened
+after mount, `:modal` and `position: fixed`; opened at mount, neither, and `position: absolute` over
+the window's content — one more layer over windows, the shape of mesh-web **A8.16**.
+
+So `ui.SignIn` ships as a card in place, and the modal variant (`ui.Dialog({ open, children:
+[card] })`, a few lines) waits on the renderer. The fix is mesh-web's: retry `showModal()` once
+connected regardless of the fallback attribute. Also the concrete half of U5's *in place versus
+over*. **S** (mesh-web) · then **S** here.
+
 ---
 
 ## Track K — the chromes
