@@ -290,3 +290,67 @@ describe('the primary action collects input before it sends any', () => {
         site.dispose();
     });
 });
+
+describe('a read refused mid-flight (U2)', () => {
+    const realFetch = globalThis.fetch;
+    afterEach(() => { globalThis.fetch = realFetch; });
+
+    it('renders the refusal with its reason, not a generic error state', async () => {
+        globalThis.fetch = ((input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.includes('organization')) {
+                return Promise.resolve(new Response(JSON.stringify({ declared: false, error: 'forbidden', message: 'Gate refusal.' }), {
+                    status: 403,
+                    headers: { 'content-type': 'application/json' },
+                }));
+            }
+            return Promise.resolve(new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }));
+        }) as typeof fetch;
+
+        const site = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'identity', contribution: IdentityApp },
+            ],
+            api: 'http://identity.test',
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        const text = site.root.textContent ?? '';
+
+        expect(text).toContain('Platform operator standing required');
+        expect(text).not.toContain('Failed to load');
+
+        site.dispose();
+    });
+
+    it('renders the error state for a network failure', async () => {
+        globalThis.fetch = ((input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.includes('organization')) {
+                return Promise.resolve(new Response(JSON.stringify({ message: 'Network offline.' }), {
+                    status: 502,
+                    headers: { 'content-type': 'application/json' },
+                }));
+            }
+            return Promise.resolve(new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }));
+        }) as typeof fetch;
+
+        const site = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'identity', contribution: IdentityApp },
+            ],
+            api: 'http://identity.test',
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        const text = site.root.textContent ?? '';
+
+        expect(text).toContain('Network offline');
+        expect(text).not.toContain('Platform operator standing required');
+        expect(text).toContain('Network offline'); // Error state usually says "Failed to load" or the message
+
+        site.dispose();
+    });
+});

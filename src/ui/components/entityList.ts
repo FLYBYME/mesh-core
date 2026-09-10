@@ -49,10 +49,24 @@ export const EntityList: Component<EntityListProps> = defineComponent<EntityList
             children: [text(() => read(props.loadingMessage) ?? 'Loading…')],
         });
 
-        const errorNode = (): Node => element('Row', {
-            props: { class: 'ui-entity-list-error', role: 'alert' },
-            children: [text(() => read(props.errorMessage) ?? 'Failed to load')],
-        });
+        const errorNode = (): Node => {
+            const err = read(props.errorMessage);
+            if (typeof err === 'object' && err !== null && 'refused' in err) {
+                return element('Stack', {
+                    props: { class: 'ui-entity-list-refused', role: 'status' },
+                    children: [
+                        element('Text', {
+                            props: { class: 'ui-entity-list-refused-message' },
+                            children: [text(err.refused)],
+                        }),
+                    ],
+                });
+            }
+            return element('Row', {
+                props: { class: 'ui-entity-list-error', role: 'alert' },
+                children: [text(typeof err === 'string' ? err : 'Failed to load')],
+            });
+        };
 
         const emptyNode = (): Node => element('Stack', {
             props: { class: 'ui-entity-list-empty', role: 'status' },

@@ -103,7 +103,7 @@ export interface EntityListProps {
     readonly title?: Reactive<string> | undefined;
     readonly count?: Reactive<number | string | undefined> | undefined;
     readonly loadingMessage?: Reactive<string> | undefined;
-    readonly errorMessage?: Reactive<string | null | undefined> | undefined;
+    readonly errorMessage?: Reactive<string | { refused: string } | null | undefined> | undefined;
     readonly emptyMessage?: Reactive<string> | undefined;
     readonly emptyAction?: Reactive<Node | undefined> | undefined;
     readonly width?: Reactive<string | number> | undefined;
@@ -158,7 +158,7 @@ export interface TableProps {
     readonly rowsClass?: Reactive<string> | undefined;
     readonly status?: Reactive<EntityListStatus> | undefined;
     readonly loadingMessage?: Reactive<string> | undefined;
-    readonly errorMessage?: Reactive<string | null | undefined> | undefined;
+    readonly errorMessage?: Reactive<string | { refused: string } | null | undefined> | undefined;
     readonly emptyMessage?: Reactive<string> | undefined;
     readonly count?: Reactive<number | undefined> | undefined;
     readonly class?: Reactive<string> | undefined;
