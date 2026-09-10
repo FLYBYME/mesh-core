@@ -1,0 +1,117 @@
+U5, and then the identity app made to obey `spec/ui/states.md` with the
+vocabulary that now exists.
+
+Read `spec/roadmap.md` Track U first — U1, U2 and U3 all closed on 2026-09-10
+and what they added is what this dispatch spends.
+
+--------------------------------------------------------------------------------
+PART 1 — U5: `ActionCard` can be submitted and cannot be dismissed
+
+`ActionCardProps` has `primaryLabel`, `confirmation`, `onResult` and `onError`,
+and **no secondary action**. A card opened in place has no way out of itself, so
+every screen that opens one writes its own Cancel beside it — the wheel `ui`
+exists to stop being reinvented, in the component whose whole job is to be the
+form nobody hand-writes.
+
+`src/identity/view.ts` does exactly that today: it wraps the card in a `Stack`
+with its own button, and says so at the call site. The second screen to open a
+form will write a slightly different one.
+
+**Wanted:** `secondaryLabel` and `onSecondary`, defaulting to absent so a card
+that is not dismissible stays exactly as it is. Then delete the hand-written
+Cancel in `identity/view.ts` and the comment apologising for it.
+
+**Test it as behaviour.** Press the secondary control and assert the card
+dismissed and **the primary action did not run** — a Cancel that also submits is
+the failure worth catching, and asserting a label exists catches nothing.
+
+--------------------------------------------------------------------------------
+PART 2 — THE DECISION U5 NAMES: IN PLACE, OR OVER
+
+Worth deciding at the same time and **not the same thing**:
+
+    `confirm` is already a layer that dims and covers, and `spec/ui/anatomy.md`
+    gives an app regions rather than layers. The identity form is a band that
+    pushes the regions down, on the argument that nothing it covers is needed to
+    fill it in -- but that is one screen's judgement, made once, and it is the
+    kind of thing the vocabulary should decide for everybody.
+
+Decide it, write it into `spec/ui/` where a screen author will find it, and make
+`ActionCard` obey whichever you chose. If the answer is *it depends*, then say
+what it depends on **as a prop with two values**, not as a paragraph — a rule a
+component cannot express is a rule that will be broken, which is this track's
+own sentence.
+
+Note U6 before you choose: a `Dialog` opened at mount is **not modal** — the
+element is not connected, `showModal()` throws, and mesh-web's fallback leaves it
+`position: absolute` over the window's content. So *over* is not currently
+available at mount even if you want it. That is mesh-web's bug and not yours to
+fix; it is a constraint on what you can ship today, and the roadmap entry should
+say which of the two you would have chosen without it.
+
+--------------------------------------------------------------------------------
+PART 3 — THE IDENTITY APP ANSWERS ALL FIVE STATES
+
+`spec/ui/states.md`: *"Every view answers all five. Not 'handles' — **answers**,
+with something drawn."* The five are loading, empty, unauthenticated, refused,
+error.
+
+Two of them only became expressible today, so no app has used them yet:
+
+- **refused, arriving.** `ui.EntityList` and `ui.Table` now take
+  `error: string | { refused: string }`. A read that fails with 403 is mapped to
+  `{ refused: reason }` and renders states §4 rather than §5. U2.
+- **refused, foreseen, and busy.** `ui.ActionButton` reads `command.available()`
+  and renders disabled with the reason; it cannot be fired twice. U3.
+
+Go through `src/identity/` and make every view answer all five, using those
+rather than hand-rolled strings. `states.md` §4 gives the model to copy — three
+refusals, three different sentences, each naming what would fix it:
+
+    if (a.why === 'needs_operator') return 'Platform operator standing required ...';
+    if (a.why === 'needs_session')  return 'Sign in as an operator to ...';
+    if (a.why === 'not_exposed')    return 'identity.grant_role is not exposed on this server.';
+
+**Never invent a friendlier message.** The platform's errors are good and
+replacing one with *Something went wrong* destroys the only useful thing in the
+response.
+
+**A conformance test, not a promise.** `spec/apps/README.md` §6 says an app spec
+lists what each of the five looks like and the conformance test fails a view that
+cannot produce all five. Write that test for identity: drive the app into each of
+the five and assert something specific was drawn. If a state cannot be reached,
+that is the finding — write it into the roadmap rather than skipping the case.
+
+--------------------------------------------------------------------------------
+WHAT NOT TO DO
+
+- Do not touch `@flybyme/mesh` (frozen) or `@flybyme/mesh-web` (separate
+  repository, separate dispatch may be running). If you need something from the
+  kernel that does not exist, write it into `spec/roadmap.md` as a mesh-web item
+  with its evidence and work around it here.
+- Do not edit mesh-operator or mesh-serve.
+- `as any` and `as never` are bugs here, not style nits. A dispatch in another
+  repository shipped four `as any` in one test today and they were taken back out
+  within the hour. If you need one you have the wrong shape — say so in the
+  report.
+- Do not redesign the token set or the states type. Both landed today; spend
+  them, do not revise them.
+
+--------------------------------------------------------------------------------
+COMMIT AS YOU GO — NOT ADVICE
+
+A dispatch was killed mid-run today and left eight modified files uncommitted in
+its worktree; the work survived only because a person went and looked. **A commit
+survives the process ending; an unstaged edit does not.** Never background a
+command: run `npm test` in the foreground and wait.
+
+--------------------------------------------------------------------------------
+DONE MEANS
+
+- `npm test` green and not smaller than when you started (9 source + 44 browser).
+- `npm run typecheck` clean.
+- The dismiss test and the five-states conformance test both exist and pass.
+- `spec/ui/` carries the in-place-versus-over decision; `spec/roadmap.md` U5 says
+  what landed and what you decided against, with the reason.
+- Any structural gap found goes into `spec/roadmap.md` as its own item.
+- No `Co-Authored-By` or `Claude-Session` trailers.
