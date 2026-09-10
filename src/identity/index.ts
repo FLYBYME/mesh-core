@@ -92,16 +92,37 @@ export default class IdentityApp implements Application<
             return id === null ? [] : memberships.rows().filter((m) => m.organizationId === id);
         };
 
+        /**
+         * **The collection already knows which of the four states it is in.**
+         *
+         * This was derived here instead, and it was wrong in the way that is hardest to see:
+         *
+         * ```ts
+         * if (organizations.error() !== undefined) return 'error';
+         * ```
+         *
+         * `error()` answers **`null`** when there is nothing wrong, and `null !== undefined` is
+         * `true` — so this app was in `error` on every render it ever did, including the ones where
+         * the server had just answered with a list. The screen said *Failed to load* over a
+         * successful response, with no message under it, because the `error` computed below got the
+         * sentinel right and correctly reported that there was no error to describe.
+         *
+         * The comment explaining the sentinel was three lines below the line that got it wrong,
+         * written by whoever learned it while writing the second computed and did not look up.
+         *
+         * So neither is derived now. `models` publishes `status` — the same four states this screen
+         * needs plus `idle`, which means *nothing has asked yet* and is a fact about the collection
+         * rather than about the screen. To a person waiting, a fetch that has not started and one in
+         * flight are the same thing, so it folds into `loading` here.
+         */
         const status = cx.state.computed<'loading' | 'ready' | 'empty' | 'error'>(() => {
-            if (organizations.error() !== undefined) return 'error';
-            if (organizations.loading()) return 'loading';
-            return organizations.rows().length === 0 ? 'empty' : 'ready';
+            const state = organizations.status();
+            return state === 'idle' ? 'loading' : state;
         });
 
         const error = cx.state.computed<string | null>(() => {
-            // `error()` answers `null` when there is none, not `undefined`.
             const failure = organizations.error();
-            return failure == null ? null : describe(failure);
+            return failure === null ? null : describe(failure);
         });
 
         /**

@@ -58,6 +58,71 @@ describe('the identity app boots', () => {
     });
 
     /**
+     * **The index does not say it failed over a response that succeeded.**
+     *
+     * This app spent its whole life in `error`. The status was derived by hand and asked
+     * `organizations.error() !== undefined`, while `error()` answers **`null`** when there is
+     * nothing wrong — so the branch was taken on every render, including the ones where the server
+     * had just answered with a list. Reported as *"the identity app shows Failed to load but the
+     * request came back from the server with a list of orgs"*.
+     *
+     * Every other test in this file passed throughout, and the first attempt at this one did too —
+     * for a reason worth keeping. `boot()` mounts with **no API**, so the fetch genuinely fails and
+     * `error` is genuinely the right state. **A fixture where everything fails cannot tell a screen
+     * that reports failure correctly from one that reports it always.** So this one answers the
+     * query, which is the only fixture that separates them.
+     */
+    it('is not in the error state when the read came back', async () => {
+        const realFetch = globalThis.fetch;
+        globalThis.fetch = ((input: RequestInfo | URL) => {
+            const url = String(input);
+            const rows = url.includes('organization')
+                ? [{ id: 'o-1', slug: 'platform', name: 'Platform', ownerId: 'u-1' }]
+                : [];
+            return Promise.resolve(new Response(JSON.stringify(rows), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+            }));
+        }) as typeof fetch;
+
+        try {
+            const site = await mountPart({
+                parts: [
+                    { id: 'auth', contribution: AuthExtension },
+                    { id: 'identity', contribution: IdentityApp },
+                ],
+                api: 'http://identity.test',
+            });
+
+            // The read is in flight at mount, so wait for it to settle rather than racing it.
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            /**
+             * Asserted through the DOM, because `status` is internal and should stay that way —
+             * which state a screen is in is nobody else's business. `EntityList` renders the rows
+             * only in `ready`, so the organization's name appearing *is* the state.
+             */
+            const text = site.root.textContent ?? '';
+
+            // The assertion. Before the fix the screen was in `error` and this row never rendered.
+            expect(text).toContain('Platform');
+            // And the failure copy is absent. It rendered with an empty message, which is why the
+            // symptom was a bare "Failed to load" over a response that had worked.
+            expect(text).not.toContain('Loading organizations');
+            expect(text).not.toContain('No organizations yet');
+
+            // The published rows agree, so this is the screen's state and not a stale signal.
+            const api = site.kernel.provided(IDENTITY);
+            const organizations = api?.state['organizations'] as (() => readonly unknown[]) | undefined;
+            expect(organizations?.()).toHaveLength(1);
+
+            site.dispose();
+        } finally {
+            globalThis.fetch = realFetch;
+        }
+    });
+
+    /**
      * The check that says the published API matches the manifest.
      *
      * `checkBindings` runs at start and refuses a part in either direction — a declared command with
