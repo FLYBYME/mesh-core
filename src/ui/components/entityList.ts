@@ -94,12 +94,31 @@ export const EntityList: Component<EntityListProps> = defineComponent<EntityList
                 'data-status': () => currentStatus(),
                 role: 'region',
                 'aria-label': () => read(props.title) ?? 'Entity list',
-                width: () => {
+                /**
+                 * **A style, because `width` on a `div` is not a thing.**
+                 *
+                 * This wrote `width` as an *attribute*. The attribute is only meaningful on a few
+                 * elements — `img`, `canvas`, `table` — and `EntityList` renders a `Stack`, which is
+                 * a `div`, so it did nothing at all. Meanwhile `ui.css` sets `width: 100%` on this
+                 * class, so a list asked for 300px rendered full width.
+                 *
+                 * It cost an hour, and not as a layout complaint: the console's INDEX region covered
+                 * its DETAIL region, so the sign-in button was **visible, enabled, and unclickable**
+                 * — Playwright reported *"element intercepts pointer events"* on a control every
+                 * assertion said was fine. A test that checks a control is on screen cannot tell
+                 * this from working; only pressing it can.
+                 *
+                 * Same family as `Stack`'s `gap` on a non-flex container (mesh-web roadmap A8.11): a
+                 * prop that is read, rendered, and has no effect.
+                 *
+                 * A bare number means pixels. `width: 300` is what somebody writes, and `'300'` as a
+                 * CSS width is invalid and silently dropped — which is the identical failure again.
+                 */
+                style: () => {
                     const w = read(props.width);
-                    // `null`, not `undefined`: the renderer removes an attribute on null, and
-                    // `Reactive<Json>` has no undefined in it. Meaning the same thing two ways is
-                    // how a prop ends up rendering the string "undefined".
-                    return w !== undefined ? String(w) : null;
+                    if (w === undefined) return null;
+                    const size = typeof w === 'number' ? `${String(w)}px` : w;
+                    return `width: ${size}; flex: 0 0 ${size};`;
                 },
             },
             children: [
