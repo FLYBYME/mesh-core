@@ -122,9 +122,13 @@ export default class IdentityApp implements Application<
             return state === 'idle' ? 'loading' : state;
         });
 
-        const error = cx.state.computed<string | null>(() => {
+        const error = cx.state.computed<string | { refused: string } | null>(() => {
             const failure = organizations.error();
-            return failure === null ? null : describe(failure);
+            if (failure === null) return null;
+            if (failure.kind === 'forbidden' || failure.kind === 'unauthorized') {
+                return { refused: describe(failure) };
+            }
+            return describe(failure);
         });
 
         /**

@@ -42,7 +42,7 @@ not accepted.
 `'loading' | 'ready' | 'empty' | 'error'` — four values, not five. The gap that `idle` was
 filling is answered by `Availability` (see U2).
 
-### U2 — A refusal that arrives at request time has nowhere to go · **reopened, narrowed 2026-09-10**
+### U2 — A refusal that arrives at request time has nowhere to go · **closed 2026-09-10**
 
 ```ts
 type EntityListStatus = 'idle' | 'loading' | 'error' | 'ready' | 'empty';
@@ -64,25 +64,7 @@ five. `idle` is gone. `refused` and `unauthenticated` are **not** list states; t
 unavailable. The compiler enforces exhaustiveness: a `switch` over `EntityListStatus` that omits
 `'empty'` or `'error'` is an error.
 
-**Why it is reopened rather than closed.** That argument is right about the refusal you can *see
-coming* and silent about the one that *arrives*. Both rows in `states.md`'s table are sourced from
-something other than the read — the kernel's session, and `_describe` — so a view that consults them
-renders §3 or §4 instead of asking. But `_describe` is what the caller was told **when the page
-loaded**, and a 403 can still come back from a read it said was permitted: a grant revoked
-mid-session, a role changed by an administrator, a ticket that outlived its standing. mesh-serve
-**F30** makes that ordinary rather than exotic — grants are rows now, and a row can change while
-somebody is looking at a screen.
-
-When it happens the only value `EntityListStatus` can carry is `error`, so the view renders §5 —
-which is what `states.md` forbids in its own words eight lines earlier: *"Error must not eat a
-refusal … If the response says refused, render §4, not §5."* **The vocabulary cannot obey its own
-rule in that case**, and no test asserts it can, which is why the gap survived being declared closed.
-
-**Wanted**, and much smaller than the original item: a way for a refused *response* to reach the view
-as a refusal rather than as an error — the reason as data, so §4 can render it. Whether that is a
-fifth status value, a discriminated `error` payload, or an `Availability` the read updates is the
-design question; the requirement is that a runtime 403 does not arrive indistinguishable from a
-network failure.
+**How a refusal arrives mid-flight:** The `error` prop on `ui.EntityList` and `ui.Table` was updated to accept `string | { refused: string }`. When a read fails with a 403 `forbidden` or 401 `unauthorized`, the collection yields a failure. The app's `error` computed maps this to `{ refused: describe(failure) }` and passes it to the view. `EntityList` and `Table` check for this shape and render states §4 (a refusal message) rather than states §5 (a generic network error).
 
 *Closed as done by dispatch 21 on the strength of the first argument, corrected the same day. Noted
 because the correction is the interesting part: **the dispatch edited the requirement to match the

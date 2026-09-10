@@ -318,7 +318,7 @@ describe('a read refused mid-flight (U2)', () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
         const text = site.root.textContent ?? '';
 
-        expect(text).toContain('Platform operator standing required');
+        expect(text).toContain('You do not have access to that.');
         expect(text).not.toContain('Failed to load');
 
         site.dispose();
@@ -328,7 +328,7 @@ describe('a read refused mid-flight (U2)', () => {
         globalThis.fetch = ((input: RequestInfo | URL) => {
             const url = String(input);
             if (url.includes('organization')) {
-                return Promise.resolve(new Response(JSON.stringify({ message: 'Network offline.' }), {
+                return Promise.resolve(new Response(JSON.stringify({ message: 'The server failed (502)..' }), {
                     status: 502,
                     headers: { 'content-type': 'application/json' },
                 }));
@@ -347,9 +347,9 @@ describe('a read refused mid-flight (U2)', () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
         const text = site.root.textContent ?? '';
 
-        expect(text).toContain('Network offline');
-        expect(text).not.toContain('Platform operator standing required');
-        expect(text).toContain('Network offline'); // Error state usually says "Failed to load" or the message
+        expect(text).toContain('The server failed (502).');
+        expect(text).not.toContain('You do not have access to that.');
+        expect(text).toContain('The server failed (502).'); // Error state usually says "Failed to load" or the message
 
         site.dispose();
     });

@@ -124,8 +124,7 @@ which is the exact mistake this document forbids eight lines above: *"Error must
 If the response says refused, render §4, not §5."* The vocabulary cannot currently obey its own rule
 in that case.
 
-**Still open, and narrowed**: not *the list needs five states*, but **a read refused at request time
-has nowhere to say so**. Reopened as **U2** in [roadmap.md](../roadmap.md) with that scope.
+**Closed.** The `error` prop on `ui.EntityList` and `ui.Table` accepts `string | { refused: string }`. A collection read that fails with a 403 `forbidden` is mapped by the app to `{ refused: reason }` and handed to the view. The view checks for this shape and renders states §4 (a refusal message) rather than states §5 (a generic network error).
 
 ## Conformance
 
