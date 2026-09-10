@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mountPart, cleanup } from '@flybyme/mesh-web/testing';
 
 import IdentityApp from '../src/identity/index.js';
-import { AuthExtension } from '../src/auth/index.js';
+import { AuthExtension, AUTH, type AuthApi } from '../src/auth/index.js';
 import { IDENTITY } from '../src/identity/contract.js';
 
 afterEach(() => { cleanup(); });
@@ -205,6 +205,87 @@ describe('every control renders its own refusal', () => {
         // in the markup, so a caller arriving by a palette, a key binding or a tool call is refused
         // identically.
         expect(site.root.querySelector('[data-refused="true"]')).not.toBeNull();
+
+        site.dispose();
+    });
+});
+
+/**
+ * **Pressing the primary action opens a form. It does not post.**
+ *
+ * Reported from a running console: *"when i click new org it makes a post to the server
+ * `{name: "", slug: "", ownerId: "u-…"}`"*, answered with
+ * *`slug: String must contain at least 1 character(s); name: String must contain at least 1
+ * character(s)`*. The server was right — there was no form, and the button had the input written
+ * into the call as a literal.
+ *
+ * The form already existed one region away, as the index's `emptyAction`, which renders in `empty`
+ * while a signed-out person is in `error`. The same trap this file's header comment describes for
+ * the button: the button was moved out of the empty state and the form was left behind in it.
+ *
+ * Signed in, because signed out the control is refused and the two tests above already cover that.
+ */
+describe('the primary action collects input before it sends any', () => {
+    const realFetch = globalThis.fetch;
+    afterEach(() => { globalThis.fetch = realFetch; });
+
+    it('shows the form and posts nothing until it is submitted', async () => {
+        const posted: string[] = [];
+
+        globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+            const url = String(input);
+            if ((init?.method ?? 'GET') === 'POST') posted.push(url);
+
+            if (url.endsWith('/api/identity/ticket')) {
+                return Promise.resolve(new Response(
+                    JSON.stringify({ token: 't1', userId: 'u1', expiresAt: 9e12 }),
+                    { status: 200, headers: { 'content-type': 'application/json' } },
+                ));
+            }
+            if (url.endsWith('/api/identity/whoami')) {
+                return Promise.resolve(new Response(
+                    JSON.stringify({ userId: 'u1', displayName: 'Alice', roles: ['authenticated'] }),
+                    { status: 200, headers: { 'content-type': 'application/json' } },
+                ));
+            }
+            return Promise.resolve(new Response('[]', {
+                status: 200, headers: { 'content-type': 'application/json' },
+            }));
+        }) as typeof fetch;
+
+        const site = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'identity', contribution: IdentityApp },
+            ],
+            api: 'http://identity.test',
+        });
+
+        // The seam, from the kernel — `mountPart` returns a site, not an auth handle.
+        const auth = site.kernel.provided(AUTH) as AuthApi | undefined;
+        await auth?.signIn({ email: 'alice@example.com', password: 'correct-horse' });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const button = [...site.root.querySelectorAll<HTMLButtonElement>('button')]
+            .find((b) => (b.textContent ?? '').trim().startsWith('New organization'));
+        expect(button).toBeDefined();
+        expect(button?.disabled).toBe(false);
+
+        // Nothing to type into yet, so the assertion after the click is about the click.
+        expect(site.root.querySelector('input[name="slug"]')).toBeNull();
+
+        const before = posted.filter((url) => url.includes('organization')).length;
+        button?.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        // The assertion. Pressing it used to send `{ name: '', slug: '' }` straight out.
+        expect(posted.filter((url) => url.includes('organization'))).toHaveLength(before);
+
+        // And what it did instead is show somewhere to type. `ActionCard` generates a field per
+        // property of the command's own input schema, so these are `name` and `slug` without this
+        // file or that one naming them.
+        expect(site.root.querySelector('input[name="name"]')).not.toBeNull();
+        expect(site.root.querySelector('input[name="slug"]')).not.toBeNull();
 
         site.dispose();
     });

@@ -78,6 +78,8 @@ export default class IdentityApp implements Application<
         const roles = cx.models('role');
 
         const selected = cx.state.signal<string | null>(null);
+        /** Whether the new-organization form is showing. See `IdentityInternal.creating`. */
+        const creating = cx.state.signal(false);
 
         const selectedOrganization = (): Organization | null =>
             organizations.rows().find((o) => o.id === selected()) ?? null;
@@ -178,6 +180,9 @@ export default class IdentityApp implements Application<
                     // and a new transport failure is a compile error there rather than an
                     // `undefined` in a toast here.
                     selected.set(created.value.id);
+                    // The form closes because the thing it was for happened. Closing it before the
+                    // call would take the fields away from somebody the server is about to refuse.
+                    creating.set(false);
                     return created.value;
                 },
             } as BoundCommand<{ name: string; slug: string }, Organization>,
@@ -218,6 +223,7 @@ export default class IdentityApp implements Application<
             select: (id) => { selected.set(id); },
             members,
             selectedOrganization,
+            creating,
             commands,
         };
 

@@ -28,6 +28,19 @@ export function renderIdentity(
         props: { class: 'identity', style: { display: 'flex', flexDirection: 'column', height: '100%' } },
         children: [
             header(app, vx.on),
+            /**
+             * **The new-organization form, above the two regions and below the header.**
+             *
+             * Not in the DETAIL region, which is showing an organization, and not a modal. A modal
+             * would be the fourth thing on this page that dims and covers the others — `confirm` is
+             * already one — and `spec/ui/anatomy.md` gives an app regions rather than layers. This
+             * is a band that pushes the regions down while it is open, so nothing it covers is
+             * needed to fill it in and nothing behind it is lost.
+             */
+            when(
+                () => app.creating(),
+                () => createCard(app, vx.on),
+            ),
             element('Row', {
                 props: { class: 'identity-body', style: { display: 'flex', flex: '1', minHeight: '0' } },
                 children: [index(app, vx.on), detail(app, vx.on)],
@@ -50,6 +63,19 @@ export function renderIdentity(
  * to the header"*. A primary action in the empty state is an action that disappears exactly when
  * something has gone wrong.
  */
+/**
+ * Why creating an organization is refused, or `undefined` when it is not.
+ *
+ * `Availability` is a discriminated union — `{ can: true }` carries no `detail`, and only the
+ * refusing arm does — so reading `.detail` off the union does not typecheck. That is the type doing
+ * its job: *a reason for a refusal that did not happen* is not a thing, and a screen that reached for
+ * one would render an empty explanation beside an enabled control.
+ */
+const refusal = (app: IdentityInternal): string | undefined => {
+    const standing = app.commands.createOrganization.available();
+    return standing.can ? undefined : (standing.detail ?? 'refused');
+};
+
 const header = (app: IdentityInternal, on: Registrar): Node =>
     element('Row', {
         props: { class: 'identity-header' },
@@ -67,14 +93,38 @@ const header = (app: IdentityInternal, on: Registrar): Node =>
                     }),
                 ],
             }),
-            // Always present, refused when it cannot run, and saying which standing is missing.
-            ActionButton({
-                on,
-                command: app.commands.createOrganization,
-                input: { name: '', slug: '' },
-                label: 'New organization',
-                class: 'primary',
-            }).view(),
+            /**
+             * **It opens the form. It does not run the command.**
+             *
+             * It used to run it, with the input written into the call as `{ name: '', slug: '' }`,
+             * so pressing it posted two empty strings and the server answered *slug: String must
+             * contain at least 1 character(s)*. The server was right; there was no form.
+             *
+             * `ActionButton` is for a command that is ready to run. This is incidental interaction —
+             * revealing a region — so it is a plain button and `on`, the same way selecting a row is.
+             * The refusal it used to carry moves to the card, where the command actually lives, and
+             * is still visible: `createOrganization.available()` is what disables the submit.
+             */
+            element('Button', {
+                props: {
+                    class: 'identity-btn primary',
+                    /**
+                     * **Still refused when the command is, even though pressing it only opens a
+                     * form.** `spec/ui/states.md` §4 — a refused control stays on screen, disabled,
+                     * saying what is missing. Opening a form you cannot submit teaches somebody the
+                     * feature works and then refuses them a step later, which is the same lie a
+                     * vanishing control tells, one screen further in.
+                     */
+                    disabled: () => app.creating() || !app.commands.createOrganization.available().can,
+                    'data-refused': () => (app.commands.createOrganization.available().can ? 'false' : 'true'),
+                    title: () => refusal(app) ?? '',
+                },
+                intents: { activate: { action: on(() => { app.creating.set(true); }) } },
+                children: [text(() => {
+                    const why = refusal(app);
+                    return why === undefined ? 'New organization' : `New organization — ${why}`;
+                })],
+            }),
         ],
     });
 
@@ -96,7 +146,17 @@ const index = (app: IdentityInternal, on: Registrar): Node =>
         errorMessage: () => app.error(),
         loadingMessage: 'Loading organizations…',
         emptyMessage: 'No organizations yet.',
-        emptyAction: () => createCard(app, on),
+        /**
+         * **No `emptyAction`, and removing it is the point of this change.**
+         *
+         * It rendered `createCard` here, so with the form now also opening from the header there
+         * were two of the same form on one screen, each with its own buffers, one of them visible
+         * only in a state a signed-out person never reaches.
+         *
+         * `spec/ui/vocabulary.md` under `ui.ButtonRow`: *"one primary action — that belongs to the
+         * header"*. The header carries it in every state, which is what an empty list needed and
+         * what an errored one needed more.
+         */
         width: 280,
         children: [
             each(
@@ -224,5 +284,32 @@ const removeButton = (app: IdentityInternal, member: Membership, on: Registrar):
     // which is props in and description out with nothing to own.
     }).view();
 
+/**
+ * The form itself, generated from `createOrganization`'s own input schema.
+ *
+ * Nobody writes a field, a label or a buffer for `name` and `slug`: `ActionCard` reads the schema on
+ * the command. It carries the command's `available()` too, so signed out the submit is disabled and
+ * says why, which is where the refusal that used to sit on the header button now lives.
+ *
+ * **Cancel is beside the card rather than in it, and that is a gap not a preference.**
+ * `ActionCardProps` has `primaryLabel` and no secondary — so a card can submit and cannot be
+ * dismissed, and every screen that opens one in place writes its own way out. Logged as roadmap
+ * **U5**; when the card grows one this moves inside and the wrapper goes.
+ */
 const createCard = (app: IdentityInternal, on: Registrar): Node =>
-    ActionCard({ on, command: app.commands.createOrganization, title: 'New organization' }).view();
+    element('Stack', {
+        props: { class: 'identity-create' },
+        children: [
+            ActionCard({
+                on,
+                command: app.commands.createOrganization,
+                title: 'New organization',
+                onResult: () => { app.creating.set(false); },
+            }).view(),
+            element('Button', {
+                props: { class: 'identity-btn' },
+                intents: { activate: { action: on(() => { app.creating.set(false); }) } },
+                children: [text('Cancel')],
+            }),
+        ],
+    });

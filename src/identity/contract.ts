@@ -122,6 +122,25 @@ export interface IdentityInternal {
     readonly members: () => readonly Membership[];
     readonly selectedOrganization: () => Organization | null;
 
+    /**
+     * **Whether the new-organization form is on screen.**
+     *
+     * Here because the header's primary control **opens a form**; it does not run the command. It
+     * used to run it, with `input: { name: '', slug: '' }` written into the call — so pressing *New
+     * organization* posted two empty strings and the server answered
+     * *`slug: String must contain at least 1 character(s)`*, which is the server correctly refusing
+     * a form nobody had been shown.
+     *
+     * The form itself already existed one region away, as the index's `emptyAction`. That is the
+     * same trap this file's header comment describes for the button: `emptyAction` renders in
+     * `empty`, and a signed-out person is in `error`. The button was moved out and the form was left
+     * behind.
+     *
+     * A `Signal` rather than a command, because opening a form is incidental interaction — nothing
+     * outside this app should be able to drive it, and it is not a thing to put in a palette.
+     */
+    readonly creating: Signal<boolean>;
+
     readonly commands: IdentityCommands;
 }
 
