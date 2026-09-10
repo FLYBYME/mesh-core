@@ -1,0 +1,102 @@
+U1, U2 and U3 — one issue, FLYBYME/surfdns#74. Read `spec/roadmap.md` Track U in
+full first; it states all three and the sentence that ties them together:
+
+    A rule the components cannot express is a rule that will be broken.
+
+All three have already been broken in exactly the way the gap predicts. That is
+the argument for doing them together rather than three times.
+
+--------------------------------------------------------------------------------
+U1 — THERE ARE NO DESIGN TOKENS
+
+Colour, type scale and spacing exist only as literal values in `src/ui/ui.css`.
+Nothing is named, nothing is documented, and nothing stops a thirteenth component
+picking a thirteenth grey. **This is why two screens can follow every rule in
+`spec/ui/` and still not look like each other**: the rules govern behaviour and
+nothing governs appearance.
+
+Wanted: a named set — surface, border, text, muted, accent, danger; a type scale;
+a spacing scale — defined once as custom properties, documented in `spec/ui/`,
+and the only values any component may use.
+
+Note before you start: `ui.css` already declares `@layer ui.components`, and
+thirteen theme variables already exist. Find them, and build on them rather than
+beside them. Read `src/ui/ui.css` end to end before writing a single token — a
+second naming scheme layered over the first is worse than what is there now.
+
+**Make it checkable.** A component using a literal colour must fail something,
+not merely fail review. A test that scans `src/ui/**` for hex literals,
+`rgb(`/`hsl(`, and raw `px` in the properties the spacing scale covers, and fails
+naming the file and line, is the deliverable that keeps U1 closed. Allow an
+explicit, commented opt-out for the handful of places a literal is genuinely
+right (hairlines, shadows) so the check does not become the thing people delete.
+
+--------------------------------------------------------------------------------
+U2 — TWO OF THE FIVE STATES CANNOT BE EXPRESSED
+
+    type EntityListStatus = 'idle' | 'loading' | 'error' | 'ready' | 'empty';
+
+No `unauthenticated`, no `refused`. `spec/ui/states.md` requires all five of every
+view and the vocabulary can carry three.
+
+The consequence is not cosmetic: every app hand-rolls the two hardest states and
+they all differ. The catalog console said `Failed to load catalog parts
+(unauthorized)` for a week because the only state it could reach for was `error`.
+
+`idle` is also not a state a person can be in — nothing is idle; it has either
+started loading or it is waiting for a session. Decide whether it survives, and
+say which way in the report.
+
+Wanted: a status type carrying all five, **with the refusal reason as data**, so
+a view that forgets one does not compile. Exhaustiveness is the point: prefer a
+discriminated union the compiler can check over a string enum plus optional
+fields. If a `switch` over it can omit a case without erroring, the type is
+wrong.
+
+--------------------------------------------------------------------------------
+U3 — NO COMPONENT CAN EXPRESS A REFUSED OR A BUSY CONTROL
+
+Two rules with nothing to obey them with:
+
+- **states §4** — a control that is visible, disabled, and labelled with what is
+  missing. mesh-operator's people app rendered its own strings inline; nobody
+  else did it at all.
+- **rules §3** — the control that starts slow work shows the work and cannot be
+  fired twice. `builder.release_repo` takes forty seconds. Every long-running
+  button implements this by hand or not at all.
+
+One component covers both: a button taking an `Availability` and a pending state.
+`Availability` is already a type in `@flybyme/mesh-web` and is already data
+rather than a boolean, precisely so a refused control stays visible and can say
+why — use it, do not define a second one.
+
+**Cannot be fired twice** is a behaviour, so test it as one: press it, and while
+the first call is still pending press it again, and assert the command ran once.
+Asserting a `disabled` attribute is not the same claim.
+
+--------------------------------------------------------------------------------
+WHAT NOT TO DO
+
+- Do not touch `@flybyme/mesh`. Frozen, bug fixes only.
+- Do not change `@flybyme/mesh-web`. It is a separate repository and a separate
+  dispatch is running against it right now. If you need something from the kernel
+  that does not exist, write it down in `spec/roadmap.md` as a mesh-web item with
+  its evidence and work around it here — do not edit node_modules, and do not
+  reach into that checkout.
+- `as any` and `as never` are bugs here, not style nits. If you need one you have
+  the wrong shape; say so in the report.
+- Do not redesign the eleven components and three composites. Tokens and two
+  states are a pass over what exists, plus one new button.
+
+--------------------------------------------------------------------------------
+DONE MEANS
+
+- `npm test` green and not smaller than when you started.
+- `npm run typecheck` clean.
+- The literal-colour check and the double-press test both exist and pass.
+- `spec/ui/` documents the token set, and `spec/roadmap.md` U1/U2/U3 are updated
+  to say what landed — including anything you decided against, with the reason.
+- Any structural gap you find goes into `spec/roadmap.md` as its own item. That
+  is a standing rule here: a gap found and only mentioned in a report is lost.
+- Commit as you go. Do not add `Co-Authored-By` or `Claude-Session` trailers to
+  commits in this repository.
