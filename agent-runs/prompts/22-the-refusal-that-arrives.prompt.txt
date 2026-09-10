@@ -1,0 +1,122 @@
+Two things, and the second is an audit rather than a feature. Read
+`spec/roadmap.md` Track U and Track K first, and `spec/ui/states.md` in full.
+
+--------------------------------------------------------------------------------
+PART 1 — U2, NARROWED: A REFUSAL THAT ARRIVES HAS NOWHERE TO GO
+
+U2 was closed yesterday by dispatch 21 and reopened the same day. **Read the U2
+entry's "Why it is reopened rather than closed" section before doing anything** —
+it is the whole brief, and half of what the previous dispatch argued is correct
+and must be kept.
+
+What is right and stays: `refused` and `unauthenticated` are **not** list states
+when you can see them coming. `states.md`'s own table sources both from something
+other than the read — the kernel's session, and `_describe` — so a view consults
+those and renders §3 or §4 *instead of* asking. Do not add a fifth enum value on
+the strength of the original item's wording. `EntityListStatus` stays four values
+unless you have an argument better than this one.
+
+What is missing: **the refusal that arrives.** `_describe` is what the caller was
+told *when the page loaded*. A 403 can still come back from a read it said was
+permitted — a grant revoked mid-session, a role changed by an administrator, a
+ticket that outlived its standing. mesh-serve **F30** landed today and makes this
+ordinary rather than exotic: grants are rows now, and a row can change while
+somebody is looking at a screen.
+
+When it happens the only value `EntityListStatus` can carry is `error`, so the
+view renders §5 — which `states.md` forbids in its own words eight lines above
+the section dispatch 21 edited:
+
+    Error must not eat a refusal. A gate refusal arriving as a `catch` is how
+    `api.describe` reported "no release" for every site on the cluster for an
+    evening -- a 403 was swallowed and rendered as absence. If the response says
+    refused, render §4, not §5.
+
+**Wanted:** a refused *response* reaches the view as a refusal, with the reason as
+data, so §4 can render it. Whether that is a discriminated `error` payload, an
+`Availability` the read updates, or something else is yours to design — argue it
+in the report. The requirement is only this: **a runtime 403 must not arrive
+indistinguishable from a network failure.**
+
+**Test it as behaviour, not as a type.** A test that asserts a union has a member
+proves nothing. Make a read reject with a 403-shaped failure, mount a view over
+it, and assert the view rendered the refusal — with its reason — and not the
+error state. Then make the same read reject with a network failure and assert it
+rendered §5. Two tests, opposite directions; that pair is the deliverable.
+
+--------------------------------------------------------------------------------
+PART 2 — K2 SAYS 32 BROWSER TESTS WERE NEVER PORTED. FIND OUT.
+
+`spec/roadmap.md` K2 reads:
+
+    `src/catalog`, `src/releases`, `src/sites` and `src/fleet` are still on disk.
+    They ship nothing, but their 32 browser tests are the only browser coverage
+    of that behaviour and were never ported onto the folded app -- which has
+    conformance coverage and no browser coverage. **Port the tests, then delete
+    the four, then rename.** Deleting first trades a merge for a hole in the
+    suite.
+
+**Those four directories are no longer on disk, and neither is `src/operator`.**
+`src/` is now `auth`, `chrome`, `identity`, `ui`, `index.ts`. So either the tests
+were ported before the delete, or the delete happened first and the hole K2 warned
+about is in the suite right now. **Nobody has checked which.** mesh-core currently
+runs 44 browser tests across 5 files.
+
+Find out, from the history rather than by guessing:
+
+- `git log --diff-filter=D --name-only` over the deleted paths, and the commits
+  that removed them. What did those commits say they were doing?
+- Did any commit add browser tests covering catalog/releases/sites/fleet
+  behaviour, in this repository or by moving files to mesh-operator?
+- mesh-operator has `test/console.spec.test.ts` and `test/people.spec.test.ts`.
+  Are those conformance tests or browser tests? Conformance coverage is not
+  browser coverage — K2 says so explicitly, and that distinction is the point.
+
+**Then write down the answer in `spec/roadmap.md` K2**, whichever it is:
+
+- If the tests were ported: close K2, name where they went, and say how you
+  verified it. State the count.
+- If they were not: **say so plainly, with the number lost and what behaviour is
+  now uncovered.** Do not port them in this dispatch — the app they covered lives
+  in another repository and this dispatch may not touch it. Leave K2 open with an
+  accurate description and a pointer to the repository that owns the port.
+
+Do not delete anything or rename anything in this part. It is an audit. The
+deliverable is a true sentence in the roadmap where there is currently an
+out-of-date one.
+
+--------------------------------------------------------------------------------
+WHY THIS PART IS WORTH A DISPATCH
+
+This repository has produced the same failure five times: **a sentence asserting a
+guarantee, with nothing calling the code that would keep it.** Yesterday's
+dispatch produced a new variant of it — it edited the requirement to match the
+code rather than the code to match the requirement, and afterwards both documents
+agreed with each other and nothing disagreed.
+
+K2 is a sentence written before a delete, describing a state of the world that no
+longer holds. It has been read as current for three days. An audit that produces
+one true sentence is worth more here than a feature.
+
+--------------------------------------------------------------------------------
+WHAT NOT TO DO
+
+- Do not touch `@flybyme/mesh` (frozen) or `@flybyme/mesh-web` (separate
+  repository, and a dispatch is running against it right now). If you need
+  something from the kernel that does not exist, write it into `spec/roadmap.md`
+  as a mesh-web item with its evidence and work around it here.
+- Do not edit anything in mesh-operator. Different repository, different dispatch.
+- `as any` and `as never` are bugs here, not style nits.
+- Do not redesign the vocabulary. U2 is one narrow hole.
+
+--------------------------------------------------------------------------------
+DONE MEANS
+
+- `npm test` green, and not fewer than 44 browser + 9 source tests.
+- `npm run typecheck` clean.
+- The two opposite-direction tests from Part 1 exist and pass.
+- `spec/ui/states.md` and `spec/roadmap.md` U2 updated to what is now true.
+- `spec/roadmap.md` K2 replaced with a sentence that is true today, with the
+  evidence you used.
+- Any structural gap you find goes into `spec/roadmap.md` as its own item.
+- Commit as you go. No `Co-Authored-By` or `Claude-Session` trailers.
