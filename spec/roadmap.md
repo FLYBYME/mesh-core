@@ -69,6 +69,28 @@ sizes the view, and a routing chrome, which hands it the page.
 It needs one answer that works under both before the anatomy document can move from Proposed to
 Decided.
 
+### U5 — `ActionCard` can be submitted and cannot be dismissed
+
+*Found 2026-09-10, giving the identity app a working New-organization form.*
+
+`ActionCardProps` has `primaryLabel`, `confirmation`, `onResult` and `onError`, and **no secondary
+action**. So a card opened in place has no way out of itself, and every screen that opens one writes
+its own Cancel beside it — which is the wheel `ui` exists to stop being reinvented, in the component
+whose whole job is to be the form nobody hand-writes.
+
+`identity/view.ts` does exactly that today, wrapping the card in a `Stack` with a button, and says so
+at the call site. The second screen to open a form will write a slightly different one.
+
+Wanted: `secondaryLabel` and `onSecondary`, defaulting to absent so a card that is not dismissible
+stays as it is. **S.**
+
+The related question, worth deciding at the same time and not the same thing: **a form that opens in
+place versus one that opens over.** `confirm` is already a layer that dims and covers, and
+`spec/ui/anatomy.md` gives an app regions rather than layers. The identity form is a band that pushes
+the regions down, on the argument that nothing it covers is needed to fill it in — but that is one
+screen's judgement, made once, and it is the kind of thing the vocabulary should decide for
+everybody.
+
 ---
 
 ## Track K — the chromes
