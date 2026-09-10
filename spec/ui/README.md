@@ -42,6 +42,7 @@ Everything below follows from those three.
 | [anatomy.md](./anatomy.md) | The shape of a view: regions, scroll, and where a control lives. |
 | [states.md](./states.md) | The five states, drawn. The anti-"fucked up" document. |
 | [vocabulary.md](./vocabulary.md) | The twelve components: which for which job, and when not to. |
+| [tokens.md](./tokens.md) | The design token set: colour, spacing, type scale, radius. Every component value comes from here. |
 | [responsive.md](./responsive.md) | One design, many surfaces. Why there is no `isMobile`. |
 | [words.md](./words.md) | Labels, errors, confirmations. The half of the UI that is prose. |
 
@@ -56,6 +57,11 @@ mesh-operator keeps a pointer.
 
 ## What this set does not cover
 
-**Colour, type scale and spacing tokens.** They are in `src/ui/ui.css` and nowhere else, undocumented
+~~**Colour, type scale and spacing tokens.** They are in `src/ui/ui.css` and nowhere else, undocumented
 and unnamed. That is a real gap and it is why two screens can follow every rule here and still not
-look like each other — recorded as **U1** in [roadmap.md](../roadmap.md).
+look like each other — recorded as **U1** in [roadmap.md](../roadmap.md).~~
+
+**Colour, type scale and spacing tokens are now defined and enforced.** The token set lives in
+`@layer ui.tokens` in `src/ui/ui.css`, is documented in `spec/ui/tokens.md`, and is enforced by
+`test/ui.source.spec.ts`. U1 is closed.
+

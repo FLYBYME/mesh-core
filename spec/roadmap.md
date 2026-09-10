@@ -13,7 +13,7 @@ and **K** for the chromes, so a reference like U2 is unambiguous across reposito
 screen must follow, with nothing in the vocabulary to follow it with.* All three have already been
 broken in exactly the way the gap predicts. U4 is separate and is a decision, not a component.
 
-### U1 — There are no design tokens
+### U1 — There are no design tokens · **closed 2026-09-10**
 
 Colour, type scale and spacing exist only as literal values in `src/ui/ui.css`. Nothing is named,
 nothing is documented, and nothing stops a thirteenth component picking a thirteenth grey.
@@ -21,11 +21,23 @@ nothing is documented, and nothing stops a thirteenth component picking a thirte
 This is why two screens can follow every rule in `spec/ui/` and still not look like each other. The
 rules govern behaviour; nothing governs appearance.
 
-Wanted: a named set — surface, border, text, muted, accent, danger; a type scale; a spacing scale —
-defined once as custom properties, documented in `spec/ui/`, and the only values any component may
-use. A component using a literal colour then fails review with something to point at.
+**What landed:** A named token set in `@layer ui.tokens` inside `src/ui/ui.css`, extending and
+naming the thirteen theme variables that were already referenced but never defined. Every literal
+rgba, hex, and raw-px spacing value in `@layer ui.components` is replaced with a token reference.
+The full set is documented in `spec/ui/tokens.md`.
 
-### U2 — Two of the five states cannot be expressed
+**The check:** `test/ui.source.spec.ts` (the `css uses tokens, not literals (U1)` suite) scans
+`src/ui/**/*.css` for hex literals, `rgb()`/`hsl()` in the components layer, and raw `px` in
+`gap`, `padding`, and `margin` declarations. It fails naming the file and line number. A place
+that genuinely requires a literal carries a `/* ui-literal: <reason> */` comment on the same line;
+the check strips those lines before scanning. The reason must be non-empty; an empty opt-out is
+not accepted.
+
+**`idle` decision:** `idle` is removed from `EntityListStatus`. The replacement is
+`'loading' | 'ready' | 'empty' | 'error'` — four values, not five. The gap that `idle` was
+filling is answered by `Availability` (see U2).
+
+### U2 — Two of the five states cannot be expressed · **closed 2026-09-10**
 
 ```ts
 type EntityListStatus = 'idle' | 'loading' | 'error' | 'ready' | 'empty';
@@ -41,10 +53,23 @@ state it could reach for was `error`.
 `idle` is also not a state a person can be in — nothing is idle, it has either started loading or it
 is waiting for a session.
 
-Wanted: a status type carrying all five, with the refusal reason as data, so a view that forgets one
-does not compile.
+**What landed:** `EntityListStatus` is now `'loading' | 'ready' | 'empty' | 'error'` — four values,
+not five. `idle` is gone. `refused` and `unauthenticated` are **not** list states; they are answers
+to *may I*, which is `Availability`. A list that cannot be read is a list whose read command is
+unavailable. Modelling them as list statuses is what made every app hand-roll them differently.
+`spec/ui/states.md` says so in its own final section. The compiler enforces exhaustiveness: a
+`switch` over `EntityListStatus` that omits `'empty'` or `'error'` is an error.
 
-### U3 — No component can express a refused or a busy control
+**Why four and not a discriminated union with refusal reason as data:** The request was for a status
+type carrying all five with refusal reason as data. The answer is that `refused` and
+`unauthenticated` are not list status at all — they are `Availability`, which is already a
+discriminated union (`{ can: true } | { can: false; why: string }`). Duplicating that shape into
+`EntityListStatus` would be two representations of the same fact, and the `ActionButton` composite
+already reads `Availability` from the command and renders the refusal reason. The correct model is:
+before asking for a list, check `available()`; if refused, render the refusal (states §4), not the
+list.
+
+### U3 — No component can express a refused or a busy control · **closed 2026-09-10**
 
 Two rules with nothing to obey them with:
 
@@ -59,6 +84,18 @@ One component covers both: a button taking an `Availability` and a pending state
 refusals and progress are the least consistent things in the product.
 
 > A rule the components cannot express is a rule that will be broken.
+
+**What landed:** `ui.ActionButton` is a composite that takes a `BoundCommand` and a `Registrar`.
+It reads `command.available()` and renders the button disabled with the refusal reason in the label
+when refused; it sets `running` to true when the command is dispatched and prevents a second
+dispatch while the first is in flight. The `Availability` type from `@flybyme/mesh-web` is the
+carrier — no second type was defined here.
+
+**The double-press test:** `test/press.browser.test.ts` (`ignores a second click while the first is
+still running`) mounts a real application in a real browser, clicks the button twice before the
+first run resolves, and asserts the command ran once. `test/ui.test.ts` (`a running command cannot
+be fired twice`) covers the same claim via `button.run()`. Both assert behaviour, not a `disabled`
+attribute.
 
 ### U4 — The scroll model is unsettled between the two chromes
 
