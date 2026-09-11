@@ -59,6 +59,34 @@ const wiring = createHandlerTable('ui.test');
  * renderer's dispatcher takes when a person clicks. `invoke` answers false for an id nobody
  * registered, so an inert control fails here instead of being reported as a passing test.
  */
+/**
+ * Every node in a description tree, depth first.
+ *
+ * A typed walk, so a test can say *the node with this class* instead of
+ * `view.children[1].children[1].children[1]`. The chain is what a component's internal layout
+ * happens to be today; the class is what `ui.css` promises and what a screen depends on, so it is
+ * also the thing worth asserting against.
+ *
+ * Narrowed with a property cast rather than `as any`, the same way `press` above reads `intents`:
+ * a description node is a union and this asks it one question.
+ */
+function* everyNode(node: Node): Generator<Node> {
+    yield node;
+    for (const child of (node as { children?: readonly Node[] }).children ?? []) yield* everyNode(child);
+}
+
+/** The first node carrying this class, or undefined. `class` may be reactive, so it is read. */
+const byClass = (root: Node, wanted: string): Node | undefined => {
+    for (const node of everyNode(root)) {
+        const props = (node as { props?: { class?: unknown } }).props;
+        const value = typeof props?.class === 'function'
+            ? (props.class as () => unknown)()
+            : props?.class;
+        if (typeof value === 'string' && value.split(/\s+/).includes(wanted)) return node;
+    }
+    return undefined;
+};
+
 const press = (node: Node): boolean => {
     const intents = (node as { intents?: { activate?: { action: Action } } }).intents;
     const action = intents?.activate?.action;
@@ -336,15 +364,12 @@ describe('ActionCard secondary action', () => {
             onSecondary: () => { dismissed += 1; },
         });
 
-        const view = card.view() as any;
-        
-        // Find the secondary button
-        const bodyStack = view.children[1];
-        const actionsRow = bodyStack.children[1];
-        const secondaryBtn = actionsRow.children[1];
+        // By class, not by position: `ui-action-card-cancel` is what ui.css promises and what a
+        // screen depends on. A child index is this component's current layout and nothing else.
+        const secondaryBtn = byClass(card.view(), 'ui-action-card-cancel');
         expect(secondaryBtn).toBeDefined();
 
-        press(secondaryBtn);
+        expect(press(secondaryBtn!)).toBe(true);
 
         await Promise.resolve();
 
