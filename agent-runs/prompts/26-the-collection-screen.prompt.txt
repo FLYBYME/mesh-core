@@ -1,0 +1,192 @@
+U8, properly. Build the composite that renders a CRUD collection: list it, page
+it, sort it, search it, open a row, edit it, create one, delete one with a
+confirmation. Every control generated from the schemas that already describe the
+data.
+
+This is the item the platform's owner asked for in his own words:
+
+    "there should just be a ui composite that any app can use the show the data in
+     cruds. like the find and list and get and update are all part of that REST
+     system and you know how to show the data. like i needs to be simple to expose
+     a nice ui things every time you want to show a lost of objects from a crud
+     collection."
+
+    "i want paganation sort limit search, i want to edit object and create them.
+     i want tot delete them with a confim."
+
+    "all contracts and crud have defined input and output. the ui needs to be
+     dynamic and build rich ui elements. no comma separated shit or raw json. they
+     all have descriptions and min/max/defaults"
+
+Read `spec/roadmap.md` U8, then `spec/ui/anatomy.md`, `spec/ui/states.md`,
+`src/ui/schema.ts` and `src/ui/composites/form.ts`.
+
+--------------------------------------------------------------------------------
+START FROM `rebuild`, NOT FROM DISPATCH 25
+
+`dispatch/25` attempted this and is **not** the base. Read it if you like —
+`git show dispatch/25:src/ui/composites/collection.ts` — but it has 3 `any`, 8
+casts and non-null assertions, 4 blocks of inline `style: { display: 'flex' }`,
+and none of pagination, sort, search or delete. Its one good idea is worth
+keeping: it rewrote `src/identity/view.ts` from 298 lines down, which is the right
+way to prove this.
+
+--------------------------------------------------------------------------------
+PART 1 — THE QUERY IS ALREADY IN THE CONTRACT
+
+**Every generated `find` already accepts all of it.** `CrudParamsSchema`
+(`@flybyme/mesh/dist/interfaces/ICrudContract.d.ts:31`):
+
+    limit         number, with a default
+    offset        number, with a default
+    sort          string | string[]
+    search        string
+    searchFields  string | string[]
+    fields        string | string[]
+    query         Record<string, unknown>
+    populate      string | string[]
+
+Nothing in any UI in this platform passes one of them. `cx.models(name)` fetches
+and nothing else, so every list is the whole collection, unsorted, unsearchable.
+
+So pagination, sort, limit and search are **not new server work and not new
+client-side filtering.** They are parameters being passed. Wire them, and let the
+server do the paging — a composite that fetches everything and slices it in the
+browser is the wrong answer and will fall over on the first real collection.
+
+Page size belongs to the caller with a sensible default. Sort by clicking a
+column. Search is one input bound to `search`, debounced, and the composite must
+say **which fields it is searching** rather than implying it searches everything —
+`searchFields` exists because the server will not guess either.
+
+--------------------------------------------------------------------------------
+PART 2 — RICH CONTROLS, GENERATED FROM THE SCHEMA
+
+    "no comma separated shit or raw json. they all have descriptions and
+     min/max/defaults"
+
+This is the part to take literally. A JSON Schema from a zod contract carries far
+more than a field name and a type, and the current form ignores nearly all of it.
+Use it:
+
+    type: string + enum        a select, not a text box
+    type: string + format      email, uri, date-time each get their own control
+    type: number + min/max     a number input that enforces them, or a range
+    type: boolean              a checkbox
+    type: array of string      repeatable rows with an add and a remove
+    type: array of object      repeatable groups, each generated from items
+    type: object               a nested fieldset
+    description                shown, as help text on the field
+    default                    prefilled
+    required                   marked, and enforced before submit
+    minLength / maxLength      enforced, and surfaced as you type
+    pattern                    validated
+
+**Two things are forbidden outputs**, and both exist today:
+
+- **A comma-separated text box standing in for an array.** `site.seed` takes
+  `sources: [{ repository, ref, subdirectory }]` and the console renders one text
+  box, so a per-repository ref cannot be expressed at all. An array of objects
+  gets repeatable rows. That is the case that has to work.
+- **A raw JSON textarea.** If a shape cannot be rendered, say so in words and name
+  the field; do not hand somebody a JSON editor and call it a form.
+
+A field the composite genuinely cannot render is a finding for
+`spec/roadmap.md`, not a `<textarea>`.
+
+--------------------------------------------------------------------------------
+PART 3 — CREATE, EDIT, DELETE
+
+- **Create** opens a generated form from the `create` contract's input schema.
+- **Edit** opens the same generation from `update`'s input, prefilled from the
+  row, and submits only what changed.
+- **Delete** requires a confirmation naming what will be deleted. `Confirmation`
+  already exists in the vocabulary and `ui.ActionButton` already honours it —
+  use it rather than inventing a dialog. Nothing in the platform exposes a
+  `delete` today (mesh-serve #69), so this path must degrade to a refusal that
+  says so, and a test must cover that case.
+
+Each of the four is optional. A collection with `find` and nothing else renders a
+read-only screen with no create button — **not a disabled one and not a hidden
+one**: a control that is not part of this collection's surface does not exist,
+while a control the caller is merely not allowed to press stays visible, disabled,
+and labelled with what is missing. Those are different states and `states.md` §4
+is about the second.
+
+--------------------------------------------------------------------------------
+PART 4 — THREE THINGS THAT HAVE ALREADY GONE WRONG ONCE
+
+**A scoped collection answers about one organization, and the screen says which.**
+`site.find` is `scopedBy: 'tenantId'`, `membership.find` by `organizationId`. The
+console shipped a header reading *What this cluster serves* over a scoped read and
+it looked right because the only cluster it had run on had one organization. The
+composite needs a place for *whose* and must not let a caller quietly omit it.
+
+**A refusal is a state, per contract.** A caller may read and not write: `find` at
+`user` and `update` at `operator` is ordinary. `Availability` is already data for
+exactly this. All five states reachable; `idle` folds into `loading`.
+
+**A field is not always renderable.** `UserSchema` carries `passwordHash` and
+`user.find` cannot be exposed at all because of it — surfdns **V2**. A renderer
+that draws every field of every row is where that becomes a leak. Make the safe
+direction the default and write the decision down.
+
+--------------------------------------------------------------------------------
+WHAT NOT TO DO
+
+- **No `any`, no `as`, no `!`.** Not in the composite, not in its tests. U7 gave
+  you `Fields<T>` and generic functions that keep their type parameters; if
+  something still will not type, that is a finding worth writing down, not a cast.
+  Dispatch 25 used 11 of them in 207 lines.
+- **No inline `style: { … }`.** Dispatch 25 wrote four. `ui.css` and the token set
+  exist; a composite that styles itself inline cannot be themed and bypasses the
+  layer ordering that was fixed this week.
+- **Do not hand-roll a list, a table or a form.** `ui.EntityList`, `ui.Table`,
+  `ui.DetailSurface`, `ui.PropertyGrid`, `ui.Form`, `ui.ActionCard`,
+  `ui.ViewLayout`. This composite is their composition.
+- **Do not rename existing props.** Two were renamed on the strength of a roadmap
+  note this week and both had to be reverted.
+- Do not edit mesh-serve, mesh-web, mesh-operator or flowboard. If the kernel
+  lacks something, write it into `spec/roadmap.md` with its evidence and work
+  around it here.
+- Do not touch `@flybyme/mesh` (frozen).
+- Do not build console views. That is mesh-operator's and a different dispatch.
+
+--------------------------------------------------------------------------------
+HOW TO EDIT, AND IT IS NOT OPTIONAL
+
+**Edit files with your file tools.** Dispatch 24 in this repository committed
+eighteen `.cjs` scripts that read a source file, ran a regex over it and wrote it
+back — `fix-table-row.cjs` through `fix-table-row5.cjs`, a record of one pattern
+failing to match four times — plus a `sed -i`. A dispatch in mesh-serve did the
+same with five `patch_*.js` the next day and **deleted 88 lines of explanatory
+comments** doing it. All of them had to be removed by hand, by the person who owns
+this platform, who found them himself. Write the change. Do not write a program
+that writes the change.
+
+**Commit as you go, in the foreground.** The mesh-serve dispatch reported SUCCESS
+having committed nothing, with eight modified files sitting unstaged. When your
+turn ends the process exits: a commit survives it and an unstaged edit does not.
+Never background `npm test`; wait for it.
+
+--------------------------------------------------------------------------------
+DONE MEANS
+
+- `npm test` green and not smaller than when you started (10 source + 57 browser;
+  the script runs `typecheck` first — deliberate, do not remove it).
+- `src/identity/view.ts` is rewritten on the composite, with the line count before
+  and after in the report and an honest list of what it could not express.
+- Browser tests that **drive** it, not that assert an element exists:
+  - paging forward and back changes the rows, and the request carried `offset`
+  - clicking a column header changes the order, and the request carried `sort`
+  - typing in search changes the rows, and the request carried `search`
+  - creating a row adds it; editing one changes it; deleting one asks first, and
+    cancelling leaves the row alone
+  - an array-of-objects field renders repeatable rows and round-trips two entries
+  - a field with `enum` renders a select; one with `min`/`max` enforces them; a
+    `description` is on screen
+  - a permitted read beside a refused write renders §4, not §5
+  - an excluded field (`passwordHash`) is not rendered
+- Zero `any`, zero `as`, zero `!` in the new code. Check before you finish.
+- `spec/roadmap.md` U8 updated with what was decided and what was not built.
+- No `Co-Authored-By` or `Claude-Session` trailers.
