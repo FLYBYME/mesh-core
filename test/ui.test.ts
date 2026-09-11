@@ -307,3 +307,48 @@ describe('pressing the button is what runs the command', () => {
         expect(ran).toBe(0);
     });
 });
+
+// ---------------------------------------------------------------------------- 6. action card
+
+import { createActionCard } from '../src/ui/composites/actionCard.js';
+
+import type { Json } from '@flybyme/mesh-web';
+
+const formCommandThat = (
+    available: () => Availability,
+    run: (input: Record<string, Json | undefined>) => Promise<unknown> = async () => undefined,
+): BoundCommand<Record<string, Json | undefined>, unknown> => ({
+    action: 'thing.rename',
+    description: 'Gives the thing a different name.',
+    input: schema<Record<string, Json | undefined>>(),
+    output: schema<unknown>(),
+    available,
+    run,
+});
+
+describe('ActionCard secondary action', () => {
+    it('dismisses without running the primary action', async () => {
+        let ran = 0;
+        let dismissed = 0;
+        const card = createActionCard({
+            on: wiring.on,
+            command: formCommandThat(() => AVAILABLE, async () => { ran += 1; }),
+            onSecondary: () => { dismissed += 1; },
+        });
+
+        const view = card.view() as any;
+        
+        // Find the secondary button
+        const bodyStack = view.children[1];
+        const actionsRow = bodyStack.children[1];
+        const secondaryBtn = actionsRow.children[1];
+        expect(secondaryBtn).toBeDefined();
+
+        press(secondaryBtn);
+
+        await Promise.resolve();
+
+        expect(dismissed).toBe(1);
+        expect(ran).toBe(0);
+    });
+});

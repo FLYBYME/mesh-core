@@ -145,6 +145,17 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
                     intents: { activate: { action: pressed } },
                     children: [text(getPrimaryLabel)],
                 }),
+                ...(props.onSecondary ? [
+                    element('Button', {
+                        props: {
+                            class: 'ui-button ui-button-secondary ui-action-card-cancel',
+                            type: 'button',
+                            disabled: running,
+                        },
+                        intents: { activate: { action: props.on(() => props.onSecondary?.()) } },
+                        children: [text(() => read(props.secondaryLabel) ?? 'Cancel')],
+                    })
+                ] : []),
             ],
         });
 

@@ -118,7 +118,7 @@ sizes the view, and a routing chrome, which hands it the page.
 It needs one answer that works under both before the anatomy document can move from Proposed to
 Decided.
 
-### U5 — `ActionCard` can be submitted and cannot be dismissed
+### U5 — `ActionCard` can be submitted and cannot be dismissed · **closed 2026-09-10**
 
 *Found 2026-09-10, giving the identity app a working New-organization form.*
 
@@ -130,15 +130,16 @@ whose whole job is to be the form nobody hand-writes.
 `identity/view.ts` does exactly that today, wrapping the card in a `Stack` with a button, and says so
 at the call site. The second screen to open a form will write a slightly different one.
 
-Wanted: `secondaryLabel` and `onSecondary`, defaulting to absent so a card that is not dismissible
-stays as it is. **S.**
+**What landed:** `ActionCardProps` gained `secondaryLabel` and `onSecondary`. If provided, the
+composite renders a secondary button that invokes `onSecondary` without dispatching the primary
+action. The hand-written wrapper in `identity/view.ts` was removed.
 
-The related question, worth deciding at the same time and not the same thing: **a form that opens in
-place versus one that opens over.** `confirm` is already a layer that dims and covers, and
-`spec/ui/anatomy.md` gives an app regions rather than layers. The identity form is a band that pushes
-the regions down, on the argument that nothing it covers is needed to fill it in — but that is one
-screen's judgement, made once, and it is the kind of thing the vocabulary should decide for
-everybody.
+**In-place versus over:** A form that opens in place versus one that opens over.
+**The decision:** In place. Forms open as a band that pushes the regions down, rather than as a
+modal layer that dims and covers them. This is recorded in `spec/ui/anatomy.md`.
+*Why it was decided against 'over':* U6 documents that `Dialog` opened at mount is not modal due
+to a mesh-web bug. If we mandated 'over', forms opened at mount (like `ui.SignIn` or an empty state
+requiring action) would break. If this constraint is lifted in the future, 'over' might be revisited.
 
 ### U6 — `ui.SignIn` is in place only, because a dialog open at mount is not modal
 

@@ -340,6 +340,8 @@ export interface ActionCardProps<I = Record<string, Json | undefined>, O = unkno
     readonly title?: Reactive<string> | undefined;
     readonly consequence?: Reactive<string> | undefined;
     readonly primaryLabel?: Reactive<string> | undefined;
+    readonly secondaryLabel?: Reactive<string> | undefined;
+    readonly onSecondary?: (() => void) | undefined;
     readonly overrides?: FormOverrides | undefined;
     readonly confirmation?: Confirmation | undefined;
     readonly initialValues?: Partial<I> | undefined;

@@ -16,7 +16,7 @@ import {
     type Node, type PartApi, type Registrar, type ViewContext,
 } from '@flybyme/mesh-web';
 
-import { DetailSurface, EntityItem, EntityList, PropertyGrid, Table, TableRow, ActionButton, ActionCard } from '../ui/index.js';
+import { DetailSurface, EntityItem, EntityList, PropertyGrid, Table, TableRow, ActionButton, ActionCard, formatRefusal } from '../ui/index.js';
 import type { IdentityInternal, Membership, Organization } from './contract.js';
 
 export function renderIdentity(
@@ -73,7 +73,7 @@ export function renderIdentity(
  */
 const refusal = (app: IdentityInternal): string | undefined => {
     const standing = app.commands.createOrganization.available();
-    return standing.can ? undefined : (standing.detail ?? 'refused');
+    return standing.can ? undefined : formatRefusal(standing);
 };
 
 const header = (app: IdentityInternal, on: Registrar): Node =>
@@ -236,30 +236,31 @@ const membersTable = (app: IdentityInternal, on: Registrar): Node =>
         props: { class: 'identity-members' },
         children: [
             element('Heading', { props: { level: 2 }, children: [text('Members')] }),
-            when(
-                () => app.members().length === 0,
-                () => element('Text', {
-                    props: { class: 'identity-empty' },
-                    children: [text('Nobody belongs to this organization yet.')],
-                }),
-                () => Table({
-                    headers: ['Account', 'Role', ''],
-                    children: [
-                        each(
-                            () => app.members(),
-                            (m: Membership) => m.id,
-                            (m: () => Membership) => TableRow({
-                                children: [
-                                    // The account id, for the same reason as the owner above.
-                                    element('Text', { children: [text(() => m().userId)] }),
-                                    element('Text', { children: [text(() => m().roleKey)] }),
-                                    removeButton(app, m(), on),
-                                ],
-                            }),
-                        ),
-                    ],
-                }),
-            ),
+            Table({
+                headers: ['Account', 'Role', ''],
+                status: () => {
+                    const status = app.membershipsStatus();
+                    if (status === 'ready' && app.members().length === 0) return 'empty';
+                    return status;
+                },
+                errorMessage: () => app.membershipsError(),
+                loadingMessage: 'Loading members…',
+                emptyMessage: 'Nobody belongs to this organization yet.',
+                children: [
+                    each(
+                        () => app.members(),
+                        (m: Membership) => m.id,
+                        (m: () => Membership) => TableRow({
+                            children: [
+                                // The account id, for the same reason as the owner above.
+                                element('Text', { children: [text(() => m().userId)] }),
+                                element('Text', { children: [text(() => m().roleKey)] }),
+                                removeButton(app, m(), on),
+                            ],
+                        }),
+                    ),
+                ],
+            }),
         ],
     });
 
@@ -291,10 +292,8 @@ const removeButton = (app: IdentityInternal, member: Membership, on: Registrar):
  * the command. It carries the command's `available()` too, so signed out the submit is disabled and
  * says why, which is where the refusal that used to sit on the header button now lives.
  *
- * **Cancel is beside the card rather than in it, and that is a gap not a preference.**
- * `ActionCardProps` has `primaryLabel` and no secondary — so a card can submit and cannot be
- * dismissed, and every screen that opens one in place writes its own way out. Logged as roadmap
- * **U5**; when the card grows one this moves inside and the wrapper goes.
+ * **Cancel is now supported by the composite.**
+ * `ActionCardProps` has `onSecondary`, allowing the card to be dismissed without a custom wrapper.
  */
 const createCard = (app: IdentityInternal, on: Registrar): Node =>
     element('Stack', {
@@ -305,11 +304,7 @@ const createCard = (app: IdentityInternal, on: Registrar): Node =>
                 command: app.commands.createOrganization,
                 title: 'New organization',
                 onResult: () => { app.creating.set(false); },
+                onSecondary: () => { app.creating.set(false); },
             }).view(),
-            element('Button', {
-                props: { class: 'identity-btn' },
-                intents: { activate: { action: on(() => { app.creating.set(false); }) } },
-                children: [text('Cancel')],
-            }),
         ],
     });
