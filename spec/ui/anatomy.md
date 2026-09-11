@@ -1,6 +1,6 @@
 # The anatomy of a view
 
-**Status.** Proposed. The regions are Decided; the scroll model is Proposed and the reason is below.
+**Status.** Decided.
 
 A view answers **one question**. "Catalog" is not a question. *What is published, and at what
 versions* is. If two things on screen answer different questions, they are two views.
@@ -37,7 +37,7 @@ selected.
 **FOOTER** — work in progress: what is running, since when. Not errors — those belong where they
 happened (states §5). A view with no long-running work has no footer.
 
-## The scroll model — **Proposed**
+## The scroll model
 
 > "the left side thing needs to be two independent scroll sections"
 
@@ -48,9 +48,7 @@ becomes unusable.
 Concretely: the view fills its surface and does not grow it. HEADER and FOOTER are fixed. INDEX and
 DETAIL each own their overflow. Nothing outside the view scrolls because of something inside it.
 
-This is Proposed rather than Decided because it interacts with the chrome: a windowed chrome sizes
 the view, a routing chrome gives it the page, and "fills its surface" means different things to
-each. It needs one answer that works under both before it is Decided.
 
 ## Where a control lives
 

@@ -13,8 +13,8 @@
 import { element, read, signal, text } from '@flybyme/mesh-web';
 import type { Action, Node } from '@flybyme/mesh-web';
 import {
-    defineComposite, formatRefusal, UI_ACTION_BUTTON,
-    type ActionButtonProps, type ActionButtonState, type Composite,
+    formatRefusal,
+    type ActionButtonProps, type ActionButtonState,
 } from '../contract.js';
 import { humanizeLabel } from '../schema.js';
 
@@ -138,11 +138,6 @@ export function createActionButton<I = void, O = void>(
     };
 }
 
-export const ActionButton: Composite<ActionButtonProps<unknown, unknown>, ActionButtonState<unknown>> = defineComposite<
-    ActionButtonProps<unknown, unknown>,
-    ActionButtonState<unknown>
->(
-    UI_ACTION_BUTTON,
-    'One command: owns whether it is running, reads available() for refusal, confirms before running.',
-    (props) => createActionButton(props),
-);
+export function ActionButton<I = void, O = void>(props: ActionButtonProps<I, O>): Node {
+    return createActionButton(props).view();
+}

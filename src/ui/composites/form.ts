@@ -19,7 +19,7 @@ import { ButtonRow } from '../components/buttonRow.js';
 import { Field } from '../components/field.js';
 import { Select } from '../components/select.js';
 import {
-    defineComposite, UI_FORM, type Composite, type FieldOverride,
+    type FieldOverride,
     type FieldRenderContext, type FormProps, type FormState,
 } from '../contract.js';
 import {
@@ -367,7 +367,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
         });
 
         const actionsNode = hasActions
-            ? (overrides.renderActions ? overrides.renderActions(defaultActions) : defaultActions())
+            ? (overrides.button ? overrides.button(defaultActions) : defaultActions())
             : undefined;
 
         const defaultFormFrame = (): Node => element('Form', {
@@ -416,11 +416,6 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
     };
 }
 
-export const Form: Composite<FormProps<Record<string, Json | undefined>>, FormState<Record<string, Json | undefined>>> = defineComposite<
-    FormProps<Record<string, Json | undefined>>,
-    FormState<Record<string, Json | undefined>>
->(
-    UI_FORM,
-    'Editing a thing: owns the buffers, validity, dirty state, and generates fields from schema.',
-    (props) => createForm(props),
-);
+export function Form<T extends Record<string, Json | undefined> = Record<string, Json | undefined>>(props: FormProps<T>): Node {
+    return createForm(props).view();
+}

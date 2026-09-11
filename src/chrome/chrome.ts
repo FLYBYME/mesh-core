@@ -27,6 +27,7 @@
  * seen an element.
  */
 
+import { type BoundCommand } from '@flybyme/mesh-web';
 import {
     command, each, element, needs, text, when, PAGE_CHROME,
     type Chrome, type ChromeWindow, type Context, type Extension, type Node, type PageChrome,
@@ -47,7 +48,38 @@ export class ConsoleChrome implements Extension<typeof NEEDS, readonly [], typeo
         { id: 'console.focusWindow', title: 'Focus window' },
     ];
 
-    activate(cx: Context<typeof NEEDS, readonly []>): PageChrome {
+    activate(cx: Context<typeof NEEDS, readonly []>): PageChrome & { api: ConsoleChromeApi } {
+        const navItems = cx.state.signal<readonly NavItem[]>([]);
+        const api: ConsoleChromeApi = {
+            addNav: (item) => navItems.set([...navItems(), item])
+        };
+
+        const sidebar = (): Node => element('Stack', {
+            props: { class: 'console-sidebar' },
+            children: [
+                each(
+                    navItems,
+                    (i) => i.id,
+                    (i) => {
+                        const item = i();
+                        const avail = item.command.available?.();
+                        const can = avail ? avail.can : true;
+                        
+                        return element('Button', {
+                            props: { 
+                                class: 'console-sidebar-item', 
+                                type: 'button',
+                                disabled: !can ? 'disabled' : undefined,
+                                title: avail && !avail.can ? avail.detail ?? avail.why : undefined
+                            },
+                            ...(can ? { intents: { activate: { action: command(item.command.action) } } } : {}),
+                            children: [text(item.label)]
+                        });
+                    }
+                )
+            ]
+        });
+
         const chrome = cx.chrome;
 
         cx.commands.implement('console.toggleMode', () => {
@@ -60,12 +92,13 @@ export class ConsoleChrome implements Extension<typeof NEEDS, readonly [], typeo
 
         cx.log.info('console chrome ready');
 
-        return {
+        return { api,
             render: (): Node => element('Stack', {
                 props: { class: 'console' },
                 children: [
                     banner(chrome),
                     tabs(chrome),
+                    sidebar(),
 
                     // **The windows.** Unconditional, and never inside a `when` or an `each`: either
                     // destroys and rebuilds it, which re-parents every window and resets its scroll.
@@ -147,3 +180,15 @@ const status = (chrome: Chrome): Node => element('Row', {
         }),
     ],
 });
+
+export interface NavItem {
+    readonly id: string;
+    readonly label: string;
+    readonly command: BoundCommand<unknown, unknown>;
+}
+
+export const CONSOLE_CHROME = 'console.chrome';
+
+export interface ConsoleChromeApi {
+    readonly addNav: (item: NavItem) => void;
+}

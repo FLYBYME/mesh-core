@@ -10,6 +10,7 @@
  */
 
 import { DetailSurface } from './components/detailSurface.js';
+import { ViewLayout } from './components/viewLayout.js';
 import { EntityItem, EntityList } from './components/entityList.js';
 import { Field, Label } from './components/field.js';
 import { PropertyGrid } from './components/propertyGrid.js';
@@ -26,6 +27,7 @@ import { createSignIn, SignIn } from './composites/signIn.js';
 import './ui.css';
 
 export const ui = {
+    ViewLayout,
     EntityList,
     EntityItem,
     DetailSurface,
@@ -44,6 +46,7 @@ export const ui = {
 } as const;
 
 export {
+    ViewLayout,
     EntityList,
     EntityItem,
     DetailSurface,

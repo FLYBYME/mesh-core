@@ -9,6 +9,7 @@
  * Pure descriptions: props in, Node out. Zero DOM manipulation.
  */
 
+import { ActionButton } from '../composites/actionButton.js';
 import { element, read, text, when } from '@flybyme/mesh-web';
 import type { Node } from '@flybyme/mesh-web';
 import {
@@ -130,7 +131,15 @@ export const TableRow: Component<TableRowProps> = defineComponent<TableRowProps>
             },
             ...(props.intents ? { intents: props.intents } : {}),
             ...(props.key !== undefined ? { key: props.key } : {}),
-            children: props.children ?? [],
+            children: [
+                ...(props.children ?? []),
+                ...(props.action ? [
+                    element('Text', {
+                        props: { class: 'ui-table-cell ui-table-action-cell', role: 'cell' },
+                        children: [ActionButton(props.action)]
+                    })
+                ] : [])
+            ],
         });
     },
 );
