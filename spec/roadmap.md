@@ -158,6 +158,46 @@ So `ui.SignIn` ships as a card in place, and the modal variant (`ui.Dialog({ ope
 connected regardless of the fallback attribute. Also the concrete half of U5's *in place versus
 over*. **S** (mesh-web) · then **S** here.
 
+### U7 — The `ui` namespace erases the types it exists to carry, and does not say what it returns
+
+*Found 2026-09-11, reading the 28 typecheck errors that mesh-operator dispatch 5 left behind.*
+
+Dispatch 5 wrote two console views — `catalog` and `fleet` — against this vocabulary and ran out of
+quota with **28 typecheck errors**. Read together they are not 28 mistakes. They are three, and all
+three are ours rather than the caller's.
+
+**1. The same author got the return type wrong in both directions, in one dispatch (7 errors).**
+`ui.ActionCard(…)` returns `ActionCardState & { view(): Node }` and was put straight into a children
+array — four `Type … is not assignable to type 'Node'`. Three lines away, `ui.DetailSurface(…)` and
+`ui.PropertyGrid(…)` return a `Node` and had `.view()` called on them — three
+`Property 'view' does not exist on type 'Node'`. Fourteen names are exported from one object, eleven
+return a node and three return state, and **nothing at the call site distinguishes them**. `ui.` is
+the prefix on both.
+
+**2. The namespace is not generic, so no real command can be passed to it (7 errors).**
+`createActionCard<I, O>` is generic in its command's input and output. `ui.ActionCard` is declared
+`Composite<ActionCardProps<Record<string, Json | undefined>, unknown>, …>`, and `ui.ActionButton` as
+`ActionButtonProps<unknown, unknown>` — **the type parameters are pinned to their defaults at the
+export**. So `command: builder.import_repo` is `BoundCommand<BuilderImportRepoInput, …>` and does not
+fit `BoundCommand<Record<string, Json | undefined>, unknown>`, and `input: () => ({ hostname, ref })`
+does not fit `Partial<Record<string, Json | undefined>>`.
+
+This is the one that matters. Every screen is told *nothing hand-rolls a list, use the vocabulary* —
+and the vocabulary cannot accept a typed command. The two ways out are importing `createActionCard`
+instead, which is the vocabulary telling you not to use it, or a cast. **A design system that can
+only be used through a cast is how `as any` gets into a codebase that bans it**, and the next
+dispatch under time pressure will find that door before it finds this paragraph.
+
+**3. Four props were invented because the real ones are not discoverable (4 errors, plus 8
+`implicitly has an 'any' type` following from them).** `items` on `EntityListProps` — which takes
+`children`, so every caller writes the same map from a collection to rows. `subtitle` on
+`DetailSurfaceProps`. `button` on `FormOverrides`. A `{ header, value }[]` where `PropertyGrid`
+wants items. Each is a guess at the obvious name, which says what the obvious name would have been.
+
+**What this blocks:** `catalog` and `fleet` are written and cannot compile, and `access` — the view
+the whole authorization model is invisible without — is the same shape again. **M** here, then the
+console is unblocked. U7 comes before any further console work.
+
 ---
 
 ## Track K — the chromes

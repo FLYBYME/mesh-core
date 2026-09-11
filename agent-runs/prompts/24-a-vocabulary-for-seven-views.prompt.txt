@@ -9,6 +9,51 @@ built well out of what the vocabulary currently offers, and the evidence is that
 here.
 
 --------------------------------------------------------------------------------
+PART 0 — U7, AND IT COMES FIRST BECAUSE IT IS MEASURED
+
+Do this part before the others. It is not a guess about what seven views will
+need: two of them are written, in `mesh-operator`, and they do not compile.
+
+A dispatch there wrote `catalog` and `fleet` against this vocabulary and stopped
+with **28 typecheck errors**. Read together they are three problems, and all three
+are this repository's rather than the caller's. `spec/roadmap.md` U7 has the full
+account with the error counts. In short:
+
+1. **Eleven of the fourteen names in `ui` return a `Node` and three return state
+   with a `view()`, and the call site cannot tell which.** The same author got it
+   wrong in both directions within one file — put `ui.ActionCard(…)` into a
+   children array, and called `.view()` on `ui.PropertyGrid(…)`.
+
+2. **The namespace is not generic.** `createActionCard<I, O>` is; `ui.ActionCard`
+   is declared `Composite<ActionCardProps<Record<string, Json | undefined>,
+   unknown>, …>` and `ui.ActionButton` as `ActionButtonProps<unknown, unknown>`,
+   so the type parameters are pinned to their defaults **at the export**. A real
+   `BoundCommand<BuilderImportRepoInput, …>` therefore does not fit, and neither
+   does a typed `input`. The vocabulary that every screen is told to use cannot
+   accept a typed command.
+
+3. **Four props were invented** because the real ones are not discoverable —
+   `items` on `EntityListProps`, `subtitle` on `DetailSurfaceProps`, `button` on
+   `FormOverrides`, and a `{ header, value }[]` for `PropertyGrid`. Each is a
+   guess at the obvious name, which tells you what the obvious name would be.
+
+(2) is the one that matters, and it is worth being blunt about why. The two ways
+out of it today are importing `createActionCard` instead — the vocabulary telling
+you not to use the vocabulary — or a cast. **A design system usable only through a
+cast is how `as any` enters a codebase that bans it.** The next dispatch under
+time pressure will find that door long before it finds the roadmap entry.
+
+Fix the export so the generics survive it. Then decide (1) — a naming rule, a
+`.view()` on everything, or one shape for all fourteen; whichever, it must be
+answerable *at the call site without checking a table*. Then look at (3) and take
+the guesses seriously as evidence about the names.
+
+The test that proves this is not a unit test. **Write a type-level check that a
+real typed `BoundCommand` can be passed to `ui.ActionCard` and `ui.ActionButton`
+with no cast** — the errors above are compile-time, so a runtime test cannot see
+them. `npm test` runs `typecheck` first, so a file that must compile is a test.
+
+--------------------------------------------------------------------------------
 PART 1 — U4: THE SCROLL MODEL, WHICH IS BLOCKING THE ANATOMY DOCUMENT
 
 `spec/ui/anatomy.md` says INDEX and DETAIL scroll independently and a view fills
@@ -59,7 +104,7 @@ designing anything: if the chrome already answers this, the finding is that
 nothing uses it, and wiring it up is the work. If it does not, say what is missing
 and build the smallest thing that serves seven views without becoming an
 application switcher — **A6.2 is explicitly not in scope** and neither is a
-command palette (U7/A8.14).
+command palette (mesh-web A8.14). U7 is Part 0 of this dispatch, not a palette.
 
 Whatever it is, a view must be able to say *I am not available to this caller*
 and have the navigation reflect it, rather than offering a tab that lands on a
@@ -69,9 +114,10 @@ likely to be skipped.
 --------------------------------------------------------------------------------
 WHAT NOT TO DO
 
-- **Do not edit mesh-operator, mesh-web or mesh-serve.** Separate repositories,
-  and a dispatch is running in mesh-operator right now building two of the seven
-  views. If you need something from the kernel that does not exist, write it into
+- **Do not edit mesh-operator, mesh-web or mesh-serve.** Separate repositories.
+  `mesh-operator-dispatch-5` is a parked worktree holding the 28 errors Part 0 is
+  about — **read it, that is what it is for, and change nothing in it.** If you
+  need something from the kernel that does not exist, write it into
   `spec/roadmap.md` as a mesh-web item with its evidence and work around it here.
 - Do not touch `@flybyme/mesh` (frozen).
 - Do not redesign the token set. It was rewritten twice today — once to introduce
@@ -105,7 +151,11 @@ command: run `npm test` in the foreground and wait.
 --------------------------------------------------------------------------------
 DONE MEANS
 
-- `npm test` green and not smaller than when you started (10 source + 48 browser).
+- `npm test` green and not smaller than when you started (typecheck + 10 source +
+  51 browser).
+- A file that passes a real typed `BoundCommand` to `ui.ActionCard` and
+  `ui.ActionButton` with **no cast** compiles. U7 is not closed without it.
+- `spec/roadmap.md` U7 updated with what was decided for the return-type rule.
 - The double-press row-action test exists and passes.
 - The scroll model is tested under **both** chromes.
 - `spec/ui/anatomy.md` carries the scroll decision and says Decided.
