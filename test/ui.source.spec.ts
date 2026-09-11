@@ -136,6 +136,58 @@ describe('css uses tokens, not literals (U1)', () => {
         return results;
     };
 
+    /**
+     * **CSS comments do not nest, and this file is documented heavily enough for that to matter.**
+     *
+     * The header explained the opt-out annotation by spelling it out inline, terminator and all. The
+     * header comment therefore ended at that inner terminator, and the remainder of the sentence
+     * became stray text before the first rule — where a browser read `comment.` as a selector and
+     * consumed the entire `@layer ui.tokens { … }` block as its declaration body.
+     *
+     * So **every token was undefined on the live page**: colours, spacing, radii, all of it resolving
+     * to nothing, lists rendering unstyled and stacked. The file was valid to every tool that reads
+     * CSS as text — the token scan below passed, the bundler emitted it, the server served it — and
+     * invalid to the only thing that parses it. Nothing in the suite could see it, which is why this
+     * check is here and not a comment asking people to be careful.
+     *
+     * A nested opener is the detectable half: a comment opening while already inside one.
+     *
+     * This doc comment made the same mistake while being written, which is the argument for the
+     * check rather than against it.
+     */
+    it('has no nested comment opener, which silently truncates the file', () => {
+        const offences: string[] = [];
+
+        for (const file of cssFiles()) {
+            const source = readFileSync(file, 'utf8');
+            let index = 0;
+            let line = 1;
+
+            while (index < source.length) {
+                if (source.startsWith('/*', index)) {
+                    const close = source.indexOf('*/', index + 2);
+                    const body = source.slice(index + 2, close === -1 ? source.length : close);
+                    const nested = body.indexOf('/*');
+                    if (nested !== -1) {
+                        const at = line + (body.slice(0, nested).match(/\n/g)?.length ?? 0);
+                        offences.push(`${file}:${String(at)}  a comment opens inside a comment`);
+                    }
+                    if (close === -1) {
+                        offences.push(`${file}:${String(line)}  a comment is never closed`);
+                        break;
+                    }
+                    line += (source.slice(index, close).match(/\n/g)?.length ?? 0);
+                    index = close + 2;
+                    continue;
+                }
+                if (source[index] === '\n') line += 1;
+                index += 1;
+            }
+        }
+
+        expect(offences, offences.join('\n')).toEqual([]);
+    });
+
     it('contains no hex colour literals', () => {
         // Matches #rgb, #rrggbb, #rrggbbaa -- but not inside a comment or opt-out.
         const hexLiteral = /#[0-9a-fA-F]{3,8}\b/;

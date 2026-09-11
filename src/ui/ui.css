@@ -7,7 +7,16 @@
  * A component that needs a colour, a size, or a radius picks a token.
  * A component that picks a literal value is wrong, and test/ui.source.spec.ts will say so.
  * The only permitted exceptions are structural constants (0, 100%, transparent, inherit, none,
- * auto) and values explicitly opted out with a /* ui-literal: <reason> */ comment.
+ * auto) and values carrying an opt-out annotation — the four words "ui-literal:" and a reason,
+ * inside a comment on the same line. See spec/ui/tokens.md for the form of it.
+ *
+ * NOTE, and it cost a working stylesheet: **CSS comments do not nest.** This header used to spell
+ * the annotation out inline, which ended this comment at that inner terminator and left the rest of
+ * the sentence as stray text before the first rule. A browser then read `comment.` as a selector and
+ * swallowed the whole `@layer ui.tokens { … }` block as its body — so every token was undefined,
+ * every colour and every padding resolved to nothing, and the lists rendered with no styling at all.
+ * The file was valid to every tool that reads it as text and invalid to the only thing that parses
+ * it. `test/ui.source.spec.ts` now checks for a nested opener.
  */
 
 /* ============================================================================ ui.tokens
