@@ -154,7 +154,7 @@ describe('a component renders without a DOM', () => {
     });
 
     it('renders label and value pairs', () => {
-        const node = PropertyGrid({ items: [{ header: 'Host', value: 'console.localhost' }] });
+        const node = PropertyGrid({ items: [{ label: 'Host', value: 'console.localhost' }] });
         expect(textOf(node)).toContain('console.localhost');
     });
 });

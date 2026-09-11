@@ -38,8 +38,9 @@ export const DetailSurface: Component<DetailSurfaceProps> = defineComponent<Deta
 
         const hasHeader = (): boolean => {
             const t = read(props.title);
-            const b = read(props.subtitle);
-            return (t !== undefined && t !== '') || (b !== undefined && b !== '');
+            const b = read(props.badge);
+            const s = read(props.subtitle);
+            return [t, b, s].some((part) => part !== undefined && part !== '');
         };
 
         const headerNode = (): Node => element('Row', {
@@ -51,14 +52,20 @@ export const DetailSurface: Component<DetailSurfaceProps> = defineComponent<Deta
                         children: [text(props.title)],
                     }),
                 ] : []),
-                ...(props.subtitle !== undefined ? [
+                ...(props.badge !== undefined ? [
                     element('Badge', {
                         props: {
                             class: () => {
-                                const variant = read(props.subtitleVariant);
+                                const variant = read(props.badgeVariant);
                                 return `ui-detail-surface-badge${variant ? ` ui-badge-${variant}` : ''}`;
                             },
                         },
+                        children: [text(props.badge)],
+                    }),
+                ] : []),
+                ...(props.subtitle !== undefined ? [
+                    element('Text', {
+                        props: { class: 'ui-detail-surface-subtitle' },
                         children: [text(props.subtitle)],
                     }),
                 ] : []),

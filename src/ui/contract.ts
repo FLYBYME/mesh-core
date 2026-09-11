@@ -129,8 +129,17 @@ export interface DetailSurfaceProps {
     readonly placeholderTitle?: Reactive<string> | undefined;
     readonly placeholderMessage?: Reactive<string> | undefined;
     readonly title?: Reactive<string> | undefined;
+    /**
+     * **A short status chip beside the title** — `control`, `rolling`, `archived`.
+     *
+     * Was briefly renamed to `subtitle`, which is a different thing and is why `subtitle` now
+     * exists separately below. A console dispatch asked for `subtitle`, found only `badge`, and
+     * used `badge` for a sentence; the answer to that is the missing prop, not a renamed one.
+     */
+    readonly badge?: Reactive<string> | undefined;
+    readonly badgeVariant?: Reactive<string> | undefined;
+    /** A line of description under the title. Prose, not a chip. */
     readonly subtitle?: Reactive<string> | undefined;
-    readonly subtitleVariant?: Reactive<string> | undefined;
     readonly class?: Reactive<string> | undefined;
     readonly children?: readonly Node[] | undefined;
 }
@@ -138,7 +147,18 @@ export interface DetailSurfaceProps {
 // ---------------------------------------------------------------------------- props: PropertyGrid
 
 export interface PropertyGridItem {
-    readonly header: Reactive<string>;
+    /**
+     * **`label`, and it was renamed to `header` once by mistake.**
+     *
+     * U7 recorded that a console dispatch wrote `{ header, value }[]` here, and read that as
+     * evidence about the obvious name. It was evidence of something narrower: that dispatch was
+     * thinking of a table, where the word for the thing above a column is `header`. This is a
+     * property grid, and the word for the thing beside a value is `label` — which is also what
+     * every caller already wrote.
+     *
+     * A guessed name is worth listening to. It is not automatically right.
+     */
+    readonly label: Reactive<string>;
     readonly value: Reactive<string | number | boolean | null | undefined | Node>;
 }
 

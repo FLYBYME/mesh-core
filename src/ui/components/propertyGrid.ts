@@ -47,7 +47,7 @@ export const PropertyGrid: Component<PropertyGridProps> = defineComponent<Proper
                         children: [
                             element('Text', {
                                 props: { class: 'ui-property-label' },
-                                children: [text(item.header)],
+                                children: [text(item.label)],
                             }),
                             valueNode,
                         ],

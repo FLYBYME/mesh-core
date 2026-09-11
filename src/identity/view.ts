@@ -220,10 +220,10 @@ const detail = (app: IdentityInternal, on: Registrar): Node =>
 const facts = (app: IdentityInternal): Node =>
     PropertyGrid({
         items: [
-            { header: 'Slug', value: () => app.selectedOrganization()?.slug ?? '—' },
+            { label: 'Slug', value: () => app.selectedOrganization()?.slug ?? '—' },
             // An id, not a name. `user` is internal, so the platform will not say who this is.
             // That is surfdns#71, rendered rather than worked around.
-            { header: 'Owner', value: () => app.selectedOrganization()?.ownerId ?? '—' },
+            { label: 'Owner', value: () => app.selectedOrganization()?.ownerId ?? '—' },
         ],
     });
 
