@@ -1,0 +1,1 @@
+sed -i 's/export function Form<T = Record<string, Json | undefined>>(props: FormProps<T>): Node {/export function Form<T = Record<string, Json | undefined>>(props: FormProps<T>): Node {\n    return createForm(props).view();/g' src/ui/composites/form.ts

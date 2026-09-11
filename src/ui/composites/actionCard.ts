@@ -15,7 +15,7 @@ import { element, read, signal, text, when } from '@flybyme/mesh-web';
 import type { Action, Json, Node } from '@flybyme/mesh-web';
 import {
     formatRefusal,
-    type ActionCardProps, type ActionCardState,
+    type ActionCardProps, type ActionCardState, type Fields,
 } from '../contract.js';
 import { humanizeLabel, type JsonSchema } from '../schema.js';
 import { createForm } from './form.js';
@@ -28,7 +28,7 @@ function extractCommandJsonSchema(inputSchema: unknown): JsonSchema | undefined 
     return inputSchema as JsonSchema;
 }
 
-export function createActionCard<I extends Record<string, Json | undefined> = Record<string, Json | undefined>, O = unknown>(
+export function createActionCard<I extends Fields<I> = Record<string, Json | undefined>, O = unknown>(
     props: ActionCardProps<I, O>,
 ): ActionCardState<I, O> {
     const command = props.command;
@@ -226,6 +226,6 @@ export function createActionCard<I extends Record<string, Json | undefined> = Re
     };
 }
 
-export function ActionCard<I extends Record<string, Json | undefined> = Record<string, Json | undefined>, O = unknown>(props: ActionCardProps<I, O>): Node {
+export function ActionCard<I extends Fields<I> = Record<string, Json | undefined>, O = unknown>(props: ActionCardProps<I, O>): Node {
     return createActionCard(props).view();
 }

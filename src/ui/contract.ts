@@ -261,6 +261,37 @@ export interface ActionButtonState<O = unknown> {
     view(): Node;
 }
 
+// ---------------------------------------------------------------------------- what a form can render
+
+/**
+ * **An object whose every field is JSON — which is what a generated form can draw.**
+ *
+ * Not `Record<string, Json | undefined>`, and the difference is the whole of **U7**. That demands an
+ * *index signature*, and a TypeScript `interface` never has an implicit one. `mesh-serve client`
+ * emits an interface for every contract input:
+ *
+ *     export interface IdentityRegisterInput {
+ *         readonly email: string;
+ *         readonly password: string;
+ *         readonly displayName: string;
+ *     }
+ *
+ * so **every generated command failed the constraint**, fell back to the default type argument, and
+ * stopped matching its own command. An application then had two ways through, and `mesh-operator`
+ * took both in one file: bolt `[key: string]: Json | undefined` onto its own `SeedInput`, which
+ * turns off excess-property checking on the thing it declared in order to be checked, or write
+ * `BoundCommand<any, any>` and give up.
+ *
+ * This is a **homomorphic** mapped type: `{ [K in keyof T]: … }` walks the keys `T` actually has and
+ * preserves `readonly` and `?` as it goes. An interface satisfies it, a type alias satisfies it, and
+ * an input with optional fields satisfies it — while a field typed something a form could not draw,
+ * a `Date` or a function, still does not.
+ *
+ * Used as a self-referential constraint, `T extends Fields<T>`, which reads as *every field of T is
+ * JSON* rather than *T accepts any string key at all*.
+ */
+export type Fields<T> = { [K in keyof T]: Json | undefined };
+
 // ---------------------------------------------------------------------------- props: Form
 
 export interface FieldRenderContext<T = Json> {
