@@ -18,6 +18,7 @@ import type { JsonSchema, JsonSchemaProperty } from './schema.js';
 
 // ---------------------------------------------------------------------------- component identifiers
 
+export const UI_VIEW_LAYOUT = 'ui.ViewLayout';
 export const UI_ENTITY_LIST = 'ui.EntityList';
 export const UI_ENTITY_ITEM = 'ui.EntityItem';
 export const UI_DETAIL_SURFACE = 'ui.DetailSurface';
@@ -128,8 +129,8 @@ export interface DetailSurfaceProps {
     readonly placeholderTitle?: Reactive<string> | undefined;
     readonly placeholderMessage?: Reactive<string> | undefined;
     readonly title?: Reactive<string> | undefined;
-    readonly badge?: Reactive<string> | undefined;
-    readonly badgeVariant?: Reactive<string> | undefined;
+    readonly subtitle?: Reactive<string> | undefined;
+    readonly subtitleVariant?: Reactive<string> | undefined;
     readonly class?: Reactive<string> | undefined;
     readonly children?: readonly Node[] | undefined;
 }
@@ -137,7 +138,7 @@ export interface DetailSurfaceProps {
 // ---------------------------------------------------------------------------- props: PropertyGrid
 
 export interface PropertyGridItem {
-    readonly label: Reactive<string>;
+    readonly header: Reactive<string>;
     readonly value: Reactive<string | number | boolean | null | undefined | Node>;
 }
 
@@ -166,6 +167,7 @@ export interface TableProps {
 }
 
 export interface TableRowProps {
+    readonly action?: ActionButtonProps<any, any> | undefined;
     readonly selected?: Reactive<boolean> | undefined;
     readonly class?: Reactive<string> | undefined;
     readonly intents?: Intents | undefined;
@@ -259,6 +261,37 @@ export interface ActionButtonState<O = unknown> {
     view(): Node;
 }
 
+// ---------------------------------------------------------------------------- what a form can render
+
+/**
+ * **An object whose every field is JSON — which is what a generated form can draw.**
+ *
+ * Not `Record<string, Json | undefined>`, and the difference is the whole of **U7**. That demands an
+ * *index signature*, and a TypeScript `interface` never has an implicit one. `mesh-serve client`
+ * emits an interface for every contract input:
+ *
+ *     export interface IdentityRegisterInput {
+ *         readonly email: string;
+ *         readonly password: string;
+ *         readonly displayName: string;
+ *     }
+ *
+ * so **every generated command failed the constraint**, fell back to the default type argument, and
+ * stopped matching its own command. An application then had two ways through, and `mesh-operator`
+ * took both in one file: bolt `[key: string]: Json | undefined` onto its own `SeedInput`, which
+ * turns off excess-property checking on the thing it declared in order to be checked, or write
+ * `BoundCommand<any, any>` and give up.
+ *
+ * This is a **homomorphic** mapped type: `{ [K in keyof T]: … }` walks the keys `T` actually has and
+ * preserves `readonly` and `?` as it goes. An interface satisfies it, a type alias satisfies it, and
+ * an input with optional fields satisfies it — while a field typed something a form could not draw,
+ * a `Date` or a function, still does not.
+ *
+ * Used as a self-referential constraint, `T extends Fields<T>`, which reads as *every field of T is
+ * JSON* rather than *T accepts any string key at all*.
+ */
+export type Fields<T> = { [K in keyof T]: Json | undefined };
+
 // ---------------------------------------------------------------------------- props: Form
 
 export interface FieldRenderContext<T = Json> {
@@ -295,7 +328,7 @@ export interface FormOverrides {
     readonly fields?: FormFieldOverrides | undefined;
     readonly fieldOrder?: readonly string[] | undefined;
     readonly frame?: ((defaultForm: () => Node) => Node) | undefined;
-    readonly renderActions?: ((defaultActions: () => Node) => Node) | undefined;
+    readonly button?: ((defaultActions: () => Node) => Node) | undefined;
 }
 
 export interface FormProps<T = Record<string, Json | undefined>> {
@@ -392,3 +425,16 @@ export interface SignInState {
     submit(): Promise<Session | undefined>;
     view(): Node;
 }
+
+// ---------------------------------------------------------------------------- props: ViewLayout
+
+export interface ViewLayoutProps {
+    readonly header?: Reactive<Node | undefined> | undefined;
+    readonly index?: Reactive<Node | undefined> | undefined;
+    readonly detail?: Reactive<Node | undefined> | undefined;
+    readonly footer?: Reactive<Node | undefined> | undefined;
+    readonly class?: Reactive<string> | undefined;
+}
+
+// ---------------------------------------------------------------------------- props: ViewLayout
+

@@ -657,3 +657,32 @@
         color: var(--ui-ink-dim);
     }
 }
+
+    /* ------------------------------------------------------------------------- ui.ViewLayout */
+    .ui-view-layout {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
+        box-sizing: border-box;
+    }
+
+    .ui-view-layout-body {
+        display: flex;
+        flex-direction: row;
+        flex: 1 1 auto;
+        min-height: 0;
+        width: 100%;
+    }
+
+    .ui-view-layout > :not(.ui-view-layout-body) {
+        flex: 0 0 auto;
+    }
+
+    .ui-view-layout-body > * {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
+    }

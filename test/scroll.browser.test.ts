@@ -122,3 +122,58 @@ describe('a long table scrolls rather than dropping rows', () => {
         expect(header.getBoundingClientRect().top).toBeLessThan(rowsEl.getBoundingClientRect().top + 1);
     });
 });
+
+function routed(): HTMLElement {
+    const host = document.createElement('div');
+    // For a routed view (page), the height is constrained by the viewport, not the element itself.
+    // However, to simulate 100vh in a test where we don't control the real viewport, we set height.
+    host.style.height = `${String(CONTAINER_HEIGHT)}px`;
+    host.style.display = 'block';
+    document.body.append(host);
+    mounted.push(host);
+    return host;
+}
+
+describe('a ViewLayout maintains scroll boundaries under both chromes', () => {
+    const renderLayout = (host: HTMLElement) => {
+        host.innerHTML = `
+            <div class="ui-view-layout">
+                <div class="ui-view-layout-body">
+                    <div class="ui-entity-list" style="width: 300px;">
+                        <div class="ui-entity-list-items" id="index-scroll">${rows('ui-entity-item', ITEMS)}</div>
+                    </div>
+                    <div class="ui-detail-surface" id="detail-scroll">
+                        <div class="ui-detail-surface-content" >
+                            <div style="height: 1000px;">Huge detail content</div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    };
+
+    it('works under windowed chrome (flex container)', () => {
+        const host = bounded();
+        renderLayout(host);
+        
+        const idx = host.querySelector('#index-scroll') as HTMLElement;
+        const det = host.querySelector('#detail-scroll') as HTMLElement;
+        const layout = host.querySelector('.ui-view-layout') as HTMLElement;
+
+        expect(layout.getBoundingClientRect().height).toBeLessThanOrEqual(CONTAINER_HEIGHT + 1);
+        expect(idx.scrollHeight).toBeGreaterThan(idx.clientHeight);
+        expect(det.scrollHeight).toBeGreaterThan(det.clientHeight);
+    });
+
+    it('works under routed chrome (block container)', () => {
+        const host = routed();
+        renderLayout(host);
+        
+        const idx = host.querySelector('#index-scroll') as HTMLElement;
+        const det = host.querySelector('#detail-scroll') as HTMLElement;
+        const layout = host.querySelector('.ui-view-layout') as HTMLElement;
+
+        expect(layout.getBoundingClientRect().height).toBeLessThanOrEqual(CONTAINER_HEIGHT + 1);
+        expect(idx.scrollHeight).toBeGreaterThan(idx.clientHeight);
+        expect(det.scrollHeight).toBeGreaterThan(det.clientHeight);
+    });
+});

@@ -197,14 +197,14 @@ const detail = (app: IdentityInternal, on: Registrar): Node =>
         placeholderTitle: 'Select an organization',
         placeholderMessage: 'Pick one on the left to see who belongs to it.',
         title: () => app.selectedOrganization()?.name ?? '',
-        badge: () => `${String(app.members().length)} members`,
+        subtitle: () => `${String(app.members().length)} members`,
         children: [
             element('Stack', {
                 props: { style: { display: 'flex', flexDirection: 'column', gap: '20px' } },
                 children: [
                     facts(app),
                     membersTable(app, on),
-                    ActionCard({ on, command: app.commands.addMember, title: 'Add a member' }).view(),
+                    ActionCard({ on, command: app.commands.addMember, title: 'Add a member' }),
                 ],
             }),
         ],
@@ -220,10 +220,10 @@ const detail = (app: IdentityInternal, on: Registrar): Node =>
 const facts = (app: IdentityInternal): Node =>
     PropertyGrid({
         items: [
-            { label: 'Slug', value: () => app.selectedOrganization()?.slug ?? '—' },
+            { header: 'Slug', value: () => app.selectedOrganization()?.slug ?? '—' },
             // An id, not a name. `user` is internal, so the platform will not say who this is.
             // That is surfdns#71, rendered rather than worked around.
-            { label: 'Owner', value: () => app.selectedOrganization()?.ownerId ?? '—' },
+            { header: 'Owner', value: () => app.selectedOrganization()?.ownerId ?? '—' },
         ],
     });
 
@@ -283,7 +283,7 @@ const removeButton = (app: IdentityInternal, member: Membership, on: Registrar):
     // A composite is created and then rendered: `create` returns its state *and* a `view()`, so a
     // caller that wants only the description asks for it. That is the difference from a component,
     // which is props in and description out with nothing to own.
-    }).view();
+    });
 
 /**
  * The form itself, generated from `createOrganization`'s own input schema.
@@ -305,6 +305,6 @@ const createCard = (app: IdentityInternal, on: Registrar): Node =>
                 title: 'New organization',
                 onResult: () => { app.creating.set(false); },
                 onSecondary: () => { app.creating.set(false); },
-            }).view(),
+            }),
         ],
     });

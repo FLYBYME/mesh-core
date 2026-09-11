@@ -90,7 +90,7 @@ class SignInApp implements Application<typeof APP_NEEDS, typeof APP_CONSUMES, un
             window: { defaultSize: { width: 420, height: 360 }, minSize: { width: 200, height: 150 } },
             render: (vx: ViewContext<Record<string, never>, Internal, PartApi>) => element('Stack', {
                 children: [
-                    SignIn({ on: vx.on, auth: vx.internal.auth, note: 'Everything here is gated.' }).view(),
+                    SignIn({ on: vx.on, auth: vx.internal.auth, note: 'Everything here is gated.' }),
                 ],
             }),
         },

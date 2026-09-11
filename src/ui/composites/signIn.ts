@@ -41,8 +41,8 @@ import { element, read, signal, text, when } from '@flybyme/mesh-web';
 import type { Action, Node, Session } from '@flybyme/mesh-web';
 import { Field } from '../components/field.js';
 import {
-    defineComposite, UI_SIGN_IN,
-    type Composite, type SignInProps, type SignInState,
+    
+    type SignInProps, type SignInState,
 } from '../contract.js';
 
 const DEFAULT_TITLE = 'Sign in';
@@ -207,8 +207,6 @@ export function createSignIn(props: SignInProps): SignInState {
     return { busy, error, submit, view };
 }
 
-export const SignIn: Composite<SignInProps, SignInState> = defineComposite<SignInProps, SignInState>(
-    UI_SIGN_IN,
-    'Email and password over the auth API: busy while signing in, the failure in place, gone once signed in.',
-    (props) => createSignIn(props),
-);
+export function SignIn(props: SignInProps): Node {
+    return createSignIn(props).view();
+}

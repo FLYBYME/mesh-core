@@ -19,8 +19,8 @@ import { ButtonRow } from '../components/buttonRow.js';
 import { Field } from '../components/field.js';
 import { Select } from '../components/select.js';
 import {
-    defineComposite, UI_FORM, type Composite, type FieldOverride,
-    type FieldRenderContext, type FormProps, type FormState,
+    type FieldOverride,
+    type FieldRenderContext, type Fields, type FormProps, type FormState,
 } from '../contract.js';
 import {
     getProperties, humanizeLabel, isPropertyRequired, parseDefaultValue,
@@ -35,7 +35,7 @@ function extractJsonSchema<T>(schemaOrWrapper: JsonSchema | Schema<T> | undefine
     return schemaOrWrapper as JsonSchema;
 }
 
-export function createForm<T extends Record<string, Json | undefined> = Record<string, Json | undefined>>(
+export function createForm<T extends Fields<T> = Record<string, Json | undefined>>(
     props: FormProps<T>,
 ): FormState<T> {
     const rawSchema = extractJsonSchema(props.schema);
@@ -52,6 +52,22 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
     }
 
     const values = signal<T>({ ...initialRecord } as T);
+
+    /**
+     * **Reading a value by a name that came from the schema rather than from `keyof T`.**
+     *
+     * Two loops below walk the JSON schema's property names. Those are strings, and a string cannot
+     * index `Fields<T>`, whose keys are the literal union `keyof T`. The constraint on `T` is
+     * precisely the promise that makes this sound: every field of `T` is `Json | undefined`, so a
+     * name that is not a field reads `undefined` rather than something unexpected.
+     *
+     * One accessor, so the widening happens in a place with a reason attached, and reading only —
+     * writing still goes through `setField`, which is typed on `keyof T`. The alternative that was
+     * here before U7 was to demand an index signature from every caller, which is what stopped a
+     * generated interface reaching this composite at all.
+     */
+    const fieldOf = (row: T, name: string): Json | undefined =>
+        (row as Readonly<Record<string, Json | undefined>>)[name];
     const errors = signal<Record<string, string | undefined>>({});
     const busy = signal<boolean>(false);
 
@@ -75,7 +91,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
         const currentValues = values();
         for (const name of Object.keys(properties)) {
             if (isPropertyRequired(rawSchema, name)) {
-                const v = currentValues[name];
+                const v = fieldOf(currentValues, name);
                 if (v === undefined || v === null || v === '') return false;
             }
         }
@@ -100,7 +116,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
             const currentValues = values();
             for (const [name, prop] of Object.entries(properties)) {
                 const req = isPropertyRequired(rawSchema, name);
-                const v = currentValues[name];
+                const v = fieldOf(currentValues, name);
                 if (req && (v === undefined || v === null || v === '')) {
                     newErrors[name] = `${prop.title ?? humanizeLabel(name)} is required`;
                 }
@@ -367,7 +383,7 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
         });
 
         const actionsNode = hasActions
-            ? (overrides.renderActions ? overrides.renderActions(defaultActions) : defaultActions())
+            ? (overrides.button ? overrides.button(defaultActions) : defaultActions())
             : undefined;
 
         const defaultFormFrame = (): Node => element('Form', {
@@ -416,11 +432,6 @@ export function createForm<T extends Record<string, Json | undefined> = Record<s
     };
 }
 
-export const Form: Composite<FormProps<Record<string, Json | undefined>>, FormState<Record<string, Json | undefined>>> = defineComposite<
-    FormProps<Record<string, Json | undefined>>,
-    FormState<Record<string, Json | undefined>>
->(
-    UI_FORM,
-    'Editing a thing: owns the buffers, validity, dirty state, and generates fields from schema.',
-    (props) => createForm(props),
-);
+export function Form<T extends Fields<T> = Record<string, Json | undefined>>(props: FormProps<T>): Node {
+    return createForm(props).view();
+}
