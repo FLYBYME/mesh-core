@@ -1,0 +1,152 @@
+U8: give the vocabulary a way to render a CRUD collection, so that exposing data
+and showing data cost the same.
+
+This is the item the console is actually stuck behind, and it came from the person
+who owns the platform looking at the screen and saying it shows almost nothing.
+Read `spec/roadmap.md` U8 first — it has the measurement — then `spec/ui/anatomy.md`
+and `spec/ui/states.md`, then `src/ui/`.
+
+--------------------------------------------------------------------------------
+THE MEASUREMENT, SO YOU ARE NOT DESIGNING FROM A HUNCH
+
+Taken against a running cluster on 2026-09-11, not argued:
+
+    mesh-serve defines          17 CRUD collections
+    the control site exposes     9 of them to an operator, holding 80 rows
+    the console draws            7 rows
+
+and of the rows it draws it drops most of every one:
+
+    release     15 fields on the row      1 rendered
+    site        14                        6
+    membership   7                        4
+
+A release row carries name, kernel, parts, requires, policy, agentRoles, rolling,
+source, supersededBy and composedAt. **The list renders the hash.** That row is
+the answer to *what would this site serve if I deployed it*, shown as a hex
+string.
+
+**This is not the console being lazy — it is what this vocabulary makes cheap.**
+`EntityList` takes children. `DetailSurface` takes children. `PropertyGrid` takes
+hand-written items. So every field on screen is a line somebody typed, and the
+cost of showing a row scales with the row. Exposing a collection is one line in a
+manifest; showing it is a few hundred. **That asymmetry is the defect.**
+
+--------------------------------------------------------------------------------
+WHAT TO BUILD
+
+A composite that takes a collection and the contracts over it and renders the
+whole screen: the index, the detail, and the forms for the writes.
+
+The pieces already exist and nothing composes them:
+
+  cx.models(name)       rows, status (5, incl. `idle`), error, refetch — already
+                        keyed on `<name>.find`, already typed from the site's API
+  _describe             JSON Schema for every contract, input and output
+  ui.Form               already generates fields from a JSON Schema
+  ui.EntityList/Table   already render a list given rows
+  ui.DetailSurface      already renders a selection
+  ui.ActionCard         already renders one command with a generated form
+  U7's `Fields<T>`      the constraint that lets a generated interface through
+
+So the work is composition and naming, not new rendering. Roughly:
+
+    ui.Collection({
+        on,
+        rows,                 // what cx.models gives back
+        find / get / create / update / delete,   // BoundCommands, each optional
+        …what to show and what to hide
+    })
+
+**Design the shape yourself** — the sketch above is a starting point and not a
+specification. What it has to achieve: a screen that lists a collection, shows a
+row, and offers the writes that exist, in a handful of lines rather than a few
+hundred, without the caller enumerating fields that the schema already describes.
+
+Prove it by **rewriting one real screen on it.** `src/identity/view.ts` in this
+repository renders organizations, memberships and roles by hand and is the honest
+test: if the composite cannot express what that screen already does, it is not
+finished. Report the line count before and after, and say what it could not
+express.
+
+--------------------------------------------------------------------------------
+THREE THINGS IT MUST GET RIGHT, EACH OF WHICH HAS ALREADY GONE WRONG ONCE
+
+**1. A scoped collection answers about one organization, and the screen has to
+say which.** `site.find` is `scopedBy: 'tenantId'` and `membership.find` by
+`organizationId`, so they answer within the caller's own organization and neither
+row says which one. The console shipped a header reading *What this cluster
+serves* over a scoped read, and it looked right because the only cluster it had
+run on had one organization. A generic renderer is exactly where that gets
+baked in for every future screen, so the surface needs a place for *whose* and
+should not let a caller quietly omit it.
+
+**2. A refusal is a state, not an error — and it is per contract.** U2. A caller
+may read a collection and not write it: `find` at `user` and `update` at
+`operator` is ordinary, and the right rendering is the row with a disabled control
+and the reason, never a missing control and never an error screen. `Availability`
+is already data for exactly this. All five states from `states.md` have to be
+reachable, and `idle` folds into `loading` — a fetch that has not started and a
+fetch in flight are the same thing to a person waiting.
+
+**3. A field is not always renderable.** `UserSchema` carries `passwordHash`, and
+`user.find` cannot be exposed at all because of it — surfdns freeze gate **V2**,
+now the sixth instance. A renderer that draws every field of every row is the
+thing that turns that gap into a leak the first time somebody exposes a collection
+without re-reading its schema. Decide how a field is excluded and make the safe
+direction the default one. Write the decision down.
+
+--------------------------------------------------------------------------------
+WHAT NOT TO DO
+
+- **Do not build seven console views.** This is the vocabulary; the views are
+  mesh-operator's and a different dispatch. One real screen rewritten here is the
+  proof, and more than that is scope this dispatch should not take.
+- Do not edit mesh-serve, mesh-web, mesh-operator or flowboard. Separate
+  repositories, and a dispatch is running in mesh-serve right now. If the kernel
+  lacks something, write it into `spec/roadmap.md` as a mesh-web item with its
+  evidence and work around it here.
+- Do not touch `@flybyme/mesh` (frozen).
+- **Do not rename existing props.** U7 recorded three invented prop names as
+  evidence of what the obvious names were; dispatch 24 read that as an instruction
+  and renamed `PropertyGridItem.label` to `header` and `DetailSurfaceProps.badge`
+  to `subtitle`, both of which had to be reverted. A guessed name is evidence, not
+  a verdict.
+- `as any` and `as never` are bugs here, not style nits. Dispatch 24's type-level
+  proof of U7 was written with three of them and proved a weaker claim than its
+  own name; it had to be rewritten. **If a proof needs the banned construct, the
+  proof is wrong, not the ban.**
+
+--------------------------------------------------------------------------------
+A NOTE ON HOW TO EDIT
+
+Edit files with your file tools. Dispatch 24 committed eighteen throwaway `.cjs`
+scripts that read a source file, ran a regex over it and wrote it back —
+`fix-table-row.cjs` through `fix-table-row5.cjs`, a record of the same pattern
+failing to match four times — plus a `sed -i` shell script. They all had to be
+removed by hand. Write the change; do not write a program that writes the change.
+
+--------------------------------------------------------------------------------
+COMMIT AS YOU GO — NOT ADVICE
+
+Run `npm test` in the **foreground** and wait. Never background a command and
+never end your turn saying you will wait for results: you are running
+non-interactively, so when your turn ends the process exits, anything backgrounded
+is killed, and uncommitted work is lost with no report. A commit survives the
+process ending; an unstaged edit does not.
+
+--------------------------------------------------------------------------------
+DONE MEANS
+
+- `npm test` green and not smaller than when you started (10 source + 57 browser,
+  and the script runs `typecheck` first — deliberate, do not remove it).
+- One real screen in this repository is rewritten on the composite, with the line
+  count before and after in the report, and an honest list of what it could not
+  express.
+- A browser test drives the composite into **all five states** and asserts
+  something specific was drawn for each, including a refused *write* alongside a
+  permitted *read* on the same collection.
+- A test asserts an excluded field is not rendered. `passwordHash` is the case.
+- `spec/roadmap.md` U8 updated with what was decided, and anything found added as
+  its own item.
+- No `Co-Authored-By` or `Claude-Session` trailers.
