@@ -1,0 +1,113 @@
+The console is going from two views to seven. Close the vocabulary gaps now,
+before seven screens each work around them differently.
+
+**Read `mesh-operator/spec/apps/console.md`** — the plan, written against a live
+cluster — then `spec/ui/anatomy.md`, `spec/ui/states.md` and `spec/roadmap.md`
+Track U. This dispatch is mesh-core's half of that plan: the console cannot be
+built well out of what the vocabulary currently offers, and the evidence is that
+`mesh-operator/src/console/views/sites.ts` already hand-writes things that belong
+here.
+
+--------------------------------------------------------------------------------
+PART 1 — U4: THE SCROLL MODEL, WHICH IS BLOCKING THE ANATOMY DOCUMENT
+
+`spec/ui/anatomy.md` says INDEX and DETAIL scroll independently and a view fills
+its surface without growing it. **"Fills its surface" means two different things**
+under a windowed chrome, which sizes the view, and a routing chrome, which hands
+it the page.
+
+It needs one answer that works under both before `anatomy.md` can move from
+Proposed to Decided — and seven views is exactly when an unsettled scroll model
+starts producing seven different inline `style="display:flex;flex:1;min-height:0"`
+attributes, which is what the console writes today.
+
+Decide it. Write it into `spec/ui/anatomy.md`. Then make the components obey it,
+so a screen gets the behaviour by using the vocabulary rather than by remembering
+a CSS incantation. **A rule the components cannot express is a rule that will be
+broken** — this track's own sentence.
+
+Test it under both chromes, because "works under both" is the requirement and a
+test under one proves the half that was never in doubt.
+
+--------------------------------------------------------------------------------
+PART 2 — A TABLE ROW NEEDS ACTIONS, AND THE CONSOLE ALREADY WORKS AROUND IT
+
+`ui.Table` renders rows. The console's release table puts a **Deploy** button in
+every row, and does it by passing a `Node` into a cell — which works, and means
+the component has no idea a row has an action, so it cannot align one, disable
+one, or say why one is refused.
+
+Seven views will each want this: deploy a release, revoke a grant, assign a node,
+decide an approval, remove a member. Five hand-rolled versions is the wheel `ui`
+exists to stop being reinvented.
+
+Give `ui.Table` a declared per-row action taking a `BoundCommand` and rendering it
+through the same path `ui.ActionButton` uses — so a refused row action is visible,
+disabled and labelled with the reason, and a running one cannot be fired twice.
+
+**Press it in a test**, twice, and assert the command ran once and against the
+right row. Asserting a button exists is not the claim.
+
+--------------------------------------------------------------------------------
+PART 3 — AN APP WITH SEVEN VIEWS NEEDS A WAY TO GET BETWEEN THEM
+
+The console has two views and switches with a button labelled "Members" that the
+other view does not have. That does not survive seven.
+
+`src/chrome/` is where a console's tabs come from. Look at what is there before
+designing anything: if the chrome already answers this, the finding is that
+nothing uses it, and wiring it up is the work. If it does not, say what is missing
+and build the smallest thing that serves seven views without becoming an
+application switcher — **A6.2 is explicitly not in scope** and neither is a
+command palette (U7/A8.14).
+
+Whatever it is, a view must be able to say *I am not available to this caller*
+and have the navigation reflect it, rather than offering a tab that lands on a
+refusal. That is `states.md` §4 applied to navigation, and it is the part most
+likely to be skipped.
+
+--------------------------------------------------------------------------------
+WHAT NOT TO DO
+
+- **Do not edit mesh-operator, mesh-web or mesh-serve.** Separate repositories,
+  and a dispatch is running in mesh-operator right now building two of the seven
+  views. If you need something from the kernel that does not exist, write it into
+  `spec/roadmap.md` as a mesh-web item with its evidence and work around it here.
+- Do not touch `@flybyme/mesh` (frozen).
+- Do not redesign the token set. It was rewritten twice today — once to introduce
+  it and once because it was defining the kernel's own variables and truncating
+  itself at its own header comment. It is correct now; spend it.
+- `as any` and `as never` are bugs here, not style nits. Five came out of another
+  repository today and one of them was hiding the fact that a test proved nothing.
+
+--------------------------------------------------------------------------------
+A WARNING WORTH READING, BECAUSE IT HAPPENED IN THIS FILE'S NEIGHBOUR TODAY
+
+`ui.css` was truncated at its own header for a day: the header spelled out a
+comment annotation inline, **CSS comments do not nest**, so the file ended early
+and a browser swallowed the entire token layer as a bogus rule's body. Every token
+was undefined on the live page and every test still passed, because the browser
+tests mount components without that stylesheet.
+
+`test/ui.source.spec.ts` now checks for it. The lesson is the one this repository
+keeps relearning: **a thing that is valid to every tool that reads it as text can
+be invalid to the only thing that parses it.** If you add a stylesheet, check it
+is parsed, not just that it is emitted.
+
+--------------------------------------------------------------------------------
+COMMIT AS YOU GO — NOT ADVICE
+
+A dispatch was killed mid-run yesterday and left eight modified files
+uncommitted; the work survived only because a person went and looked. **A commit
+survives the process ending; an unstaged edit does not.** Never background a
+command: run `npm test` in the foreground and wait.
+
+--------------------------------------------------------------------------------
+DONE MEANS
+
+- `npm test` green and not smaller than when you started (10 source + 48 browser).
+- The double-press row-action test exists and passes.
+- The scroll model is tested under **both** chromes.
+- `spec/ui/anatomy.md` carries the scroll decision and says Decided.
+- `spec/roadmap.md` U4 updated; anything found added as its own item.
+- No `Co-Authored-By` or `Claude-Session` trailers.
