@@ -90,11 +90,33 @@ describe('css uses tokens, not literals (U1)', () => {
     // The annotation is:  /* ui-literal: <non-empty reason> */  on the same line.
     // An empty reason is not accepted.
     const UI_LITERAL_RE = /\/\*\s*ui-literal:\s*\S/;
-    const stripOptOuts = (source: string): string =>
-        source
+
+    /**
+     * Blank what must not be scanned, **keeping the line count**, in two passes.
+     *
+     * Order matters: an opt-out *is* a comment, so opt-out lines go first or the annotation is
+     * erased before it is read.
+     *
+     * 1. **Opt-out lines** become empty. They used to be `filter`ed out, which dropped them from the
+     *    array — so every line number reported after the first opt-out was wrong, and the failure
+     *    message pointed at the wrong rule. A check whose output sends you to the wrong line is a
+     *    check people stop trusting.
+     * 2. **Comment bodies** become spaces. Without this the scan reads prose: documenting *why*
+     *    `--on-accent` must not be `#fff` failed the test for containing `#fff`, which is the check
+     *    forbidding its own explanation. Newlines are preserved so a block comment does not collapse
+     *    the file.
+     */
+    const blankForScan = (source: string): string => {
+        const withoutOptOuts = source
             .split('\n')
-            .filter((line) => !UI_LITERAL_RE.test(line))
+            .map((line) => (UI_LITERAL_RE.test(line) ? '' : line))
             .join('\n');
+
+        return withoutOptOuts.replace(
+            /\/\*[\s\S]*?\*\//g,
+            (comment) => comment.replace(/[^\n]/g, ' '),
+        );
+    };
 
     // Returns offending lines from CSS files (after removing opt-out lines).
     // Each result is "file:linenum  content" for a readable failure message.
@@ -102,7 +124,7 @@ describe('css uses tokens, not literals (U1)', () => {
         const results: string[] = [];
         for (const file of cssFiles()) {
             const source = readFileSync(file, 'utf8');
-            const stripped = stripOptOuts(source);
+            const stripped = blankForScan(source);
             const originalLines = source.split('\n');
             const strippedLines = stripped.split('\n');
             strippedLines.forEach((line, i) => {
@@ -133,7 +155,7 @@ describe('css uses tokens, not literals (U1)', () => {
             // Extract the content of @layer ui.components by finding the block after the layer.
             const match = full.match(/@layer\s+ui\.components\s*\{([\s\S]*)/);
             const source = match?.[1] ?? full;
-            const stripped = stripOptOuts(source);
+            const stripped = blankForScan(source);
             const lines = stripped.split('\n');
             lines.forEach((line, i) => {
                 if (colourFn.test(line)) {

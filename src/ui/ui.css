@@ -12,79 +12,94 @@
 
 /* ============================================================================ ui.tokens
  *
- * Colour tokens are defined as pairs: the raw channel values and a derived alpha token.
- * Using channels lets overlay variants (--surface-hover, --surface-selected) be built
- * from the same hue without repeating it.
+ * **A part derives its tokens; it does not define the host's.**
  *
- * Fallback values are a dark theme. A host that provides its own --ink, --edge, etc.
- * overrides them in :root or a theme class.
+ * The first version of this block defined `--ink`, `--surface`, `--edge`, `--accent` and
+ * `--on-accent` on `:root`. Those are the *kernel's* variables: `mesh-web/src/kernel.css` never
+ * defines them, it consumes them — `background: var(--page, #0d1117)`, `color: var(--ink, #e6edf3)`
+ * — because the **site's theme** is what sets them and the inline fallback is what a themeless site
+ * gets. Defining them here made a composed part silently retheme the window chrome around it, and
+ * three of the values were not the kernel's: `--on-accent` became white where the kernel wants dark
+ * text on blue, `--surface-hover` became a translucent tint where the kernel wants an opaque colour,
+ * and `--ink-dim` came out lighter. That is why the lists and the chrome stopped agreeing.
+ *
+ * So every token is `--ui-` prefixed and every one the host owns is **derived**:
+ *
+ *     --ui-ink: var(--ink, #e6edf3);
+ *
+ * The site's theme still wins, the kernel's own default is still the fallback, and a part can no
+ * longer reach up and change something it does not own. Tokens the vocabulary genuinely introduces
+ * — the scales, danger, success, muted, the tints — keep the same prefix so that *which layer owns
+ * this name* is answerable by reading it.
+ *
+ * Tints use `color-mix` rather than channel triples. The `--x-rgb` pairs existed so an overlay could
+ * be built from a hue without repeating it; a derived token has no channels to borrow, and
+ * `color-mix` composes the resolved colour whatever the host set it to — which is the whole point.
  */
 @layer ui.tokens {
     :root {
-        /* ------------------------------------------------------------------ colour: ink */
-        --ink-rgb: 230, 237, 243;
-        --ink: rgb(var(--ink-rgb));
-        --ink-dim: rgba(var(--ink-rgb), 0.5);
+        /* ---------------------------------------------------------- colour: the host's, derived
+         *
+         * Each fallback is **the kernel's own**, copied from `mesh-web/src/kernel.css` where it is
+         * written inline as `var(--ink, #e6edf3)`. A site with no theme therefore looks exactly as it
+         * did before this file existed, which is the property that was broken: picking a different
+         * fallback here is how `--on-accent` turned white on a kernel that wants dark text on blue.
+         * These are the one place a literal belongs, because a literal is precisely what is being
+         * mirrored. If the kernel changes one, this changes with it.
+         */
+        --ui-ink: var(--ink, #e6edf3); /* ui-literal: mirrors kernel.css's own fallback */
+        --ui-ink-dim: var(--ink-dim, #8b949e); /* ui-literal: mirrors kernel.css's own fallback */
+        --ui-edge: var(--edge, #30363d); /* ui-literal: mirrors kernel.css's own fallback */
+        --ui-surface: var(--surface, #161b22); /* ui-literal: mirrors kernel.css's own fallback */
+        --ui-surface-hover: var(--surface-hover, #21262d); /* ui-literal: mirrors kernel.css's own fallback */
+        --ui-accent: var(--accent, #58a6ff); /* ui-literal: mirrors kernel.css's own fallback */
+        --ui-on-accent: var(--on-accent, #0d1117); /* ui-literal: mirrors kernel.css's own fallback */
 
-        /* ------------------------------------------------------------------ colour: edge */
-        --edge-rgb: 48, 54, 61;
-        --edge: rgb(var(--edge-rgb));
-        --edge-dim: rgba(var(--edge-rgb), 0.5);
+        /* ---------------------------------------------------------- colour: the vocabulary's own */
+        --ui-edge-dim: color-mix(in srgb, var(--ui-edge) 50%, transparent);
+        --ui-surface-dim: color-mix(in srgb, var(--ui-surface) 60%, transparent);
+        --ui-surface-selected: color-mix(in srgb, var(--ui-accent) 15%, transparent);
 
-        /* ------------------------------------------------------------------ colour: surface */
-        --surface-rgb: 22, 27, 34;
-        --surface: rgb(var(--surface-rgb));
-        --surface-dim: rgba(var(--surface-rgb), 0.6);
-        --surface-hover: rgba(255, 255, 255, 0.05); /* ui-literal: overlay tint, no semantic token */
-        --surface-selected: rgba(88, 166, 255, 0.15); /* ui-literal: accent tint, derived from --accent-rgb */
+        --ui-danger: var(--danger, #f85149); /* ui-literal: the vocabulary's own default, themeable */
+        --ui-danger-dim: color-mix(in srgb, var(--ui-danger) 10%, transparent);
+        /* --ui-error is the published name components use; danger is the semantic name */
+        --ui-error: var(--ui-danger);
+        --ui-error-dim: var(--ui-danger-dim);
 
-        /* ------------------------------------------------------------------ colour: accent */
-        --accent-rgb: 88, 166, 255;
-        --accent: rgb(var(--accent-rgb));
-        --on-accent: #fff; /* ui-literal: white-on-blue contrast requirement */
+        --ui-success: var(--success, #2ea043); /* ui-literal: the vocabulary's own default, themeable */
+        --ui-success-dim: color-mix(in srgb, var(--ui-success) 10%, transparent);
 
-        /* ------------------------------------------------------------------ colour: danger / error */
-        --danger-rgb: 248, 81, 73;
-        --danger: rgb(var(--danger-rgb));
-        --danger-dim: rgba(var(--danger-rgb), 0.1);
-        /* --error is the published name components use; danger is the semantic name */
-        --error: var(--danger);
-        --error-dim: var(--danger-dim);
-
-        /* ------------------------------------------------------------------ colour: success */
-        --success-rgb: 46, 160, 67;
-        --success: rgb(var(--success-rgb));
-        --success-dim: rgba(var(--success-rgb), 0.1);
-
-        /* ------------------------------------------------------------------ colour: muted */
-        --muted-rgb: 110, 118, 129;
-        --muted: rgb(var(--muted-rgb));
+        --ui-muted: var(--muted, #6e7681); /* ui-literal: the vocabulary's own default, themeable */
 
         /* ------------------------------------------------------------------ spacing scale
          *
          * Names are multiples of 4 px. Use these for gap, padding, and margin.
-         * --space-px is the 1 px hairline used for borders and dividers only.
+         * --ui-space-px is the 1 px hairline used for borders and dividers only.
+         *
+         * Prefixed like the colours even though no host defines these: the prefix is what makes
+         * *which layer owns this name* answerable by reading it, and a generic `--space-2` in a
+         * composed part is a collision waiting for the second design system.
          */
-        --space-px: 1px;
-        --space-1: 4px;
-        --space-2: 8px;
-        --space-3: 12px;
-        --space-4: 16px;
-        --space-5: 20px;
-        --space-6: 24px;
-        --space-8: 32px;
+        --ui-space-px: 1px;
+        --ui-space-1: 4px;
+        --ui-space-2: 8px;
+        --ui-space-3: 12px;
+        --ui-space-4: 16px;
+        --ui-space-5: 20px;
+        --ui-space-6: 24px;
+        --ui-space-8: 32px;
 
         /* ------------------------------------------------------------------ type scale */
-        --text-xs: 12px;
-        --text-sm: 13px;
-        --text-base: 14px;
-        --text-md: 16px;
-        --text-lg: 18px;
+        --ui-text-xs: 12px;
+        --ui-text-sm: 13px;
+        --ui-text-base: 14px;
+        --ui-text-md: 16px;
+        --ui-text-lg: 18px;
 
         /* ------------------------------------------------------------------ radius scale */
-        --radius-sm: 4px;
-        --radius-md: 6px;
-        --radius-lg: 8px;
+        --ui-radius-sm: 4px;
+        --ui-radius-md: 6px;
+        --ui-radius-lg: 8px;
     }
 }
 
@@ -101,57 +116,57 @@
     .ui-entity-list-header {
         display: flex;
         align-items: baseline;
-        gap: var(--space-2);
-        padding: var(--space-2) var(--space-3);
-        border-bottom: var(--space-px) solid var(--edge);
+        gap: var(--ui-space-2);
+        padding: var(--ui-space-2) var(--ui-space-3);
+        border-bottom: var(--ui-space-px) solid var(--ui-edge);
     }
 
     .ui-entity-list-title {
-        font-size: var(--text-base);
+        font-size: var(--ui-text-base);
         font-weight: 600;
         margin: 0;
-        color: var(--ink);
+        color: var(--ui-ink);
     }
 
     .ui-entity-list-count {
-        font-size: var(--text-xs);
-        color: var(--ink-dim);
+        font-size: var(--ui-text-xs);
+        color: var(--ui-ink-dim);
     }
 
     .ui-entity-list-items {
         display: flex;
         flex-direction: column;
         gap: 2px; /* ui-literal: sub-scale gap between list rows */
-        padding: var(--space-1);
+        padding: var(--ui-space-1);
         overflow-y: auto;
     }
 
     .ui-entity-list-loading,
     .ui-entity-list-empty,
     .ui-entity-list-error {
-        padding: var(--space-4);
-        font-size: var(--text-sm);
+        padding: var(--ui-space-4);
+        font-size: var(--ui-text-sm);
         text-align: center;
     }
 
     .ui-entity-list-loading {
-        color: var(--ink-dim);
+        color: var(--ui-ink-dim);
     }
 
     .ui-entity-list-empty {
-        color: var(--ink-dim);
+        color: var(--ui-ink-dim);
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: var(--space-2);
+        gap: var(--ui-space-2);
     }
 
     .ui-entity-list-error {
-        color: var(--error);
-        background: var(--error-dim);
-        border: var(--space-px) solid var(--error);
-        border-radius: var(--radius-md);
-        margin: var(--space-2);
+        color: var(--ui-error);
+        background: var(--ui-error-dim);
+        border: var(--ui-space-px) solid var(--ui-error);
+        border-radius: var(--ui-radius-md);
+        margin: var(--ui-space-2);
     }
 
     /* ------------------------------------------------------------------------- ui.EntityItem */
@@ -159,43 +174,43 @@
         display: flex;
         flex-direction: column;
         gap: 2px; /* ui-literal: sub-scale gap between title and description */
-        padding: var(--space-2) var(--space-3);
-        border-radius: var(--radius-md);
-        border: var(--space-px) solid transparent;
+        padding: var(--ui-space-2) var(--ui-space-3);
+        border-radius: var(--ui-radius-md);
+        border: var(--ui-space-px) solid transparent;
         background: transparent;
-        color: var(--ink);
+        color: var(--ui-ink);
         cursor: pointer;
         text-align: left;
         font-family: inherit;
-        font-size: var(--text-sm);
+        font-size: var(--ui-text-sm);
         transition: background 0.1s ease, border-color 0.1s ease;
     }
 
     .ui-entity-item:hover {
-        background: var(--surface-hover);
+        background: var(--ui-surface-hover);
     }
 
     .ui-entity-item.selected,
     .ui-entity-item[data-selected="true"] {
-        background: var(--surface-selected);
-        border-color: var(--accent);
+        background: var(--ui-surface-selected);
+        border-color: var(--ui-accent);
     }
 
     .ui-entity-item-title {
         font-weight: 500;
-        color: var(--ink);
+        color: var(--ui-ink);
     }
 
     .ui-entity-item-description {
-        font-size: var(--text-xs);
-        color: var(--ink-dim);
+        font-size: var(--ui-text-xs);
+        color: var(--ui-ink-dim);
     }
 
     /* ------------------------------------------------------------------------- ui.DetailSurface */
     .ui-detail-surface {
         display: flex;
         flex-direction: column;
-        padding: var(--space-4);
+        padding: var(--ui-space-4);
         height: 100%;
         overflow-y: auto;
         box-sizing: border-box;
@@ -204,15 +219,15 @@
     .ui-detail-surface-header {
         display: flex;
         align-items: center;
-        gap: var(--space-2);
-        margin-bottom: var(--space-4);
+        gap: var(--ui-space-2);
+        margin-bottom: var(--ui-space-4);
     }
 
     .ui-detail-surface-title {
-        font-size: var(--text-lg);
+        font-size: var(--ui-text-lg);
         font-weight: 600;
         margin: 0;
-        color: var(--ink);
+        color: var(--ui-ink);
     }
 
     .ui-detail-surface-placeholder {
@@ -222,47 +237,47 @@
         justify-content: center;
         height: 100%;
         min-height: 200px; /* ui-literal: minimum height for a readable placeholder */
-        color: var(--ink-dim);
+        color: var(--ui-ink-dim);
         text-align: center;
-        gap: var(--space-2);
+        gap: var(--ui-space-2);
     }
 
     .ui-detail-placeholder-title {
-        font-size: var(--text-md);
+        font-size: var(--ui-text-md);
         font-weight: 500;
         margin: 0;
-        color: var(--ink);
+        color: var(--ui-ink);
     }
 
     .ui-detail-placeholder-message {
-        font-size: var(--text-sm);
-        color: var(--ink-dim);
+        font-size: var(--ui-text-sm);
+        color: var(--ui-ink-dim);
     }
 
     /* ------------------------------------------------------------------------- ui.PropertyGrid */
     .ui-property-grid {
         display: flex;
         flex-direction: column;
-        gap: var(--space-2);
-        font-size: var(--text-sm);
+        gap: var(--ui-space-2);
+        font-size: var(--ui-text-sm);
     }
 
     .ui-property-row {
         display: flex;
         justify-content: space-between;
         align-items: baseline;
-        padding: var(--space-1) 0;
-        border-bottom: var(--space-px) solid var(--edge-dim);
+        padding: var(--ui-space-1) 0;
+        border-bottom: var(--ui-space-px) solid var(--ui-edge-dim);
     }
 
     .ui-property-label {
         font-weight: 500;
-        color: var(--ink-dim);
+        color: var(--ui-ink-dim);
     }
 
     .ui-property-value {
         font-weight: 400;
-        color: var(--ink);
+        color: var(--ui-ink);
     }
 
     /* ------------------------------------------------------------------------- ui.Table */
@@ -270,8 +285,8 @@
         display: flex;
         flex-direction: column;
         width: 100%;
-        border: var(--space-px) solid var(--edge);
-        border-radius: var(--radius-md);
+        border: var(--ui-space-px) solid var(--ui-edge);
+        border-radius: var(--ui-radius-md);
         overflow: hidden;
         box-sizing: border-box;
     }
@@ -279,16 +294,16 @@
     .ui-table-header {
         display: flex;
         align-items: center;
-        background: var(--surface-dim);
-        border-bottom: var(--space-px) solid var(--edge);
-        font-size: var(--text-xs);
+        background: var(--ui-surface-dim);
+        border-bottom: var(--ui-space-px) solid var(--ui-edge);
+        font-size: var(--ui-text-xs);
         font-weight: 600;
-        color: var(--ink-dim);
+        color: var(--ui-ink-dim);
     }
 
     .ui-table-header-cell {
         flex: 1;
-        padding: var(--space-2) var(--space-3);
+        padding: var(--ui-space-2) var(--ui-space-3);
     }
 
     .ui-table-rows {
@@ -299,9 +314,9 @@
     .ui-table-row {
         display: flex;
         align-items: center;
-        border-bottom: var(--space-px) solid var(--edge-dim);
-        padding: var(--space-2) var(--space-3);
-        font-size: var(--text-sm);
+        border-bottom: var(--ui-space-px) solid var(--ui-edge-dim);
+        padding: var(--ui-space-2) var(--ui-space-3);
+        font-size: var(--ui-text-sm);
     }
 
     .ui-table-row:last-child {
@@ -309,22 +324,22 @@
     }
 
     .ui-table-row.selected {
-        background: var(--surface-selected);
+        background: var(--ui-surface-selected);
     }
 
     .ui-table-loading,
     .ui-table-empty,
     .ui-table-error {
-        padding: var(--space-4);
+        padding: var(--ui-space-4);
         text-align: center;
-        font-size: var(--text-sm);
+        font-size: var(--ui-text-sm);
     }
 
     /* ------------------------------------------------------------------------- ui.Field & ui.Label */
     .ui-field {
         display: flex;
         flex-direction: column;
-        gap: var(--space-1);
+        gap: var(--ui-space-1);
         width: 100%;
         box-sizing: border-box;
     }
@@ -332,13 +347,13 @@
     .ui-label {
         display: flex;
         align-items: center;
-        font-size: var(--text-sm);
+        font-size: var(--ui-text-sm);
         font-weight: 500;
-        color: var(--ink);
+        color: var(--ui-ink);
     }
 
     .ui-label-required {
-        color: var(--error);
+        color: var(--ui-error);
         margin-left: 2px; /* ui-literal: tight optical spacing for the asterisk */
     }
 
@@ -347,43 +362,43 @@
     }
 
     .ui-field-hint {
-        font-size: var(--text-xs);
-        color: var(--ink-dim);
+        font-size: var(--ui-text-xs);
+        color: var(--ui-ink-dim);
     }
 
     .ui-field-error {
-        font-size: var(--text-xs);
-        color: var(--error);
+        font-size: var(--ui-text-xs);
+        color: var(--ui-error);
     }
 
     /* ------------------------------------------------------------------------- ui.Select */
     .ui-select {
         display: flex;
         flex-wrap: wrap;
-        gap: var(--space-1);
+        gap: var(--ui-space-1);
     }
 
     .ui-select-option {
-        padding: var(--space-1) var(--space-3);
-        border-radius: var(--radius-sm);
-        border: var(--space-px) solid var(--edge);
-        background: var(--surface);
-        color: var(--ink);
-        font-size: var(--text-xs);
+        padding: var(--ui-space-1) var(--ui-space-3);
+        border-radius: var(--ui-radius-sm);
+        border: var(--ui-space-px) solid var(--ui-edge);
+        background: var(--ui-surface);
+        color: var(--ui-ink);
+        font-size: var(--ui-text-xs);
         cursor: pointer;
     }
 
     .ui-select-option.selected {
-        background: var(--accent);
-        color: var(--on-accent);
-        border-color: var(--accent);
+        background: var(--ui-accent);
+        color: var(--ui-on-accent);
+        border-color: var(--ui-accent);
     }
 
     /* ------------------------------------------------------------------------- ui.ButtonRow */
     .ui-button-row {
         display: flex;
         align-items: center;
-        gap: var(--space-2);
+        gap: var(--ui-space-2);
     }
 
     .ui-button-row-end {
@@ -404,25 +419,25 @@
 
     /* ------------------------------------------------------------------------- ui.Dialog */
     .ui-dialog {
-        border: var(--space-px) solid var(--edge);
-        border-radius: var(--radius-lg);
-        background: var(--surface);
-        color: var(--ink);
+        border: var(--ui-space-px) solid var(--ui-edge);
+        border-radius: var(--ui-radius-lg);
+        background: var(--ui-surface);
+        color: var(--ui-ink);
         padding: 0;
         max-width: 500px; /* ui-literal: dialog maximum width, layout constraint */
         width: 100%;
     }
 
     .ui-dialog-content {
-        padding: var(--space-4);
+        padding: var(--ui-space-4);
         display: flex;
         flex-direction: column;
-        gap: var(--space-3);
+        gap: var(--ui-space-3);
     }
 
     .ui-dialog-title {
         margin: 0;
-        font-size: var(--text-md);
+        font-size: var(--ui-text-md);
         font-weight: 600;
     }
 
@@ -430,26 +445,26 @@
     .ui-form {
         display: flex;
         flex-direction: column;
-        gap: var(--space-3);
+        gap: var(--ui-space-3);
         width: 100%;
     }
 
     .ui-input,
     .ui-textarea {
         width: 100%;
-        padding: var(--space-1) var(--space-3);
-        border: var(--space-px) solid var(--edge);
-        border-radius: var(--radius-sm);
-        background: var(--surface);
-        color: var(--ink);
+        padding: var(--ui-space-1) var(--ui-space-3);
+        border: var(--ui-space-px) solid var(--ui-edge);
+        border-radius: var(--ui-radius-sm);
+        background: var(--ui-surface);
+        color: var(--ui-ink);
         font-family: inherit;
-        font-size: var(--text-sm);
+        font-size: var(--ui-text-sm);
         box-sizing: border-box;
     }
 
     .ui-input:focus,
     .ui-textarea:focus {
-        border-color: var(--accent);
+        border-color: var(--ui-accent);
         outline: none;
     }
 
@@ -458,13 +473,13 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: var(--space-1);
-        padding: var(--space-1) var(--space-4);
-        border-radius: var(--radius-md);
-        border: var(--space-px) solid var(--edge);
-        background: var(--surface);
-        color: var(--ink);
-        font-size: var(--text-sm);
+        gap: var(--ui-space-1);
+        padding: var(--ui-space-1) var(--ui-space-4);
+        border-radius: var(--ui-radius-md);
+        border: var(--ui-space-px) solid var(--ui-edge);
+        background: var(--ui-surface);
+        color: var(--ui-ink);
+        font-size: var(--ui-text-sm);
         font-weight: 500;
         cursor: pointer;
         font-family: inherit;
@@ -472,7 +487,7 @@
     }
 
     .ui-action-button:hover:not(:disabled) {
-        background: var(--surface-hover);
+        background: var(--ui-surface-hover);
     }
 
     .ui-action-button:disabled {
@@ -482,43 +497,43 @@
 
     .ui-action-button.refused {
         border-style: dashed;
-        color: var(--ink-dim);
+        color: var(--ui-ink-dim);
     }
 
     /* ------------------------------------------------------------------------- ui.ActionCard */
     .ui-action-card {
         display: flex;
         flex-direction: column;
-        gap: var(--space-4);
-        padding: var(--space-4);
-        border: var(--space-px) solid var(--edge);
-        border-radius: var(--radius-lg);
-        background: var(--surface);
+        gap: var(--ui-space-4);
+        padding: var(--ui-space-4);
+        border: var(--ui-space-px) solid var(--ui-edge);
+        border-radius: var(--ui-radius-lg);
+        background: var(--ui-surface);
         box-sizing: border-box;
     }
 
     .ui-action-card-header {
         display: flex;
         flex-direction: column;
-        gap: var(--space-1);
+        gap: var(--ui-space-1);
     }
 
     .ui-action-card-title {
         margin: 0;
-        font-size: var(--text-md);
+        font-size: var(--ui-text-md);
         font-weight: 600;
-        color: var(--ink);
+        color: var(--ui-ink);
     }
 
     .ui-action-card-consequence {
-        font-size: var(--text-sm);
-        color: var(--ink-dim);
+        font-size: var(--ui-text-sm);
+        color: var(--ui-ink-dim);
     }
 
     .ui-action-card-body {
         display: flex;
         flex-direction: column;
-        gap: var(--space-3);
+        gap: var(--ui-space-3);
     }
 
     .ui-action-card-actions {
@@ -527,57 +542,57 @@
     }
 
     .ui-action-card-result {
-        padding: var(--space-2) var(--space-3);
-        background: var(--success-dim);
-        border: var(--space-px) solid var(--success);
-        border-radius: var(--radius-md);
-        color: var(--success);
-        font-size: var(--text-sm);
+        padding: var(--ui-space-2) var(--ui-space-3);
+        background: var(--ui-success-dim);
+        border: var(--ui-space-px) solid var(--ui-success);
+        border-radius: var(--ui-radius-md);
+        color: var(--ui-success);
+        font-size: var(--ui-text-sm);
     }
 
     .ui-action-card-error {
-        padding: var(--space-2) var(--space-3);
-        background: var(--error-dim);
-        border: var(--space-px) solid var(--error);
-        border-radius: var(--radius-md);
-        color: var(--error);
-        font-size: var(--text-sm);
+        padding: var(--ui-space-2) var(--ui-space-3);
+        background: var(--ui-error-dim);
+        border: var(--ui-space-px) solid var(--ui-error);
+        border-radius: var(--ui-radius-md);
+        color: var(--ui-error);
+        font-size: var(--ui-text-sm);
     }
 
     /* ------------------------------------------------------------------------- ui.SignIn */
     .ui-sign-in {
         display: flex;
         flex-direction: column;
-        gap: var(--space-4);
-        padding: var(--space-4);
-        border: var(--space-px) solid var(--edge);
-        border-radius: var(--radius-lg);
-        background: var(--surface);
+        gap: var(--ui-space-4);
+        padding: var(--ui-space-4);
+        border: var(--ui-space-px) solid var(--ui-edge);
+        border-radius: var(--ui-radius-lg);
+        background: var(--ui-surface);
         box-sizing: border-box;
     }
 
     .ui-sign-in-header {
         display: flex;
         flex-direction: column;
-        gap: var(--space-1);
+        gap: var(--ui-space-1);
     }
 
     .ui-sign-in-title {
         margin: 0;
-        font-size: var(--text-md);
+        font-size: var(--ui-text-md);
         font-weight: 600;
-        color: var(--ink);
+        color: var(--ui-ink);
     }
 
     .ui-sign-in-note {
-        font-size: var(--text-sm);
-        color: var(--ink-dim);
+        font-size: var(--ui-text-sm);
+        color: var(--ui-ink-dim);
     }
 
     .ui-sign-in-form {
         display: flex;
         flex-direction: column;
-        gap: var(--space-3);
+        gap: var(--ui-space-3);
     }
 
     .ui-sign-in-actions {
@@ -586,16 +601,16 @@
     }
 
     .ui-sign-in-error {
-        padding: var(--space-2) var(--space-3);
-        background: var(--error-dim);
-        border: var(--space-px) solid var(--error);
-        border-radius: var(--radius-md);
-        color: var(--error);
-        font-size: var(--text-sm);
+        padding: var(--ui-space-2) var(--ui-space-3);
+        background: var(--ui-error-dim);
+        border: var(--ui-space-px) solid var(--ui-error);
+        border-radius: var(--ui-radius-md);
+        color: var(--ui-error);
+        font-size: var(--ui-text-sm);
     }
 
     .ui-sign-in-done {
-        font-size: var(--text-sm);
-        color: var(--ink-dim);
+        font-size: var(--ui-text-sm);
+        color: var(--ui-ink-dim);
     }
 }
