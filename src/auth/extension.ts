@@ -232,8 +232,15 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
                 ...(body === undefined ? {} : { body: JSON.stringify(body) }),
                 credentials: 'omit',
             });
-
-            if (response.status === 401 || response.status === 403) return undefined;
+            // Only when it did not work. A line per request is the thing the comment above
+            // `attach` forbids, and `${method} ${path}` on a 200 says nothing a caller did not
+            // already know. A refusal and a failure are different outcomes, so they read
+            // differently: one is an answer, the other is the API breaking.
+            if (response.status === 401 || response.status === 403) {
+                cx.log.debug(`${method} ${path} refused the ticket`, { status: response.status });
+                return undefined;
+            }
+            if (!response.ok) cx.log.warn(`${method} ${path} failed`, { status: response.status });
             if (!response.ok) throw new Error(`${method} ${path} failed with ${String(response.status)}`);
 
             return await response.json() as T;
@@ -243,6 +250,8 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
             ticket = undefined;
             store?.clear();
             session.set(null);
+            // The one place the ticket is dropped, so the one place that can say it happened.
+            cx.log.debug('The ticket was dropped and the page is signed out');
         };
 
         const sessionFrom = (who: WhoamiReply, expiresAt: number): Session => ({
@@ -258,11 +267,16 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
             if (reply === undefined) {
                 // The ticket is not accepted any more — revoked, expired, or issued by an API this
                 // page no longer talks to. Whichever it is, holding it is worse than dropping it.
+                // `{ reply }` here was `{ reply: undefined }` — the branch is *defined* by the reply
+                // being absent, so logging it says nothing. The status that caused it was already
+                // logged by `request`; what this line adds is the consequence.
+                cx.log.warn('The stored ticket was not accepted, so the page is signed out');
                 clear();
                 return null;
             }
             const restored = sessionFrom(reply, expiresAt);
             session.set(restored);
+            cx.log.debug('Session restored', { userId: restored.userId, roles: restored.roles });
             return restored;
         };
 
@@ -281,6 +295,10 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
             async signIn(credentials): Promise<Session> {
                 const issued = await request<IssueReply>(endpoints.issue, 'POST', credentials);
                 if (issued === undefined) throw new Error('Those credentials are not valid.');
+                // `issued.token` is the bearer ticket and never goes in here. The log panel is
+                // rendered on the page, so a line that carries the ticket hands a live credential
+                // to anyone who can see the screen or read a support paste of it.
+                cx.log.debug('Signed in', { userId: issued.userId, expiresAt: issued.expiresAt });
 
                 ticket = issued.token;
                 store?.write(issued.token);
@@ -302,6 +320,9 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
 
                 try {
                     await request(endpoints.revoke, 'POST', { token: held });
+                    // Held, not logged — `held` *is* the ticket. What is worth knowing is that the
+                    // revocation landed, which is the half `clear()` cannot do on its own.
+                    cx.log.debug('Signed out, and the ticket was revoked');
                 } catch (error) {
                     // The ticket still expires on its own. Telling the user their sign-out failed,
                     // when locally it did not, would be worse than a log line.
