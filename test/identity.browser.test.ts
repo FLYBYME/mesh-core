@@ -354,3 +354,136 @@ describe('a read refused mid-flight (U2)', () => {
         site.dispose();
     });
 });
+
+describe('conformance test (states §6): identity answers all five states', () => {
+    const realFetch = globalThis.fetch;
+    afterEach(() => { globalThis.fetch = realFetch; });
+
+    it('answers all five states', async () => {
+        // We will drive it through the states by controlling fetch.
+        let status = 'loading';
+        let items: any[] = [];
+        let error: any = null;
+
+        globalThis.fetch = ((input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.includes('organization') || url.includes('membership')) {
+                if (status === 'loading') {
+                    // simulate infinite load for loading state
+                    return new Promise(() => {});
+                }
+                if (error) {
+                    return Promise.resolve(new Response(JSON.stringify(error.body), {
+                        status: error.status,
+                        headers: { 'content-type': 'application/json' },
+                    }));
+                }
+                return Promise.resolve(new Response(JSON.stringify(items), {
+                    status: 200, headers: { 'content-type': 'application/json' }
+                }));
+            }
+            if (url.endsWith('/api/identity/ticket')) {
+                return Promise.resolve(new Response(
+                    JSON.stringify({ token: 't1', userId: 'u1', expiresAt: 9e12 }),
+                    { status: 200, headers: { 'content-type': 'application/json' } },
+                ));
+            }
+            if (url.endsWith('/api/identity/whoami')) {
+                return Promise.resolve(new Response(
+                    JSON.stringify({ userId: 'u1', displayName: 'Alice', roles: [] }),
+                    { status: 200, headers: { 'content-type': 'application/json' } },
+                ));
+            }
+            return Promise.resolve(new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }));
+        }) as typeof fetch;
+
+        // 1. Loading
+        status = 'loading';
+        const site = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'identity', contribution: IdentityApp },
+            ],
+            api: 'http://identity.test',
+        });
+        
+        // Wait a bit for initial render
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        let text = site.root.textContent ?? '';
+        expect(text).toContain('Loading organizations…'); // loading
+        
+        // Unauthenticated happens when we don't sign in. 
+        // We can test that UI elements are refused:
+        const btn = site.root.querySelector('[data-refused="true"]');
+        expect(btn).not.toBeNull();
+        expect(btn?.textContent).toContain('Sign in to manage access'); // unauthenticated / refused
+
+        // Let's sign in
+        const auth = site.kernel.provided(AUTH) as AuthApi | undefined;
+        await auth?.signIn({ email: 'alice@example.com', password: 'correct-horse' });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        // 2. Empty
+        status = 'ready';
+        items = [];
+        // To trigger re-fetch, we can't easily do it if it's already loading, but in tests, 
+        // let's just make a new site or simulate
+        site.dispose();
+
+        // Remount to see empty
+        const site2 = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'identity', contribution: IdentityApp },
+            ],
+            api: 'http://identity.test',
+        });
+        const auth2 = site2.kernel.provided(AUTH) as AuthApi | undefined;
+        await auth2?.signIn({ email: 'alice@example.com', password: 'correct-horse' });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        let text2 = site2.root.textContent ?? '';
+        expect(text2).toContain('No organizations yet.'); // empty
+
+        site2.dispose();
+
+        // 3. Error
+        status = 'error';
+        error = { status: 500, body: { message: 'Server crash' } };
+        
+        const site3 = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'identity', contribution: IdentityApp },
+            ],
+            api: 'http://identity.test',
+        });
+        const auth3 = site3.kernel.provided(AUTH) as AuthApi | undefined;
+        await auth3?.signIn({ email: 'alice@example.com', password: 'correct-horse' });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        let text3 = site3.root.textContent ?? '';
+        expect(text3).toContain('The server failed (500).'); // error
+        site3.dispose();
+
+        // 4. Refused
+        status = 'error';
+        error = { status: 403, body: { declared: false, error: 'forbidden', message: 'Not allowed' } };
+        const site4 = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'identity', contribution: IdentityApp },
+            ],
+            api: 'http://identity.test',
+        });
+        const auth4 = site4.kernel.provided(AUTH) as AuthApi | undefined;
+        await auth4?.signIn({ email: 'alice@example.com', password: 'correct-horse' });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        let text4 = site4.root.textContent ?? '';
+        expect(text4).toContain('You do not have access to that.'); // refused
+        expect(text4).not.toContain('Failed to load'); // not error
+
+        site4.dispose();
+    });
+});

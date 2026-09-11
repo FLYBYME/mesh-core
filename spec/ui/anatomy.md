@@ -80,6 +80,15 @@ If a view wants two levels of nesting, it is two views. This is the GIMP line: a
 tree of panels because everything must be reachable from one screen is an app that has stopped
 answering one question.
 
+## Where a form opens
+
+**A form opens in place**, as a band that pushes the regions down, rather than as a layer that dims
+and covers them.
+
+*Why:* `confirm` is already a layer that dims and covers. Adding another modal layer for forms violates
+the principle that an app is made of regions, not layers. (Additionally, at the time of this writing,
+`Dialog` opened at mount is not modal due to a bug in the kernel).
+
 ## What a view must not do
 
 - **Open a window.** A view is content. Whether it is a window, a page or a pane is the chrome's

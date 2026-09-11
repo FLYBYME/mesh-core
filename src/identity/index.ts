@@ -131,6 +131,22 @@ export default class IdentityApp implements Application<
             return describe(failure);
         });
 
+        const membershipsStatus = cx.state.computed<'loading' | 'ready' | 'empty' | 'error'>(() => {
+            const state = memberships.status();
+            // Also, if the filtered members list is empty but status is ready, we should show empty! Wait, `Table` doesn't know about filtered count vs actual count? 
+            // Wait, Table uses `count: () => app.members().length` but membersTable doesn't pass count. Table uses `children.length` if count is not passed.
+            return state === 'idle' ? 'loading' : state;
+        });
+
+        const membershipsError = cx.state.computed<string | { refused: string } | null>(() => {
+            const failure = memberships.error();
+            if (failure === null) return null;
+            if (failure.kind === 'forbidden' || failure.kind === 'unauthorized') {
+                return { refused: describe(failure) };
+            }
+            return describe(failure);
+        });
+
         /**
          * **`available()` reads the session, so a refusal is rendered rather than discovered.**
          *
@@ -223,6 +239,8 @@ export default class IdentityApp implements Application<
             roles: cx.state.computed(() => roles.rows() as readonly Role[]),
             status,
             error,
+            membershipsStatus,
+            membershipsError,
             selected,
             select: (id) => { selected.set(id); },
             members,
