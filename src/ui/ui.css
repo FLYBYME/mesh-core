@@ -114,11 +114,23 @@
 
 @layer ui.components {
     /* ------------------------------------------------------------------------- ui.EntityList */
+    /**
+     * `min-height: 0` is load-bearing, and its absence is why a list with twenty items broke.
+     *
+     * A flex item's default `min-height` is `auto`, which means **it will not shrink below its
+     * content**. So `overflow-y: auto` on the items below never engaged: the list grew to whatever
+     * height its rows wanted and pushed through the bottom of whatever contained it. Under ten items
+     * it fits and looks correct, which is exactly why this survived — the failure is invisible at the
+     * size everything is built and tested at.
+     *
+     * `min-width: 0` was already here for the same reason in the other axis. This is the pair.
+     */
     .ui-entity-list {
         display: flex;
         flex-direction: column;
         width: 100%;
         min-width: 0;
+        min-height: 0;
         box-sizing: border-box;
     }
 
@@ -142,9 +154,18 @@
         color: var(--ui-ink-dim);
     }
 
+    /**
+     * The scroll area: takes the space the header leaves, and may shrink below its content.
+     *
+     * `flex: 1 1 auto` claims the remainder; `min-height: 0` is what permits the shrink that makes
+     * `overflow-y` mean anything. Without both, this element is exactly as tall as its rows and the
+     * scrollbar never appears.
+     */
     .ui-entity-list-items {
         display: flex;
         flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
         gap: 2px; /* ui-literal: sub-scale gap between list rows */
         padding: var(--ui-space-1);
         overflow-y: auto;
@@ -290,10 +311,20 @@
     }
 
     /* ------------------------------------------------------------------------- ui.Table */
+    /**
+     * `overflow: hidden` here is for the rounded corners, not for the rows.
+     *
+     * On its own it was worse than the list's bug: rows past the bottom edge were **clipped and
+     * gone**, with no scrollbar to say so. A list that overflows at least looks wrong; a table that
+     * silently drops its last rows looks finished.
+     *
+     * So the clip stays for the border radius, and `.ui-table-rows` below is the thing that scrolls.
+     */
     .ui-table {
         display: flex;
         flex-direction: column;
         width: 100%;
+        min-height: 0;
         border: var(--ui-space-px) solid var(--ui-edge);
         border-radius: var(--ui-radius-md);
         overflow: hidden;
@@ -318,6 +349,9 @@
     .ui-table-rows {
         display: flex;
         flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
     }
 
     .ui-table-row {

@@ -189,11 +189,21 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
 
         // Attached once, and *before* any request could be made. The lookup runs per request, so a
         // ticket that arrives later is on the next call rather than on the next page load.
+        /**
+         * **No logging in here.** This closure runs on **every request the page makes** — every
+         * collection read, every command, every poll — so a line per call is a log that scrolls its
+         * own useful entries off the top, and `A8.17`'s log panel exists to be read.
+         *
+         * It also had nothing to say: `'Attach'`, with no ticket state, no call, and no outcome. A
+         * line that is emitted constantly and distinguishes nothing is worse than silence, because
+         * somebody debugging an auth problem now has to filter it out before they can see anything.
+         *
+         * What is worth knowing about credentials is when the ticket *changes* — signing in, signing
+         * out, a revocation landing — and those are logged where they happen, once each.
+         */
         cx.credentials.attach(
-            (): Readonly<Record<string, string>> => {
-                cx.log.debug('Attach');
-                return (ticket === undefined ? {} : { authorization: `Bearer ${ticket}` });
-            },
+            (): Readonly<Record<string, string>> =>
+                (ticket === undefined ? {} : { authorization: `Bearer ${ticket}` }),
             session,
         );
 
