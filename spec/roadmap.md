@@ -198,6 +198,74 @@ wants items. Each is a guess at the obvious name, which says what the obvious na
 the whole authorization model is invisible without — is the same shape again. **M** here, then the
 console is unblocked. U7 comes before any further console work.
 
+**Closed 2026-09-11.** Every name in `ui` is now a generic function returning a `Node`, so the call
+site no longer has to know which of the fifteen is a composite, and the type parameters survive the
+export. The constraint was the real bug and it moved from `Record<string, Json | undefined>`, which
+demands an index signature no `interface` has, to `Fields<T> = { [K in keyof T]: Json | undefined }`,
+which is homomorphic and which a generated interface satisfies.
+
+**What it cost, measured in the consumer rather than claimed here.** mesh-operator dropped the index
+signature from its own `SeedInput`, three `any` from `registerUser`, and six `.view()` calls — and
+removing the `any` immediately surfaced two defects it had been hiding: the register command
+discarded its own `Result`, so a refused registration rendered as a successful one, and `signOut`
+had shipped carrying `registerUser`'s declaration because the commands were read by array position.
+
+**Two of the three renamed props were reverted** — `PropertyGridItem.label` and
+`DetailSurfaceProps.badge`. U7 read the invented names as evidence about the obvious name, which
+they are; dispatch 24 read that as an instruction. `subtitle` is now a prop beside `badge` rather
+than instead of it, because a chip and a line of prose are different things. `EntityListProps.items`
+stayed renamed: that one was a real gap.
+
+**Open, and the next thing.** The vocabulary still has no way to render a CRUD collection as such.
+Seven views over nine collections means seven hand-written index-and-detail pairs, and the console
+currently draws 7 rows out of the 80 an operator can already read, showing 1 of a release row's 15
+fields. A composite that takes a collection and its contracts — find, get, create, update — and
+renders the list, the detail and the forms is what makes exposing data and showing data the same
+amount of work. Logged as **U8**.
+
+### U8 — Nothing in the vocabulary renders a collection, so every screen writes one
+
+*Raised 2026-09-11, from the operator looking at the console and saying it does not show the data.*
+
+**The measurement, taken against a running cluster rather than argued.** mesh-serve defines 17 CRUD
+collections. The control site already exposes 9 of them to an operator, holding 80 rows. The console
+draws 7 of those rows, and of the rows it draws it drops most of every one:
+
+| row | fields the API returns | fields drawn |
+| --- | --- | --- |
+| release | 15 | 1 |
+| site | 14 | 6 |
+| membership | 7 | 4 |
+
+A release row carries its name, kernel, parts, requirements, policy, agent roles, whether it is
+rolling, its source, what superseded it and when it was composed. The list renders the hash. That is
+the row answering *what would this site serve if I deployed it*, shown as a hex string.
+
+**Why this is a vocabulary item and not a console task.** The console is not unusually lazy; it is
+what the vocabulary makes cheap. `EntityList` takes children, `DetailSurface` takes children, and
+`PropertyGrid` takes hand-written items — so *every field on screen is a line somebody typed*, and
+the cost of showing a row scales with the row. Exposing a collection is one line in a manifest.
+Showing it is a few hundred. **That asymmetry is the bug**, and seven views is where it stops being
+affordable.
+
+What is missing is a composite that takes a collection and the contracts over it — `find`, `get`,
+and where they exist `create`, `update`, `delete` — and renders the index, the detail and the forms
+from the schemas that already describe them. `_describe` carries the JSON Schema for every contract,
+`ui.Form` already generates fields from one, and `cx.models(name)` already carries the four states.
+The parts exist; nothing composes them.
+
+Three things it has to get right, all of which the console has already got wrong once:
+
+- **A scoped collection answers about one organization**, so the surface has to name which, rather
+  than let a screen imply it is showing the cluster. That mistake shipped in a header.
+- **A refusal is a state, not an error** — U2, and per contract: a caller may read a collection and
+  not write it, so `find` at `user` and `update` at `operator` is an ordinary row with a disabled
+  control and a reason.
+- **A field is not always a field.** `passwordHash` exists on a row the platform must never render,
+  which is surfdns **V2**, and a generic renderer is exactly where that gets forgotten.
+
+**L**, and it is the item that decides whether the console reaches seven views or stays at two.
+
 ---
 
 ## Track K — the chromes
