@@ -1,0 +1,94 @@
+## The task
+
+`mesh-core`'s `identity` part cannot be built, and the reason is one missing line in `mesh.json`.
+
+This was found today by mesh-serve's builder running against this repository for real. The
+transcript:
+
+```
+build.release_repository mesh-core
+  released: auth 0.0.1, ui 0.0.1
+  failed:   identity — "identity" requires "auth", but "auth" declares no "import"
+            specifier — so there is no name to mark external, and bundling would
+            inline it. Add one to its descriptor.
+```
+
+Two of three parts built. `identity` did not, and it will not until this is fixed.
+
+## Why an `import` specifier is required, so you fix the cause and not the symptom
+
+A part is bundled with esbuild, with **exactly one specifier left external**: the kernel,
+`@flybyme/mesh-web`. Everything else is inlined from the part's own clone. A part that needs another
+part must therefore declare the specifier it is importable *as*, and the site's import map resolves
+that specifier to the composed artifact.
+
+`ui` already does this correctly and is the model to copy:
+
+```json
+"import": "@flybyme/mesh-core/ui"
+```
+
+with a matching subpath in `package.json`:
+
+```json
+"exports": { ".": "./src/index.ts", "./ui": "./src/ui/index.ts", "./package.json": "./package.json" }
+```
+
+The two go together. The `exports` subpath is what lets TypeScript resolve an ordinary
+`import { … } from '@flybyme/mesh-core/auth'` in the consuming part's source — so the author writes
+normal code and the compiler checks it — and the descriptor's `import` is what tells the builder to
+mark that specifier external instead of inlining the code behind it.
+
+**If the specifier is not marked external, the bundle contains a private copy of `auth`.** That is
+not a size problem, it is a correctness one: two copies under two URLs are two module graphs and two
+of every singleton. The kernel's own history has this exact failure measured at 1.1 MB of duplicated
+framework across 192 files.
+
+## What to change
+
+1. **`mesh.json`** — give the `auth` part an `"import"` specifier, following `ui`'s pattern exactly.
+   Use `@flybyme/mesh-core/auth`.
+
+2. **`package.json`** — add the matching `"./auth"` subpath to `exports`, pointing at the same entry
+   the descriptor names for that part (`src/auth/index.ts`).
+
+3. **Check the other parts while you are there.** `identity` is required by nothing today, so it
+   needs no specifier — but if you find any part listed in another part's `requiredParts` without an
+   `import`, it has the same defect and the same fix. Do not add a specifier to a part nothing
+   requires: an unused export is surface with no reader, and this repository's rule is *name the
+   reader, or do not add the field.*
+
+4. **`src/auth/index.ts` must actually export something a consumer can use.** Open it. If it only
+   has side effects, or exports nothing meaningful, say so in your report rather than inventing an
+   API — the descriptor would then be claiming an importable surface that does not exist, which is
+   worse than the current error.
+
+## What NOT to do
+
+- **Do not write a patch script.** Edit the files directly. Three previous dispatches in this fleet
+  committed regex patch scripts instead of changes, and they were all discarded.
+- **Do not touch `src/ui/`**. It is correct and it is the model you are copying.
+- **Do not change the kernel range or any version number.**
+- **Do not add a build step, a bundler config, or a new dependency.** The builder needs a declaration,
+  not tooling.
+
+## How to verify
+
+`npm test` and `npm run typecheck` must both pass, in the **foreground**, before you commit. Wait for
+them.
+
+Then verify the descriptor itself is still valid by reading it back: `mesh.json` must be valid JSON,
+`auth` must have an `import`, and `package.json`'s `exports` must have a matching subpath whose target
+file exists on disk. Check that last part — an `exports` entry pointing at a file that is not there is
+the failure this whole task is about, one level down.
+
+## Your report
+
+Write `agent-runs/results/27-auth-is-importable.result.md` saying:
+
+- what you changed, file by file
+- what `src/auth/index.ts` actually exports, and whether it is a real consumable surface
+- whether any other part had the same defect
+- the output of the typecheck and the test run
+
+**Commit as you go.** A commit survives your process ending; an unstaged edit does not.
