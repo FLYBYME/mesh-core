@@ -20,6 +20,7 @@
             "id": "auth",
             "version": "0.1.0",
             "entry": "src/auth/index.ts",
+            "import": "@flybyme/mesh-core/auth",
             "kernel": "^0.16",
             "description": "The credential seam: holds the session, attaches the ticket, handles revocation. A site that has no accounts does not load it.",
             "keywords": ["auth", "session", "identity"],
