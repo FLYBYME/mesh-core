@@ -194,16 +194,15 @@ export default class IdentityApp implements Application<
                      * is ever removed.
                      */
                     const owner = auth.session()?.userId ?? '';
+                    // cx.mesh.call throws on failure now -- a transport failure is still a compile
+                    // error at the command layer above, since this rethrows nothing itself and just
+                    // lets the real error (already a well-described MeshCallError) propagate.
                     const created = await cx.mesh.call('organization.create', { ...input, ownerId: owner });
-                    if (!created.ok) throw new Error(describe(created.error));
-                    // `describe` is the framework's — a site's error copy is one thing to change,
-                    // and a new transport failure is a compile error there rather than an
-                    // `undefined` in a toast here.
-                    selected.set(created.value.id);
+                    selected.set(created.id);
                     // The form closes because the thing it was for happened. Closing it before the
                     // call would take the fields away from somebody the server is about to refuse.
                     creating.set(false);
-                    return created.value;
+                    return created;
                 },
             } as BoundCommand<{ name: string; slug: string }, Organization>,
 
@@ -214,11 +213,7 @@ export default class IdentityApp implements Application<
                     const organizationId = selected();
                     if (organizationId === null) throw new Error('No organization is selected.');
                     const created = await cx.mesh.call('membership.create', { ...input, organizationId });
-                    if (!created.ok) throw new Error(describe(created.error));
-                    // `describe` is the framework's — a site's error copy is one thing to change,
-                    // and a new transport failure is a compile error there rather than an
-                    // `undefined` in a toast here.
-                    return created.value;
+                    return created;
                 },
             } as BoundCommand<{ userId: string; roleKey: string }, Membership>,
 
@@ -226,9 +221,7 @@ export default class IdentityApp implements Application<
                 ...decl[2],
                 available: needsSelection,
                 run: async (input): Promise<{ ok: boolean }> => {
-                    const removed = await cx.mesh.call('membership.delete', input);
-                    if (!removed.ok) throw new Error(describe(removed.error));
-                    return removed.value;
+                    return await cx.mesh.call('membership.delete', input);
                 },
             } as BoundCommand<{ id: string }, { ok: boolean }>,
         };
