@@ -1,0 +1,102 @@
+/**
+ * Layout for ConsoleChrome -- chrome.ts had no stylesheet at all before this. Structural only:
+ * enough for the shell to have a real height and the window host to claim the space beneath the
+ * bars, not a design pass. Values mirror mesh-web/src/kernel.css's own inline fallbacks directly
+ * (the same fallback ui.css's --ui- tokens re-derive), since this part doesn't depend on ui.css
+ * having loaded.
+ */
+
+.console {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--page, #0d1117);
+    color: var(--ink, #e6edf3);
+}
+
+.console-banner,
+.console-tabs,
+.console-status {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+}
+
+.console-banner {
+    border-bottom: 1px solid var(--edge, #30363d);
+}
+
+.console-mark {
+    font-weight: 600;
+}
+
+.console-where {
+    color: var(--ink-dim, #8b949e);
+    flex: 1;
+}
+
+.console-mode {
+    background: transparent;
+    color: inherit;
+    border: 1px solid var(--edge, #30363d);
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+}
+
+.console-tabs {
+    border-bottom: 1px solid var(--edge, #30363d);
+}
+
+.console-tab {
+    background: transparent;
+    color: var(--ink-dim, #8b949e);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.console-tab.focused {
+    background: var(--surface, #161b22);
+    color: var(--ink, #e6edf3);
+}
+
+.console-empty {
+    color: var(--ink-dim, #8b949e);
+}
+
+/**
+ * `sidebar()` renders between the tabs and the window host, unconditionally, so an empty
+ * `navItems` (true of every composition so far -- nothing calls `api.addNav` yet) collapses to
+ * nothing rather than reserving a bar with no content in it. A left-hand rail, rather than a
+ * horizontal strip, is real layout work this repository hasn't done -- `addNav` has no caller to
+ * design it for yet, and `console-sidebar-item` styling waits on the same thing.
+ */
+.console-sidebar:empty {
+    display: none;
+}
+
+.console-status {
+    border-top: 1px solid var(--edge, #30363d);
+    color: var(--ink-dim, #8b949e);
+    font-size: 0.85em;
+}
+
+.console-status .dim {
+    color: var(--ink-dim, #8b949e);
+}
+
+/**
+ * `chrome.host()` -- the marker `PageChrome` unconditionally includes, matching
+ * spec/window layer's own rule (see chrome.ts's own comment on the call site). The kernel gives
+ * its wrapper `position: relative` inline; without an explicit height here it collapses to 0 and
+ * every window inside renders off-screen at whatever negative offset its own placement produces.
+ * `flex: 1` is what claims the column's remaining height once the bars above/below take theirs.
+ */
+[data-mesh-window-host] {
+    flex: 1;
+    min-height: 0;
+}

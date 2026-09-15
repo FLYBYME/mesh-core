@@ -1,5 +1,7 @@
 export * from './chrome.js';
 
+import './chrome.css';
+
 /**
  * **The default export is what the kernel loads.**
  *
