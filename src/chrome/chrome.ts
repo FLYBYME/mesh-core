@@ -114,7 +114,7 @@ export class ConsoleChrome implements Extension<typeof NEEDS, typeof CONSUMES, t
 
         cx.log.info('console chrome ready');
 
-        return { api,
+        return { api, handlers,
             render: (): Node => element('Stack', {
                 props: { class: 'console' },
                 children: [
