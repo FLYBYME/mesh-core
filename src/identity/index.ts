@@ -73,9 +73,9 @@ export default class IdentityApp implements Application<
          * Live, not fetched once. `spec/ui/rules.md` §1: a collection streams its own changes, so a
          * membership removed in another tab leaves this screen without anybody pressing anything.
          */
-        const organizations = cx.models('organization');
-        const memberships = cx.models('membership');
-        const roles = cx.models('role');
+        const organizations = cx.models('identity.organization');
+        const memberships = cx.models('identity.membership');
+        const roles = cx.models('identity.role');
 
         const selected = cx.state.signal<string | null>(null);
         /** Whether the new-organization form is showing. See `IdentityInternal.creating`. */
@@ -197,7 +197,7 @@ export default class IdentityApp implements Application<
                     // cx.mesh.call throws on failure now -- a transport failure is still a compile
                     // error at the command layer above, since this rethrows nothing itself and just
                     // lets the real error (already a well-described MeshCallError) propagate.
-                    const created = await cx.mesh.call('organization.create', { ...input, ownerId: owner });
+                    const created = await cx.mesh.call('identity.organization.create', { ...input, ownerId: owner });
                     selected.set(created.id);
                     // The form closes because the thing it was for happened. Closing it before the
                     // call would take the fields away from somebody the server is about to refuse.
@@ -212,7 +212,7 @@ export default class IdentityApp implements Application<
                 run: async (input): Promise<Membership> => {
                     const organizationId = selected();
                     if (organizationId === null) throw new Error('No organization is selected.');
-                    const created = await cx.mesh.call('membership.create', { ...input, organizationId });
+                    const created = await cx.mesh.call('identity.membership.create', { ...input, organizationId });
                     return created;
                 },
             } as BoundCommand<{ userId: string; roleKey: string }, Membership>,
@@ -220,10 +220,10 @@ export default class IdentityApp implements Application<
             removeMember: {
                 ...decl[2],
                 available: needsSelection,
-                run: async (input): Promise<{ ok: boolean }> => {
-                    return await cx.mesh.call('membership.delete', input);
+                run: async (input): Promise<{ success: boolean }> => {
+                    return await cx.mesh.call('identity.membership.delete', input);
                 },
-            } as BoundCommand<{ id: string }, { ok: boolean }>,
+            } as BoundCommand<{ id: string }, { success: boolean }>,
         };
 
         const internal: IdentityInternal = {

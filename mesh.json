@@ -32,10 +32,10 @@
                     "package": "@flybyme/mesh-serve",
                     "version": "0.1.0",
                     "contracts": [
-                        "identity.ticket_issue",
-                        "identity.sign_out",
+                        "identity.ticket.issue",
+                        "identity.ticket.signOut",
                         "identity.whoami",
-                        "identity.set_password"
+                        "identity.user.setPassword"
                     ]
                 }
             ]
@@ -59,12 +59,12 @@
                     "version": "0.1.0",
                     "//contracts": "The key is `contracts`, not `consumes`. `requirementsOf` flat-maps `mesh[].contracts` and reads nothing else, so this list declared no requirement at all and a site built from it would grant identity nothing -- the same empty-descriptor failure flowboard had.",
                     "contracts": [
-                        "organization.find",
-                        "organization.create",
-                        "membership.find",
-                        "membership.create",
-                        "membership.delete",
-                        "role.find",
+                        "identity.organization.find",
+                        "identity.organization.create",
+                        "identity.membership.find",
+                        "identity.membership.create",
+                        "identity.membership.delete",
+                        "identity.role.find",
                         "identity.whoami"
                     ]
                 }

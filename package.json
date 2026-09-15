@@ -12,16 +12,15 @@
         "./package.json": "./package.json"
     },
     "scripts": {
-        "generate": "mesh-serve client",
+        "generate": "cd ../mesh-serve && node bin/mesh-serve.mjs generate --api \"$API_ID\" --out ../mesh-core/src/identity/generated/api.ts",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "test:browser": "vitest run --config vitest.browser.config.ts --no-file-parallelism",
         "test:source": "vitest run --environment node test/ui.source.spec.ts",
-        "test": "npm run typecheck && npm run test:source && npm run test:browser",
-        "dev": "mesh-serve dev"
+        "test": "npm run typecheck && npm run test:source && npm run test:browser"
     },
     "devDependencies": {
         "@flybyme/mesh-serve": "file:../mesh-serve",
-        "@flybyme/mesh-web": "github:FLYBYME/mesh-web#v0.17.0",
+        "@flybyme/mesh-web": "github:FLYBYME/mesh-web#v0.17.1",
         "@vitest/browser": "^2.1.9",
         "playwright": "^1.62.1",
         "typescript": "^5.9.3",

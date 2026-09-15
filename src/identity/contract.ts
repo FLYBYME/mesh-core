@@ -58,12 +58,12 @@ export const identityApi = defineApi({
     exposure: '',
     shapeHash: '',
     calls: {
-        'organization.find': call<{ query?: Record<string, unknown> }, readonly Organization[]>('GET', '/organizations'),
-        'organization.create': call<{ name: string; slug: string; ownerId: string }, Organization>('POST', '/organizations'),
-        'membership.find': call<{ query?: Record<string, unknown> }, readonly Membership[]>('GET', '/memberships'),
-        'membership.create': call<{ userId: string; organizationId: string; roleKey: string }, Membership>('POST', '/memberships'),
-        'membership.delete': call<{ id: string }, { ok: boolean }>('DELETE', '/memberships/:id'),
-        'role.find': call<{ query?: Record<string, unknown> }, readonly Role[]>('GET', '/roles'),
+        'identity.organization.find': call<{ query?: Record<string, unknown> }, readonly Organization[]>('GET', '/organizations'),
+        'identity.organization.create': call<{ name: string; slug: string; ownerId: string }, Organization>('POST', '/organizations'),
+        'identity.membership.find': call<{ query?: Record<string, unknown> }, readonly Membership[]>('GET', '/memberships'),
+        'identity.membership.create': call<{ userId: string; organizationId: string; roleKey: string }, Membership>('POST', '/memberships'),
+        'identity.membership.delete': call<{ id: string }, { success: boolean }>('DELETE', '/memberships/:id'),
+        'identity.role.find': call<{ query?: Record<string, unknown> }, readonly Role[]>('GET', '/roles'),
         'identity.whoami': call<Record<string, never>, Whoami>('GET', '/identity/whoami'),
     },
 });
@@ -149,7 +149,7 @@ export interface IdentityInternal {
 export interface IdentityCommands {
     readonly createOrganization: BoundCommand<{ name: string; slug: string }, Organization>;
     readonly addMember: BoundCommand<{ userId: string; roleKey: string }, Membership>;
-    readonly removeMember: BoundCommand<{ id: string }, { ok: boolean }>;
+    readonly removeMember: BoundCommand<{ id: string }, { success: boolean }>;
 }
 
 // ---------------------------------------------------------------------------- what it offers
@@ -217,7 +217,7 @@ export const PUBLISHES = {
                 properties: { id: { type: 'string' } },
                 required: ['id'],
             }),
-            output: schema<{ ok: boolean }>(),
+            output: schema<{ success: boolean }>(),
             available: (): Availability => AVAILABLE,
             /**
              * The only destructive control in this app, and the only one on the platform that can be
