@@ -29,14 +29,25 @@
 
 import { type BoundCommand } from '@flybyme/mesh-web';
 import {
-    command, each, element, needs, text, when, PAGE_CHROME,
+    command, consumes, createHandlerTable, each, element, needs, text, when, PAGE_CHROME,
     type Chrome, type ChromeWindow, type Context, type Extension, type Node, type PageChrome,
+    type Registrar,
 } from '@flybyme/mesh-web';
 
-const NEEDS = needs('chrome', 'state', 'commands', 'log');
+import { AUTH, type AuthApi } from '@flybyme/mesh-core/auth';
+import { SignIn } from '@flybyme/mesh-core/ui';
 
-export class ConsoleChrome implements Extension<typeof NEEDS, readonly [], typeof PAGE_CHROME> {
+const NEEDS = needs('chrome', 'state', 'commands', 'log');
+/**
+ * The one capability the shell needs that the window layer below it doesn't: somewhere to put a
+ * sign-in control that every Application on the page shares, instead of each one building its own
+ * (`ui/composites/signIn.ts`'s own header names this exact repetition as the reason it exists).
+ */
+const CONSUMES = consumes(AUTH);
+
+export class ConsoleChrome implements Extension<typeof NEEDS, typeof CONSUMES, typeof PAGE_CHROME> {
     readonly needs = NEEDS;
+    readonly consumes = CONSUMES;
     readonly provides = PAGE_CHROME;
 
     /**
@@ -48,11 +59,22 @@ export class ConsoleChrome implements Extension<typeof NEEDS, readonly [], typeo
         { id: 'console.focusWindow', title: 'Focus window' },
     ];
 
-    activate(cx: Context<typeof NEEDS, readonly []>): PageChrome & { api: ConsoleChromeApi } {
+    activate(cx: Context<typeof NEEDS, typeof CONSUMES>): PageChrome & { api: ConsoleChromeApi } {
         const navItems = cx.state.signal<readonly NavItem[]>([]);
         const api: ConsoleChromeApi = {
             addNav: (item) => navItems.set([...navItems(), item])
         };
+
+        /**
+         * One table for the whole shell's lifetime, not one per render: an Extension activates once
+         * and is never deactivated (spec/extension.md section 6), so there is no `dispose()` moment
+         * to call this against -- unlike `vx.on` in an Application's view, which a window's own
+         * teardown disposes. `banner()` below is called once too (`PageChrome.render()` is called
+         * once; the renderer keeps its signals live from there), so one table for one call is exact,
+         * not a shortcut.
+         */
+        const handlers = createHandlerTable('console-chrome');
+        const auth = cx.use(AUTH);
 
         const sidebar = (): Node => element('Stack', {
             props: { class: 'console-sidebar' },
@@ -96,7 +118,7 @@ export class ConsoleChrome implements Extension<typeof NEEDS, readonly [], typeo
             render: (): Node => element('Stack', {
                 props: { class: 'console' },
                 children: [
-                    banner(chrome),
+                    banner(chrome, auth, handlers.on),
                     tabs(chrome),
                     sidebar(),
 
@@ -112,8 +134,15 @@ export class ConsoleChrome implements Extension<typeof NEEDS, readonly [], typeo
     }
 }
 
-/** The site's own identity, and the one control that is always available. */
-const banner = (chrome: Chrome): Node => element('Row', {
+/**
+ * The site's own identity, the mode toggle, and -- new -- sign-in.
+ *
+ * `SignIn` renders itself: the form when `auth.session()` is `null`, "Signed in as …" otherwise
+ * (`ui/composites/signIn.ts`'s own doc calls this out specifically -- "the affordance that fixes the
+ * situation must not disappear exactly when the situation occurs"). Chrome doesn't branch on session
+ * state itself; it just always renders the composite and lets it decide.
+ */
+const banner = (chrome: Chrome, auth: Pick<AuthApi, 'session' | 'signIn'>, on: Registrar): Node => element('Row', {
     props: { class: 'console-banner' },
     children: [
         element('Text', { props: { class: 'console-mark' }, children: [text('surfdns')] }),
@@ -125,6 +154,7 @@ const banner = (chrome: Chrome): Node => element('Row', {
             intents: { activate: { action: command('console.toggleMode') } },
             children: [text(() => (chrome.mode() === 'tiled' ? 'Tiled' : 'Windowed'))],
         }),
+        SignIn({ auth, on, class: 'console-sign-in' }),
     ],
 });
 

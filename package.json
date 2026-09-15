@@ -9,6 +9,7 @@
         ".": "./src/index.ts",
         "./ui": "./src/ui/index.ts",
         "./auth": "./src/auth/index.ts",
+        "./chrome": "./src/chrome/index.ts",
         "./package.json": "./package.json"
     },
     "scripts": {
