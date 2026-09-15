@@ -3,8 +3,8 @@
 The parts the platform is operated with: the shell, and the consoles for the services behind it.
 
 Several parts in one repository — see `mesh-demos` for why that works and what it cost to make it
-work. Each entry in `mesh.json` becomes its own catalog row, its own artifact and its own version
-line; sharing a git repository ties nothing together at run time.
+work. Each part is registered as its own `serve.part` row, its own artifact and its own version line;
+sharing a git repository ties nothing together at run time.
 
 ## What is here
 

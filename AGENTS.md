@@ -10,7 +10,12 @@ documentation.**
 
 ## The parts this repository ships
 
-`mesh.json` is the source of truth. Four parts, and a repository holds many (decision 0005):
+There is no `mesh.json` any more — a hand-maintained manifest describing what a `serve.part` row
+already describes drifts from the real one the same way `mesh-operator`'s `mesh.wants.json` did, and
+it did: its contract keys were stale for as long as anyone can tell. The real parts a cluster serves
+are `serve.repo`/`serve.part` rows on that cluster, registered by calling the server directly (see
+`mesh-serve/src/examples/composeConsole.ts`), not parsed from a file in this repository. The table
+below is for a person reading cold, not a source of truth a builder reads:
 
 | id | kind | what it is | start here |
 | --- | --- | --- | --- |
@@ -19,9 +24,10 @@ documentation.**
 | `identity` | application | organizations, members, the roles they hold | `src/identity/index.ts` |
 | `chrome` | — | the console shell: tabs, status line | `src/chrome/chrome.ts` |
 
-`ui` declares `"import": "@flybyme/mesh-core/ui"` — **that is how another repository's part imports
-it.** A part is bundled with one specifier external and everything else inlined from its own clone,
-so before that entry existed no part outside this repository could call `Label`.
+`ui` is imported elsewhere as `@flybyme/mesh-core/ui`, matching `package.json`'s own `exports` map —
+**that is how another repository's part imports it.** A part is bundled with one specifier external
+and everything else inlined from its own clone, so before that entry existed no part outside this
+repository could call `Label`.
 
 ## Three layers, and only one of them is a driver
 

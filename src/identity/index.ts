@@ -31,7 +31,7 @@ import {
     type PartApi, type ViewDecl,
 } from '@flybyme/mesh-web';
 
-import { AUTH } from '../auth/index.js';
+import { AUTH } from '@flybyme/mesh-core/auth';
 import {
     CONSUMES, IDENTITY, NEEDS, PUBLISHES, identityApi,
     type IdentityCommands, type IdentityInternal, type Membership, type Organization, type Role,

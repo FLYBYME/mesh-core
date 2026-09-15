@@ -25,7 +25,7 @@ import {
     type ReadonlySignal, type Signal,
 } from '@flybyme/mesh-web';
 
-import { AUTH } from '../auth/index.js';
+import { AUTH } from '@flybyme/mesh-core/auth';
 
 // ---------------------------------------------------------------------------- what it talks to
 

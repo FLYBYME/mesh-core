@@ -16,7 +16,7 @@ import {
     type Node, type PartApi, type Registrar, type ViewContext,
 } from '@flybyme/mesh-web';
 
-import { DetailSurface, EntityItem, EntityList, PropertyGrid, Table, TableRow, ActionButton, ActionCard, formatRefusal } from '../ui/index.js';
+import { DetailSurface, EntityItem, EntityList, PropertyGrid, Table, TableRow, ActionButton, ActionCard, formatRefusal } from '@flybyme/mesh-core/ui';
 import type { IdentityInternal, Membership, Organization } from './contract.js';
 
 export function renderIdentity(
