@@ -1,0 +1,109 @@
+/**
+ * CodeEditor styles.
+ *
+ * Implements editor layout, line numbers gutter, caret input positioning,
+ * and diagnostic marker highlights.
+ *
+ * All design tokens are derived from --ui- and kernel tokens.
+ * min-height: 0 is load-bearing for scroll containers.
+ */
+
+.mesh-code-editor {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    box-sizing: border-box;
+    background: var(--ui-surface, #161b22); /* ui-literal: mirrors kernel.css fallback */
+    color: var(--ui-ink, #e6edf3); /* ui-literal: mirrors kernel.css fallback */
+    border: 1px solid var(--ui-edge, #30363d); /* ui-literal: mirrors kernel.css fallback */
+    border-radius: var(--ui-radius-sm, 4px); /* ui-literal: structural radius fallback */
+    font-family: var(--ui-font-mono, monospace);
+    font-size: 13px; /* ui-literal: standard code editor font size */
+    line-height: 1.5;
+    tab-size: 4;
+    overflow: hidden;
+}
+
+.mesh-editor-gutter {
+    flex-shrink: 0;
+    width: 48px; /* ui-literal: gutter width for up to 4 digit line numbers */
+    user-select: none;
+    background: var(--ui-surface, #161b22); /* ui-literal: mirrors kernel.css fallback */
+    border-right: 1px solid var(--ui-edge, #30363d); /* ui-literal: mirrors kernel.css fallback */
+    color: var(--ui-ink-dim, #8b949e); /* ui-literal: mirrors kernel.css fallback */
+    text-align: right;
+    padding-top: 8px; /* ui-literal: padding matching editor area */
+    padding-bottom: 8px; /* ui-literal: padding matching editor area */
+    padding-right: 12px; /* ui-literal: gutter right padding */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.mesh-editor-gutter-line {
+    height: 1.5em;
+    line-height: 1.5em;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+}
+
+.mesh-editor-gutter-line[data-has-marker="error"]::before {
+    content: "●";
+    position: absolute;
+    left: 4px; /* ui-literal: marker indicator offset */
+    color: var(--ui-danger, #f85149); /* ui-literal: error marker color */
+    font-size: 9px; /* ui-literal: bullet indicator size */
+}
+
+.mesh-editor-gutter-line[data-has-marker="warning"]::before {
+    content: "▲";
+    position: absolute;
+    left: 4px; /* ui-literal: marker indicator offset */
+    color: var(--ui-warning, #d29922); /* ui-literal: warning marker color */
+    font-size: 9px; /* ui-literal: bullet indicator size */
+}
+
+.mesh-editor-area {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    box-sizing: border-box;
+}
+
+.mesh-editor-textarea {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 8px 12px; /* ui-literal: editor content padding */
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    tab-size: inherit;
+    white-space: pre;
+    word-wrap: normal;
+    overflow: auto;
+    resize: none;
+    border: none;
+    outline: none;
+    caret-color: var(--ui-accent, #58a6ff); /* ui-literal: cursor color */
+}
+
+.mesh-editor-textarea::selection {
+    background: var(--ui-accent-subtle, rgba(56, 139, 253, 0.25)); /* ui-literal: selection highlight */
+}
+
+.mesh-code-editor[data-readonly="true"] .mesh-editor-textarea {
+    opacity: 0.85; /* ui-literal: muted opacity for read-only view */
+    cursor: default;
+}

@@ -1,0 +1,113 @@
+/**
+ * Styling for the Chart vocabulary.
+ *
+ * Implements SVG gridlines, axes typography, area fills, and tooltip popovers.
+ * All colors derived from --ui- and kernel variables.
+ */
+
+.mesh-chart-surface {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+}
+
+.mesh-chart-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.mesh-chart-grid line {
+    stroke: var(--ui-edge, #30363d); /* ui-literal: grid line fallback */
+    stroke-dasharray: 3 3;
+    stroke-width: 1px;
+    shape-rendering: crispEdges;
+}
+
+.mesh-chart-axis line,
+.mesh-chart-axis path {
+    stroke: var(--ui-edge, #30363d); /* ui-literal: axis baseline fallback */
+    stroke-width: 1px;
+    shape-rendering: crispEdges;
+}
+
+.mesh-chart-axis text {
+    fill: var(--ui-ink-dim, #8b949e); /* ui-literal: axis labels fallback */
+    font-size: 11px; /* ui-literal: compact axis typography */
+    font-family: var(--ui-font, -apple-system, BlinkMacSystemFont, sans-serif);
+    user-select: none;
+}
+
+.mesh-chart-line {
+    fill: none;
+    stroke: var(--ui-accent, #58a6ff); /* ui-literal: primary series stroke */
+    stroke-width: 2px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.mesh-chart-area {
+    fill: var(--ui-accent, #58a6ff); /* ui-literal: primary series area */
+    opacity: 0.15; /* ui-literal: subtle area fill tint */
+}
+
+.mesh-chart-bar {
+    fill: var(--ui-accent, #58a6ff); /* ui-literal: primary bar color */
+    rx: 2px; /* ui-literal: rounded bar corners */
+    transition: opacity 0.15s ease;
+}
+
+.mesh-chart-bar:hover {
+    opacity: 0.85; /* ui-literal: hover state */
+    cursor: pointer;
+}
+
+.mesh-chart-donut-slice {
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    cursor: pointer;
+}
+
+.mesh-chart-donut-slice:hover {
+    opacity: 0.9; /* ui-literal: hover opacity */
+}
+
+.mesh-chart-sparkline-line {
+    fill: none;
+    stroke: var(--ui-accent, #58a6ff); /* ui-literal: sparkline stroke */
+    stroke-width: 1.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.mesh-chart-sparkline-area {
+    fill: var(--ui-accent, #58a6ff); /* ui-literal: sparkline area */
+    opacity: 0.12; /* ui-literal: subtle sparkline fill */
+}
+
+.mesh-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px; /* ui-literal: legend item gap */
+    padding-top: 8px; /* ui-literal: legend top spacing */
+    font-size: 12px; /* ui-literal: legend typography */
+    color: var(--ui-ink, #e6edf3); /* ui-literal: text color */
+}
+
+.mesh-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px; /* ui-literal: swatch to label gap */
+}
+
+.mesh-chart-legend-swatch {
+    width: 10px; /* ui-literal: legend swatch box */
+    height: 10px; /* ui-literal: legend swatch box */
+    border-radius: 2px; /* ui-literal: swatch radius */
+    flex-shrink: 0;
+}

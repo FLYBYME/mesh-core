@@ -10,6 +10,12 @@
         "./ui": "./src/ui/index.ts",
         "./auth": "./src/auth/index.ts",
         "./chrome": "./src/chrome/index.ts",
+        "./editor": "./src/CodeEditor/index.ts",
+        "./CodeEditor": "./src/CodeEditor/index.ts",
+        "./charts": "./src/Charts/index.ts",
+        "./Charts": "./src/Charts/index.ts",
+        "./studio": "./src/Studio/index.ts",
+        "./Studio": "./src/Studio/index.ts",
         "./package.json": "./package.json"
     },
     "scripts": {

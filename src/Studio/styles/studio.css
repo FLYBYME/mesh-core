@@ -1,0 +1,162 @@
+/**
+ * StudioApp styles.
+ * Conforms to --ui- design system tokens and ensures min-height: 0 on flex layouts.
+ */
+
+.studio-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: var(--ui-bg-surface, #0f172a);
+    color: var(--ui-text-color, #f8fafc);
+    font-family: var(--ui-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+    overflow: hidden;
+}
+
+/* Toolbar */
+.studio-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--ui-bg-elevated, #1e293b);
+    border-bottom: 1px solid var(--ui-border-color, #334155);
+    flex-shrink: 0;
+}
+
+.studio-toolbar-left,
+.studio-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.studio-title {
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    color: var(--ui-color-primary, #38bdf8);
+}
+
+.studio-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--ui-border-radius, 4px);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.studio-status-badge.ok {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.studio-status-badge.error {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.studio-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: var(--ui-border-radius, 4px);
+    border: 1px solid var(--ui-border-color, #475569);
+    background: var(--ui-bg-surface, #1e293b);
+    color: var(--ui-text-color, #f8fafc);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.studio-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--ui-color-primary, #38bdf8);
+}
+
+.studio-btn:active {
+    transform: translateY(1px);
+}
+
+/* Split workspace */
+.studio-workspace {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Left: Code Editor Pane */
+.studio-editor-pane {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--ui-border-color, #334155);
+}
+
+.studio-pane-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    color: var(--ui-text-muted, #94a3b8);
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--ui-border-color, #334155);
+    flex-shrink: 0;
+}
+
+.studio-editor-host {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+}
+
+/* Right: Visualizer Pane */
+.studio-visualizer-pane {
+    flex: 1.2;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    overflow-y: auto;
+    background: rgba(15, 23, 42, 0.6);
+}
+
+.studio-card {
+    background: var(--ui-bg-elevated, #1e293b);
+    border: 1px solid var(--ui-border-color, #334155);
+    border-radius: var(--ui-border-radius, 6px);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+}
+
+.studio-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ui-text-muted, #94a3b8);
+}
+
+.studio-grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}

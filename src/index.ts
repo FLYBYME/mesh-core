@@ -18,3 +18,5 @@
 
 export * from './auth/index.js';
 export * from './ui/index.js';
+export * from './CodeEditor/index.js';
+export * from './Charts/index.js';
