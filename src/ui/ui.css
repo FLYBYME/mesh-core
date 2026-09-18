@@ -370,6 +370,29 @@
         background: var(--ui-surface-selected);
     }
 
+    /**
+     * TableRow.ts references this class for its own action cell (`ui-table-cell
+     * ui-table-action-cell`), but nothing ever defined it -- and a row's other cells, built by
+     * whatever passes children to TableRow, had no cell class to reach for at all. Without
+     * `flex: 1` every cell sized to its own text and sat flush against its neighbour with no
+     * column boundary, so adjacent short values (a contract key, "public") read as one run-
+     * together word. Found live: the operator console's expose table.
+     */
+    .ui-table-cell {
+        flex: 1;
+        min-width: 0;
+        padding: 0 var(--ui-space-2);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ui-table-action-cell {
+        flex: 0 0 auto;
+        text-overflow: clip;
+        white-space: normal;
+    }
+
     .ui-table-loading,
     .ui-table-empty,
     .ui-table-error {
