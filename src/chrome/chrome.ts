@@ -146,21 +146,41 @@ export class ConsoleChrome implements Extension<typeof NEEDS, typeof CONSUMES, t
 
         cx.log.info('console chrome ready');
 
+        /**
+         * **Single mode is the "normal website" a site locks itself into (`policy:
+         * { 'window-manager/mode': 'single' }`, `hives.ts`'s own words: "a locked blog is `system`
+         * policy on `window-manager/mode`"), and none of this furniture belongs there.**
+         *
+         * `WindowManager` already strips a *window's* own decorations in single mode -- no title bar,
+         * no resize grips -- but nothing stripped *this* shell around it, so a "blog" still got the
+         * full "surfdns operator console" banner, the app switcher, the per-window tab strip and the
+         * status line. An app was never the one holding that furniture (it renders content into a
+         * window and nothing else, in every mode); the fix belongs entirely here, where the furniture
+         * actually lives.
+         *
+         * Hiding the banner is also what makes a *locked* single mode actually stay locked:
+         * `console.toggleMode` lives inside it, and `WindowManager.setMode` has no lock-check of its
+         * own (found while looking at this) -- a locked site with the button still visible could be
+         * toggled right back out. No separate enforcement needed once the one control that could
+         * escape single mode is gone with the rest of the banner.
+         */
+        const isSingle = (): boolean => chrome.mode() === 'single';
+
         return { api, handlers,
             render: (): Node => element('Stack', {
                 props: { class: 'console' },
                 children: [
-                    banner(chrome, auth, handlers.on),
-                    appSwitcher(router),
-                    tabs(chrome),
-                    sidebar(),
+                    when(() => !isSingle(), () => banner(chrome, auth, handlers.on)),
+                    when(() => !isSingle(), () => appSwitcher(router)),
+                    when(() => !isSingle(), () => tabs(chrome)),
+                    when(() => !isSingle(), () => sidebar()),
 
                     // **The windows.** Unconditional, and never inside a `when` or an `each`: either
                     // destroys and rebuilds it, which re-parents every window and resets its scroll.
                     // The kernel checks this at boot rather than trusting the comment.
                     chrome.host(),
 
-                    status(chrome),
+                    when(() => !isSingle(), () => status(chrome)),
                 ],
             }),
         };

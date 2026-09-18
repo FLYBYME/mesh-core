@@ -92,3 +92,56 @@ describe('the application switcher', () => {
         site.dispose();
     });
 });
+
+describe('single mode is the "normal website" a locked blog gets', () => {
+    it('shows the full shell in windowed mode (the ordinary case, unchanged)', async () => {
+        const site = await boot();
+
+        expect(site.root.querySelector('.console-banner')).not.toBeNull();
+        expect(site.root.querySelector('.console-apps')).not.toBeNull();
+        expect(site.root.querySelector('.console-tabs')).not.toBeNull();
+        expect(site.root.querySelector('.console-status')).not.toBeNull();
+
+        site.dispose();
+    });
+
+    it('strips every piece of shell furniture, leaving only the window host', async () => {
+        const site = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'chrome', contribution: ConsoleChrome },
+                { id: 'repos', contribution: new NamedApp('Repos') },
+                { id: 'mail', contribution: new NamedApp('Mail') },
+            ],
+            policy: { 'window-manager/mode': 'single' },
+            api: 'http://identity.test',
+        });
+
+        expect(site.manager.mode()).toBe('single');
+        expect(site.root.querySelector('.console-banner')).toBeNull();
+        expect(site.root.querySelector('.console-apps')).toBeNull();
+        expect(site.root.querySelector('.console-tabs')).toBeNull();
+        expect(site.root.querySelector('.console-sidebar')).toBeNull();
+        expect(site.root.querySelector('.console-status')).toBeNull();
+        // The one thing that stays: the window layer itself, with real content in it.
+        expect(site.root.querySelector('[data-mesh-window-host]')).not.toBeNull();
+
+        site.dispose();
+    });
+
+    it('takes the toggle button -- the one control that could escape a lock -- with the rest of the banner', async () => {
+        const site = await mountPart({
+            parts: [
+                { id: 'auth', contribution: AuthExtension },
+                { id: 'chrome', contribution: ConsoleChrome },
+                { id: 'repos', contribution: new NamedApp('Repos') },
+            ],
+            policy: { 'window-manager/mode': 'single' },
+            api: 'http://identity.test',
+        });
+
+        expect(site.root.querySelector('.console-mode')).toBeNull();
+
+        site.dispose();
+    });
+});
