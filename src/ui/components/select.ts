@@ -8,8 +8,7 @@
  * A component has no logic. Props in, description out. Zero DOM manipulation.
  */
 
-import { element, read, text } from '@flybyme/mesh-web';
-import type { Node } from '@flybyme/mesh-web';
+import { each, element, read, text } from '@flybyme/mesh-web';
 import {
     defineComponent, UI_SELECT,
     type Component, type SelectOption, type SelectProps,
@@ -26,8 +25,8 @@ export const Select: Component<SelectProps> = defineComponent<SelectProps>(
     UI_SELECT,
     'A choice from a known set.',
     (props) => {
-        const rawOptions = (): readonly (string | SelectOption)[] => read(props.options) ?? [];
-        const optionsList = (): readonly SelectOption[] => rawOptions().map(normalizeOption);
+        const optionsList = (): readonly SelectOption[] =>
+            (read(props.options) ?? []).map(normalizeOption);
 
         const currentValue = (): string => {
             const v = read(props.value);
@@ -35,40 +34,6 @@ export const Select: Component<SelectProps> = defineComponent<SelectProps>(
         };
 
         const isDisabled = (): boolean => Boolean(read(props.disabled));
-
-        const optionNodes: Node[] = [];
-        const opts = optionsList();
-
-        for (const opt of opts) {
-            const isSelected = (): boolean => currentValue() === opt.value;
-
-            optionNodes.push(
-                element('Button', {
-                    /**
-                     * **The press is on the option, because the option is what a person clicks.**
-                     *
-                     * `props.intents` used to be spread onto the wrapping `Row` below and the
-                     * options carried none, so a Select was inert twice over: nothing dispatched
-                     * from a button, and the `change` the wrapper declared can never fire — `change`
-                     * is bound to the DOM `input` event and a `Row` is a `div`, which does not emit
-                     * one and has no value to read.
-                     */
-                    intents: { activate: { action: props.on(() => props.onSelect?.(opt.value)) } },
-                    props: {
-                        class: () => {
-                            const sel = isSelected();
-                            return `ui-select-option${sel ? ' selected' : ''}`;
-                        },
-                        type: 'button',
-                        disabled: isDisabled,
-                        'aria-pressed': () => String(isSelected()),
-                        'data-value': opt.value,
-                        'data-selected': () => String(isSelected()),
-                    },
-                    children: [text(opt.label)],
-                }),
-            );
-        }
 
         return element('Row', {
             props: {
@@ -81,7 +46,45 @@ export const Select: Component<SelectProps> = defineComponent<SelectProps>(
                 'data-value': currentValue,
                 'data-name': () => read(props.name) ?? null,
             },
-            children: optionNodes,
+            children: [
+                /**
+                 * `each`, not a plain loop over a snapshot -- `props.options` is reactive (a signal
+                 * or a function reading one), and a form opened before its options finish loading
+                 * used to render permanently empty: the loop below ran once, at construction, and
+                 * nothing rebuilt `optionNodes` when the signal it read later changed. Found live,
+                 * a dialog built at page load, before the organization's roles had loaded from the
+                 * network -- the role picker inside it stayed empty forever, even once they arrived.
+                 */
+                each(
+                    optionsList,
+                    (opt) => opt.value,
+                    (opt) => {
+                        const isSelected = (): boolean => currentValue() === opt().value;
+
+                        return element('Button', {
+                            /**
+                             * **The press is on the option, because the option is what a person clicks.**
+                             *
+                             * `props.intents` used to be spread onto the wrapping `Row` above and the
+                             * options carried none, so a Select was inert twice over: nothing dispatched
+                             * from a button, and the `change` the wrapper declared can never fire --
+                             * `change` is bound to the DOM `input` event and a `Row` is a `div`, which
+                             * does not emit one and has no value to read.
+                             */
+                            intents: { activate: { action: props.on(() => props.onSelect?.(opt().value)) } },
+                            props: {
+                                class: () => `ui-select-option${isSelected() ? ' selected' : ''}`,
+                                type: 'button',
+                                disabled: isDisabled,
+                                'aria-pressed': () => String(isSelected()),
+                                'data-value': () => opt().value,
+                                'data-selected': () => String(isSelected()),
+                            },
+                            children: [text(() => opt().label)],
+                        });
+                    },
+                ),
+            ],
         });
     },
 );
