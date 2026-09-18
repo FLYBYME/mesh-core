@@ -1,11 +1,11 @@
 /**
- * ComponentDefinition for ChartSurface.
+ * PrimitiveDefinition for ChartSurface.
  *
  * Registered as 'ChartSurface' in the kernel component registry.
  * Connects the declarative Chart.* components to the real SVG DOM engine.
  */
 
-import type { ComponentDefinition, Json, Props } from '@flybyme/mesh-web';
+import type { Json, PrimitiveDefinition, Props } from '@flybyme/mesh-web';
 import type { ChartRenderPayload } from '../contract/types.js';
 import { createChartDom, type ChartDomInstance } from './chartDom.js';
 import '../styles/charts.css';
@@ -38,7 +38,7 @@ function ensureObserver(): void {
     globalObserver.observe(document.body, { childList: true, subtree: true });
 }
 
-export const ChartDriver: ComponentDefinition = {
+export const ChartDriver: PrimitiveDefinition = {
     name: 'ChartSurface',
 
     create(props?: Props): Element {

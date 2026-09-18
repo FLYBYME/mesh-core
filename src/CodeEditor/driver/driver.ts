@@ -1,11 +1,11 @@
 /**
- * ComponentDefinition for CodeEditor.
+ * PrimitiveDefinition for CodeEditor.
  *
  * Registered into the kernel component registry as 'CodeEditor'.
  * Connects the declarative description tree to the real DOM engine.
  */
 
-import type { ComponentDefinition, Json, Props } from '@flybyme/mesh-web';
+import type { Json, PrimitiveDefinition, Props } from '@flybyme/mesh-web';
 import type { CodeEditorController } from '../contract/handle.js';
 import type { EditorMarker } from '../contract/types.js';
 import { createEditorDom, type EditorDomInstance } from './editorDom.js';
@@ -13,7 +13,7 @@ import '../styles/editor.css';
 
 const instances = new WeakMap<Element, EditorDomInstance>();
 
-export const CodeEditorDriver: ComponentDefinition = {
+export const CodeEditorDriver: PrimitiveDefinition = {
     name: 'CodeEditor',
 
     /**

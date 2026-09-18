@@ -118,6 +118,24 @@ export class ConsoleChrome implements Extension<typeof NEEDS, typeof CONSUMES, t
             if (typeof id === 'string') router.navigate(id);
         });
 
+        /**
+         * **The switcher existing is the site's own signal that it wants one Application at a time.**
+         *
+         * `routerSink` (mesh-web) deliberately does *not* restrict which windows show just because a
+         * composition has several Applications -- a composition with no chrome at all, sharing one
+         * ordinary window pool across Applications, is a real and unrelated thing the framework
+         * already supported and a blanket restriction broke. Only an explicit `navigate()` narrows
+         * `foreground` for real.
+         *
+         * So here, not there: this chrome is the one thing that actually renders a switcher (below),
+         * and its existing is the honest signal that this site wants app-at-a-time behavior. One
+         * navigate, to whichever Application is first, the moment there is more than one to choose
+         * between -- everything after this is the same `navigate()` a click produces.
+         */
+        if (router.applications().length > 1 && router.current() === undefined) {
+            router.navigate(router.applications()[0]!.id);
+        }
+
         cx.log.info('console chrome ready');
 
         return { api, handlers,
