@@ -13,10 +13,10 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { AuthExtension, type AuthApi, type TicketStore } from '../src/auth/index.js';
+import { AuthExtension, type AuthApi } from '../src/auth/index.js';
 import {
-    call, createServices, defineApi, needs, Kernel, KEEPS_NOTHING,
-    type Application, type Context,
+    call, createServices, defaultHives, defineApi, memoryProvider, needs, Kernel, KEEPS_NOTHING,
+    type Application, type Context, type StorageProvider,
 } from '@flybyme/mesh-web';
 
 // ---------------------------------------------------------------------------- a fake network
@@ -126,18 +126,22 @@ interface Booted {
 }
 
 async function boot(options: {
-    store?: TicketStore;
+    persist?: boolean;
+    deviceProvider?: StorageProvider;
     apiOrigin?: string;
 } = {}): Promise<Booted> {
     const services = createServices(undefined, {
         ...(options.apiOrigin === undefined ? {} : { apiOrigin: options.apiOrigin }),
+        ...(options.deviceProvider === undefined ? {} : {
+            hives: { ...defaultHives(), device: { provider: options.deviceProvider, writable: true } },
+        }),
     });
     const kernel = new Kernel({ services });
     const app = new BlogApp();
 
     kernel.boot([
         load('auth', new AuthExtension({
-            ...(options.store === undefined ? {} : { store: options.store }),
+            ...(options.persist === true ? { persist: true } : {}),
         })),
         load('blog', app),
     ]);
@@ -264,15 +268,33 @@ describe('the session', () => {
 });
 
 describe('a ticket that outlives the page', () => {
-    const store = (initial?: string): TicketStore & { held: string | undefined } => {
-        const held = { held: initial } as { held: string | undefined };
-        return {
-            get held() { return held.held; },
-            set held(value: string | undefined) { held.held = value; },
-            read: () => held.held,
-            write: (token) => { held.held = token; },
-            clear: () => { held.held = undefined; },
-        };
+    // The real storage capability (kernel/broker.ts needs('storage')), not a hand-built stand-in --
+    // this is a real, swappable provider bound to the `device` hive, the same seam a real deployment
+    // uses, just backed by memory here instead of localStorage.
+    const seeded = async (token: string): Promise<StorageProvider> => {
+        const provider = memoryProvider();
+        // namespace 'auth' matches load('auth', ...) below; 'ticket/token' matches the store name
+        // ('ticket') and key ('token') AuthExtension's TICKET_STORE declares.
+        await provider.write('auth', 'ticket/token', token);
+        return provider;
+    };
+
+    /**
+     * Boot no longer fires one `void restore(...)` -- it now waits on the storage capability's own
+     * async resolution first (`persisted.ready('token')`, a real provider read), then chains into
+     * the same restore. That's more hops than a single `setTimeout(..., 0)` reliably drains in a
+     * real browser environment (found live: one microtask-flush assumption was enough for the old
+     * one-hop version and flaky for this one), so this polls for an actual condition instead of
+     * guessing a tick count.
+     */
+    const waitUntil = async (predicate: () => boolean | Promise<boolean>, timeoutMs = 500): Promise<void> => {
+        const start = Date.now();
+        while (!(await predicate())) {
+            if (Date.now() - start > timeoutMs) {
+                throw new Error('Timed out waiting for the held ticket to finish restoring.');
+            }
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
     };
 
     it('is not kept at all unless the site asked for it', async () => {
@@ -280,18 +302,29 @@ describe('a ticket that outlives the page', () => {
         const site = await boot();
         await site.auth.signIn({ email: 'alice@example.com', password: 'correct-horse' });
 
-        // No store, so nothing was written anywhere. A framework that silently persisted a
+        // No persist option, so nothing was written anywhere. A framework that silently persisted a
         // credential would be making a security decision on the site's behalf.
         expect(sent.filter((r) => r.url.includes('identity')).length).toBeGreaterThan(0);
     });
 
+    it('writes the ticket to the device hive on sign-in when the site opts in', async () => {
+        reply = identity();
+        const provider = memoryProvider();
+        const site = await boot({ persist: true, deviceProvider: provider });
+
+        await site.auth.signIn({ email: 'alice@example.com', password: 'correct-horse' });
+
+        const stored = await provider.read('auth', 'ticket/token');
+        expect(stored?.value).toBe('ticket-1');
+    });
+
     it('restores a session by asking the API, never by trusting what it held', async () => {
         reply = identity();
-        const held = store('ticket-1');
+        const provider = await seeded('ticket-1');
 
-        const site = await boot({ store: held });
+        const site = await boot({ persist: true, deviceProvider: provider });
         // Boot fires the restore; it is not awaited by `boot`, so wait for the answer.
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        await waitUntil(() => site.auth.session() !== null);
 
         expect(site.auth.session()?.userId).toBe('u1');
         // It asked. A held ticket is a claim, not a session.
@@ -300,13 +333,16 @@ describe('a ticket that outlives the page', () => {
 
     it('drops a held ticket the API no longer accepts', async () => {
         reply = identity({ token: 'a-different-ticket' });
-        const held = store('revoked-ticket');
+        const provider = await seeded('revoked-ticket');
 
-        const site = await boot({ store: held });
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        const site = await boot({ persist: true, deviceProvider: provider });
+        // The end state (session stays null) is indistinguishable from "hasn't run yet", so this
+        // waits on the actual final outcome -- the rejected ticket being cleared from storage --
+        // rather than a null session check or merely the request having been sent.
+        await waitUntil(async () => (await provider.read('auth', 'ticket/token')) === undefined);
 
         expect(site.auth.session()).toBeNull();
-        expect(held.held).toBeUndefined();
+        expect(sent.some((r) => r.url.endsWith('/api/identity/whoami'))).toBe(true);
     });
 });
 

@@ -23,8 +23,8 @@
  */
 
 import {
-    AUTH, needs,
-    type AuthApi, type Context, type Credentialed, type Extension, type Session,
+    AUTH, needs, store,
+    type AuthApi, type Context, type Credentialed, type Extension, type Session, type Store,
 } from '@flybyme/mesh-web';
 
 // ---------------------------------------------------------------------------- what it provides
@@ -84,47 +84,54 @@ export interface AuthEndpoints {
 export interface AuthOptions {
     readonly endpoints?: AuthEndpoints;
     /**
-     * Where the ticket is kept between page loads.
-     *
-     * `undefined` means it is not kept: a reload signs you out. That is the safe default and a real
-     * choice for a console, and a site that wants the other behaviour says so — a framework that
-     * silently persisted a credential would be making a security decision on the site's behalf.
+     * Keep the ticket in the `device` hive — real persistent storage, survives a reload — so a
+     * session outlives the page. `false`/absent means it is not kept: a reload signs you out. That
+     * is the safe default and a real choice for a console; a site that wants the other behaviour
+     * says so, via `PartRef.options` on the site record — never silently, because a framework that
+     * persisted a credential by default would be making a security decision on the site's behalf.
      */
-    readonly store?: TicketStore;
+    readonly persist?: boolean;
     readonly now?: () => number;
 }
 
-export interface TicketStore {
-    read(): string | undefined;
-    write(token: string): void;
-    clear(): void;
-}
-
 /**
- * **There is deliberately no implementation of `TicketStore` in this file.**
+ * Where a persisted ticket actually lives, when a site opts in.
  *
- * There was one, `sessionTicketStore`, and it read `globalThis.sessionStorage` directly. Deleted
- * 2026-09-10. It was wrong twice over and the second reason is the one that matters:
+ * There used to be a hand-rolled `TicketStore` seam here, and an implementation of it,
+ * `sessionTicketStore`, that read `globalThis.sessionStorage` directly. Both deleted 2026-09-10,
+ * for two reasons — one of which no longer applies and one of which still fully does:
  *
- * 1. **Nothing could ever use it.** The kernel constructs a composed part with `new Exported()` and
- *    no arguments (`contribution/contract.ts:489`), so `AuthOptions` never arrives on a real page.
- *    It was dead from the day it was written — mesh-web roadmap **A8.15**.
- * 2. **It reached around the kernel for a global.** This Extension declares
- *    `needs('credentials', 'state', 'log')`, and the whole point of that declaration is that the
- *    kernel hands a part exactly what it asked for. `storage` is a first-class capability —
- *    scoped to the contributor, bound to a hive, `broker.ts:467` — and this asked for none of it,
- *    then took `sessionStorage` anyway. It was the only place in any part in any repository that
- *    touched a global, against a rule `ui/index.ts` states outright: *zero DOM calls*.
+ * 1. ~~Nothing could ever use it: the kernel constructs a composed part with `new Exported()` and
+ *    no arguments, so `AuthOptions` never arrives on a real page.~~ No longer true —
+ *    `kernel/start.ts`'s `PartRef.options` ("passed to the constructor, from the site record")
+ *    exists precisely for this: "AuthExtension takes endpoints and a ticket store, which are the
+ *    site's decisions" is quoted from that file's own doc comment. The gap this comment described
+ *    was closed elsewhere in the kernel without this file being updated to use it.
+ * 2. **It reached around the kernel for a global**, still the real defect: `storage` is a
+ *    first-class capability — scoped to the contributor, bound to a hive (`kernel/broker.ts`,
+ *    `needs('storage')`) — and the old code asked for none of it, then took `sessionStorage`
+ *    anyway, the only place in any part in any repository that touched a global.
  *
- * A part that genuinely needs a browser API is asking for a **capability**, and if the capability
- * does not exist yet then that is the work — not a `globalThis` and a `try/catch`.
+ * So this declares `needs('storage')` and opens a real, schema-validated, hive-bound store instead
+ * — `device` (persists across a reload, same-origin only), not a bespoke seam a caller constructs
+ * by hand. A test exercises this exactly the way a real site does: a fake `device` hive provider
+ * passed to `createServices`/`start`, not a hand-built `TicketStore`.
  *
- * **Where persistence should actually live**, when somebody wants *remember me*: not here. A ticket
- * in any storage a script can read is a ticket every script on the origin can read. The durable
- * credential belongs in an `HttpOnly` cookie the browser attaches and JavaScript cannot see, which
- * is a decision for the api and identity rather than for a part. The seam below stays because it is
- * how a **test** injects one, and that is a caller that does construct by hand.
+ * A cookie-based ticket — genuinely invisible to JavaScript, not merely inconvenient to reach —
+ * remains the answer for cross-*site* sessions; this only ever addresses one site outliving its own
+ * reloads, which is what was actually being asked for here (`spec/network.md §4`'s CSRF reasoning
+ * for staying bearer-only, `api.service.ts`'s CORS policy, still fully apply and are unchanged).
  */
+const TICKET_STORE: Store<string> = store({
+    name: 'ticket',
+    hive: 'device',
+    schema: (raw: unknown): string => {
+        if (typeof raw !== 'string' || raw.length === 0) {
+            throw new Error('A stored ticket must be a non-empty string.');
+        }
+        return raw;
+    },
+});
 
 /**
  * Deliberately without `mesh`.
@@ -134,7 +141,7 @@ export interface TicketStore {
  * Declaring `needs('mesh')` with no `api` is a manifest mistake the kernel refuses outright, and it
  * would be the wrong tool here anyway: `credentials` already carries the origin.
  */
-const NEEDS = needs('credentials', 'state', 'log');
+const NEEDS = needs('credentials', 'state', 'log', 'storage');
 
 const DEFAULTS = {
     issue: '/api/identity/ticket',
@@ -175,17 +182,23 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
 
     activate(cx: Context<typeof NEEDS, readonly []>): AuthApi {
         const endpoints = { ...DEFAULTS, ...this.#options.endpoints };
-        const store = this.#options.store;
         const now = this.#options.now ?? Date.now;
         const session = cx.state.signal<Session | null>(null);
+        // Opened unconditionally (the capability is declared either way; needs() is a static
+        // manifest, inspected before activation, and cannot vary per instance) but only ever read
+        // from or written to when the site actually opted in.
+        const persisted = this.#options.persist === true ? cx.storage.open(TICKET_STORE) : undefined;
 
         /**
          * The ticket, held here and nowhere a contribution can reach.
          *
          * A closure variable rather than a signal: nothing renders it, and a signal would make it
-         * reactive state that something could come to depend on.
+         * reactive state that something could come to depend on. Starts undefined even when
+         * `persisted` is set -- the storage capability resolves asynchronously (`storage/storage.ts`),
+         * so a held ticket populates this a tick or more after `activate()` returns, the same
+         * "nothing is signed in until the API says so" shape sign-in itself already has.
          */
-        let ticket = store?.read();
+        let ticket: string | undefined;
 
         // Attached once, and *before* any request could be made. The lookup runs per request, so a
         // ticket that arrives later is on the next call rather than on the next page load.
@@ -248,7 +261,7 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
 
         const clear = (): void => {
             ticket = undefined;
-            store?.clear();
+            if (persisted !== undefined) void persisted.remove('token');
             session.set(null);
             // The one place the ticket is dropped, so the one place that can say it happened.
             cx.log.debug('The ticket was dropped and the page is signed out');
@@ -280,10 +293,16 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
             return restored;
         };
 
-        if (ticket !== undefined) {
-            // A held ticket is a claim, never a session. Nothing is signed in until the API says so,
-            // which is the same rule the API applies to itself (spec/auth.md §3).
-            void restore(now() + UNKNOWN_LIFETIME).catch((error: unknown) => {
+        if (persisted !== undefined) {
+            // Waits for the storage capability's own async resolution (a `device`-hive read), then
+            // the same rule as always applies: a held ticket is a claim, never a session — nothing
+            // is signed in until the API says so (spec/auth.md §3).
+            void persisted.ready('token').then(() => {
+                const held = persisted.get('token')();
+                if (held === undefined) return undefined;
+                ticket = held;
+                return restore(now() + UNKNOWN_LIFETIME).then(() => undefined);
+            }).catch((error: unknown) => {
                 cx.log.warn('could not restore a session from the held ticket', error);
                 clear();
             });
@@ -301,7 +320,7 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
                 cx.log.debug('Signed in', { userId: issued.userId, expiresAt: issued.expiresAt });
 
                 ticket = issued.token;
-                store?.write(issued.token);
+                if (persisted !== undefined) void persisted.set('token', issued.token);
 
                 const restored = await restore(issued.expiresAt);
                 if (restored === null) {
