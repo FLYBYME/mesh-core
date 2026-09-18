@@ -483,7 +483,15 @@
         justify-content: space-between;
     }
 
-    /* ------------------------------------------------------------------------- ui.Dialog */
+    /* ------------------------------------------------------------------------- ui.Dialog
+     *
+     * Neither this nor .ui-action-card-body below had a height cap, so a dialog taller than the
+     * viewport scrolled as one block -- the native <dialog>'s own overflow, carrying the dialog's
+     * own title and the card's submit/cancel row along with the fields. `max-height` here plus
+     * `flex`/`min-height: 0` down the chain gives each level a bounded box to shrink into, so only
+     * `.ui-action-card-body` (the field list) ends up as the thing that actually scrolls -- title
+     * and actions stay pinned regardless of how many fields a form has.
+     */
     .ui-dialog {
         border: var(--ui-space-px) solid var(--ui-edge);
         border-radius: var(--ui-radius-lg);
@@ -491,7 +499,11 @@
         color: var(--ui-ink);
         padding: 0;
         max-width: 500px; /* ui-literal: dialog maximum width, layout constraint */
+        max-height: 85vh; /* ui-literal: viewport-relative cap so tall content scrolls inside it */
         width: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
 
     .ui-dialog-content {
@@ -499,6 +511,18 @@
         display: flex;
         flex-direction: column;
         gap: var(--ui-space-3);
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .ui-dialog-header {
+        flex-shrink: 0;
+    }
+
+    .ui-dialog-body {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
     }
 
     .ui-dialog-title {
@@ -626,7 +650,15 @@
         color: var(--ui-ink-dim);
     }
 
-    /* ------------------------------------------------------------------------- ui.ActionCard */
+    /* ------------------------------------------------------------------------- ui.ActionCard
+     *
+     * `min-height: 0` on the card and `flex: 1 1 auto` + `overflow-y: auto` on just the body is
+     * what lets a constrained ancestor (ui.Dialog's `max-height`) shrink this card instead of
+     * overflowing it -- without a height imposed from outside, flexbox leaves an unconstrained
+     * child to size to its content exactly as before, so a standalone (non-dialog) card is
+     * unaffected. Header and the actions row (a sibling of body, not nested inside it -- see
+     * actionCard.ts) stay `flex-shrink: 0`, so only the field list itself ever scrolls.
+     */
     .ui-action-card {
         display: flex;
         flex-direction: column;
@@ -636,12 +668,14 @@
         border-radius: var(--ui-radius-lg);
         background: var(--ui-surface);
         box-sizing: border-box;
+        min-height: 0;
     }
 
     .ui-action-card-header {
         display: flex;
         flex-direction: column;
         gap: var(--ui-space-1);
+        flex-shrink: 0;
     }
 
     .ui-action-card-title {
@@ -660,11 +694,15 @@
         display: flex;
         flex-direction: column;
         gap: var(--ui-space-3);
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
     }
 
     .ui-action-card-actions {
         display: flex;
         justify-content: flex-end;
+        flex-shrink: 0;
     }
 
     .ui-action-card-result {
@@ -674,6 +712,7 @@
         border-radius: var(--ui-radius-md);
         color: var(--ui-success);
         font-size: var(--ui-text-sm);
+        flex-shrink: 0;
     }
 
     .ui-action-card-error {
@@ -683,6 +722,7 @@
         border-radius: var(--ui-radius-md);
         color: var(--ui-error);
         font-size: var(--ui-text-sm);
+        flex-shrink: 0;
     }
 
     /* ------------------------------------------------------------------------- ui.SignIn */

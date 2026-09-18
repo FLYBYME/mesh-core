@@ -203,13 +203,15 @@ export function createActionCard<I extends Fields<I> = Record<string, Json | und
                         }),
                     ],
                 }),
+                // Body holds only the form -- the primary/cancel row used to be a child of this,
+                // which meant scrolling the body (inside a height-constrained ui.Dialog) scrolled
+                // the submit button out of view along with the fields. It's now a sibling instead,
+                // so CSS can pin header, actions, and result/error while only the field list scrolls.
                 element('Stack', {
                     props: { class: 'ui-action-card-body' },
-                    children: [
-                        form.view(),
-                        primaryControlNode,
-                    ],
+                    children: [form.view()],
                 }),
+                primaryControlNode,
                 when(() => result() !== undefined, resultNode),
                 when(() => Boolean(error()), errorNode),
             ],
