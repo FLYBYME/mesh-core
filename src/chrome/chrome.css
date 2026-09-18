@@ -15,6 +15,7 @@
 }
 
 .console-banner,
+.console-apps,
 .console-tabs,
 .console-status {
     flex: none;
@@ -44,6 +45,26 @@
     border-radius: 4px;
     padding: 2px 8px;
     cursor: pointer;
+}
+
+.console-apps {
+    border-bottom: 1px solid var(--edge, #30363d);
+    background: var(--surface, #161b22);
+}
+
+.console-app {
+    background: transparent;
+    color: var(--ink-dim, #8b949e);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.console-app.focused {
+    background: var(--page, #0d1117);
+    color: var(--ink, #e6edf3);
 }
 
 .console-tabs {

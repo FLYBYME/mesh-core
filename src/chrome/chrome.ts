@@ -31,13 +31,13 @@ import { type BoundCommand } from '@flybyme/mesh-web';
 import {
     command, consumes, createHandlerTable, each, element, needs, text, when, PAGE_CHROME,
     type Chrome, type ChromeWindow, type Context, type Extension, type Node, type PageChrome,
-    type Registrar,
+    type Registrar, type Router, type RouterApplication,
 } from '@flybyme/mesh-web';
 
 import { AUTH, type AuthApi } from '@flybyme/mesh-core/auth';
 import { SignIn } from '@flybyme/mesh-core/ui';
 
-const NEEDS = needs('chrome', 'state', 'commands', 'log');
+const NEEDS = needs('chrome', 'state', 'commands', 'log', 'router');
 /**
  * The one capability the shell needs that the window layer below it doesn't: somewhere to put a
  * sign-in control that every Application on the page shares, instead of each one building its own
@@ -57,6 +57,7 @@ export class ConsoleChrome implements Extension<typeof NEEDS, typeof CONSUMES, t
     readonly commands = [
         { id: 'console.toggleMode', title: 'Toggle tiled / windowed' },
         { id: 'console.focusWindow', title: 'Focus window' },
+        { id: 'console.switchApp', title: 'Switch application' },
     ];
 
     activate(cx: Context<typeof NEEDS, typeof CONSUMES>): PageChrome & { api: ConsoleChromeApi } {
@@ -112,6 +113,11 @@ export class ConsoleChrome implements Extension<typeof NEEDS, typeof CONSUMES, t
             if (typeof id === 'string') chrome.focus(id);
         });
 
+        const router = cx.router;
+        cx.commands.implement('console.switchApp', (id) => {
+            if (typeof id === 'string') router.navigate(id);
+        });
+
         cx.log.info('console chrome ready');
 
         return { api, handlers,
@@ -119,6 +125,7 @@ export class ConsoleChrome implements Extension<typeof NEEDS, typeof CONSUMES, t
                 props: { class: 'console' },
                 children: [
                     banner(chrome, auth, handlers.on),
+                    appSwitcher(router),
                     tabs(chrome),
                     sidebar(),
 
@@ -157,6 +164,39 @@ const banner = (chrome: Chrome, auth: Pick<AuthApi, 'session' | 'signIn'>, on: R
         SignIn({ auth, on, class: 'console-sign-in' }),
     ],
 });
+
+/**
+ * One entry per Application this site composes, however many windows each has open.
+ *
+ * Distinct from `tabs()` below on purpose: that is a *window* switcher (Alt-Tab, one entry per open
+ * window, however many belong to one Application), and this is an *Application* switcher (one entry
+ * per Application, whether it has one window open or ten) — the thing that was missing entirely
+ * before `needs('router')` existed, which is why composing several Applications onto one site used to
+ * mean every one of them on screen at once with no way to choose between them.
+ *
+ * Only rendered when there is more than one Application to choose from: a single-Application site
+ * (still the ordinary case) gets nothing extra on screen for a choice it doesn't have.
+ */
+const appSwitcher = (router: Router): Node => when(
+    () => router.applications().length > 1,
+    () => element('Row', {
+        props: { class: 'console-apps' },
+        children: [
+            each(
+                () => router.applications(),
+                (a: RouterApplication) => a.id,
+                (a: () => RouterApplication) => element('Button', {
+                    props: {
+                        class: () => (router.current() === a().id ? 'console-app focused' : 'console-app'),
+                        type: 'button',
+                    },
+                    intents: { activate: { action: command('console.switchApp', a().id) } },
+                    children: [text(() => a().title)],
+                }),
+            ),
+        ],
+    }),
+);
 
 /**
  * One tab per open window, whoever opened it.
