@@ -511,6 +511,66 @@
         outline: none;
     }
 
+    /* ------------------------------------------------------------------------- ui.Button
+     *
+     * The generic button classes ui.Form and ui.ActionCard render their own submit/cancel controls
+     * with (`ui-button`, `ui-button-primary`, `ui-button-secondary`, `ui-button-cancel`,
+     * `ui-button-submit`), and that any hand-written `element('Button', ...)` reaches for the same
+     * way ui.ActionButton below reaches for `ui-action-button`. Never defined: every one of those
+     * buttons rendered as a bare, unstyled native <button>, which on Chrome/most browsers means a
+     * light gray/white control -- visible against any dark surface regardless of what token values
+     * the host site sets. `.ui-action-button` (below) already existed with a real look; this gives
+     * the equally common submit/cancel/generic names the same treatment.
+     */
+    .ui-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--ui-space-1);
+        padding: var(--ui-space-1) var(--ui-space-4);
+        border-radius: var(--ui-radius-md);
+        border: var(--ui-space-px) solid var(--ui-edge);
+        background: var(--ui-surface);
+        color: var(--ui-ink);
+        font-size: var(--ui-text-sm);
+        font-weight: 500;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.1s ease, border-color 0.1s ease;
+    }
+
+    .ui-button:hover:not(:disabled) {
+        background: var(--ui-surface-hover);
+    }
+
+    .ui-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .ui-button-primary {
+        background: var(--ui-accent);
+        border-color: var(--ui-accent);
+        color: var(--ui-on-accent);
+    }
+
+    .ui-button-primary:hover:not(:disabled) {
+        filter: brightness(1.1);
+    }
+
+    .ui-button-secondary,
+    .ui-button-cancel {
+        background: var(--ui-surface);
+        border-color: var(--ui-edge);
+        color: var(--ui-ink);
+    }
+
+    .ui-button-danger {
+        background: var(--ui-danger-dim);
+        border-color: var(--ui-danger);
+        color: var(--ui-danger);
+    }
+
     /* ------------------------------------------------------------------------- ui.ActionButton */
     .ui-action-button {
         display: inline-flex;
