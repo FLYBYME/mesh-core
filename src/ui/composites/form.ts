@@ -225,8 +225,15 @@ export function createForm<T extends Fields<T> = Record<string, Json | undefined
 
                     // 1. Enum / Select
                     if (prop.enum || override?.widget === 'select' || override?.options) {
+                        // `override.options` passed straight through, not called here -- calling it
+                        // once and handing Select the resulting plain array baked in whatever it
+                        // returned at this exact moment forever, discarding the whole point of it
+                        // being a function: a field built before its options finished loading (an
+                        // ActionCard inside a ui.Dialog, built once at page construction, long before
+                        // any network response) rendered permanently empty, even after the data it
+                        // depended on arrived. Select's own `options` prop is already `Reactive<...>`
+                        // and reads it correctly on its own.
                         const rawOpts = override?.options ?? prop.enum ?? [];
-                        const opts = typeof rawOpts === 'function' ? rawOpts() : rawOpts;
 
                         return Select({
                             name,
@@ -240,7 +247,7 @@ export function createForm<T extends Fields<T> = Record<string, Json | undefined
                                 const v = fieldValue();
                                 return typeof v === 'string' || typeof v === 'number' ? v : undefined;
                             },
-                            options: opts,
+                            options: rawOpts,
                             disabled: isDisabled,
                             placeholder,
                         });
