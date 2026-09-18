@@ -128,12 +128,20 @@ export class ConsoleChrome implements Extension<typeof NEEDS, typeof CONSUMES, t
          * `foreground` for real.
          *
          * So here, not there: this chrome is the one thing that actually renders a switcher (below),
-         * and its existing is the honest signal that this site wants app-at-a-time behavior. One
-         * navigate, to whichever Application is first, the moment there is more than one to choose
-         * between -- everything after this is the same `navigate()` a click produces.
+         * and its existing is the honest signal that this site wants app-at-a-time behavior.
+         *
+         * **`router.current()` already resolves to a real Application id here** -- explicitly chosen,
+         * matched from the URL, or the first one as a last resort -- never `undefined` once there is
+         * at least one. So this isn't "pick the first Application if nothing has"; it's "make whatever
+         * `current()` already resolves to the *explicit, restricting* choice", which is exactly what
+         * turns a page loaded at a real deep link (`current()` already resolves to that Application)
+         * into the same outcome a click on its switcher entry would produce, and a page loaded with no
+         * route at all into picking the first one -- both through the one `navigate()` call. It is a
+         * no-op on the URL when they already agree (`navigate`'s own guard against a redundant history
+         * entry, `router.ts`), so a deep link doesn't gain a duplicate back-stop.
          */
-        if (router.applications().length > 1 && router.current() === undefined) {
-            router.navigate(router.applications()[0]!.id);
+        if (router.applications().length > 1) {
+            router.navigate(router.current()!);
         }
 
         cx.log.info('console chrome ready');
