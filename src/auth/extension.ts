@@ -91,7 +91,14 @@ export interface AuthOptions {
      * persisted a credential by default would be making a security decision on the site's behalf.
      */
     readonly persist?: boolean;
+    readonly store?: TicketStore;
     readonly now?: () => number;
+}
+
+export interface TicketStore {
+    read(): string | undefined;
+    write(token: string): void;
+    clear(): void;
 }
 
 /**
@@ -198,7 +205,8 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
          * so a held ticket populates this a tick or more after `activate()` returns, the same
          * "nothing is signed in until the API says so" shape sign-in itself already has.
          */
-        let ticket: string | undefined;
+        const store = this.#options.store;
+        let ticket: string | undefined = store?.read();
 
         // Attached once, and *before* any request could be made. The lookup runs per request, so a
         // ticket that arrives later is on the next call rather than on the next page load.
@@ -261,6 +269,7 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
 
         const clear = (): void => {
             ticket = undefined;
+            store?.clear();
             if (persisted !== undefined) void persisted.remove('token');
             session.set(null);
             // The one place the ticket is dropped, so the one place that can say it happened.
@@ -306,6 +315,11 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
                 cx.log.warn('could not restore a session from the held ticket', error);
                 clear();
             });
+        } else if (ticket !== undefined) {
+            void restore(now() + UNKNOWN_LIFETIME).catch((error: unknown) => {
+                cx.log.warn('could not restore a session from the held ticket', error);
+                clear();
+            });
         }
 
         return {
@@ -320,6 +334,7 @@ export class AuthExtension implements Extension<typeof NEEDS, readonly [], typeo
                 cx.log.debug('Signed in', { userId: issued.userId, expiresAt: issued.expiresAt });
 
                 ticket = issued.token;
+                store?.write(issued.token);
                 if (persisted !== undefined) void persisted.set('token', issued.token);
 
                 const restored = await restore(issued.expiresAt);
