@@ -26,7 +26,7 @@
         "test": "npm run typecheck && npm run test:source && npm run test:browser"
     },
     "devDependencies": {
-        "@flybyme/mesh-serve": "file:../mesh-serve",
+        "@flybyme/mesh-serve": "github:FLYBYME/mesh-serve#v0.8.5",
         "@flybyme/mesh-web": "github:FLYBYME/mesh-web#v0.19.3",
         "@vitest/browser": "^2.1.9",
         "playwright": "^1.62.1",
